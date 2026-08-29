@@ -1,0 +1,341 @@
+// Traducido desde schema_postgres.sql / QueryPAnteones.sql (SQL Server original).
+// Modelos en PascalCase (mismo vocabulario que las entidades C# actuales) mapeados
+// a tablas/columnas snake_case (idiomático en Postgres) vía @@map / @map.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Supabase (y cualquier Postgres detrás de pgbouncer) necesita una conexión
+  // directa aparte para migraciones: el pooler en modo transacción no soporta
+  // los prepared statements que usa `prisma migrate`. Ver .env.example.
+  directUrl = env("DIRECT_URL")
+}
+
+model Rol {
+  rolId       Int       @id @default(autoincrement()) @map("rol_id")
+  nombre      String    @unique @db.VarChar(50)
+  descripcion String?   @db.VarChar(300)
+  activo      Boolean   @default(true)
+  fechaAlta   DateTime  @default(now()) @map("fecha_alta")
+
+  usuarios    Usuario[]
+
+  @@map("roles")
+}
+
+model TipoTramite {
+  tipoTramiteId  Int       @id @default(autoincrement()) @map("tipo_tramite_id")
+  clave          String    @unique @db.VarChar(30)
+  nombre         String    @db.VarChar(100)
+  descripcion    String?   @db.VarChar(300)
+  retencionAnios Int?      @map("retencion_anios")
+  activo         Boolean   @default(true)
+
+  permisos       Permiso[]
+
+  @@map("tipos_tramite")
+}
+
+model TipoLote {
+  tipoLoteId  Int     @id @default(autoincrement()) @map("tipo_lote_id")
+  nombre      String  @unique @db.VarChar(50)
+  descripcion String? @db.VarChar(200)
+
+  lotes       Lote[]
+
+  @@map("tipos_lote")
+}
+
+model Panteon {
+  panteonId       Int          @id @default(autoincrement()) @map("panteon_id")
+  nombre          String       @db.VarChar(150)
+  clave           String?      @unique @db.VarChar(10)
+  usaColindancias Boolean      @default(false) @map("usa_colindancias")
+  direccion       String?      @db.VarChar(300)
+  activo          Boolean      @default(true)
+
+  lotes           Lote[]
+  incidencias     Incidencia[]
+
+  @@map("panteones")
+}
+
+model Usuario {
+  usuarioId      Int       @id @default(autoincrement()) @map("usuario_id")
+  rolId          Int       @map("rol_id")
+  nombreUsuario  String    @unique @db.VarChar(100) @map("nombre_usuario")
+  nombreCompleto String    @db.VarChar(200) @map("nombre_completo")
+  email          String?   @db.VarChar(150)
+  passwordHash   String    @db.VarChar(256) @map("password_hash")
+  activo         Boolean   @default(true)
+  fechaAlta      DateTime  @default(now()) @map("fecha_alta")
+  ultimoAcceso   DateTime? @map("ultimo_acceso")
+
+  rol                    Rol              @relation(fields: [rolId], references: [rolId])
+  titulosEmitidos        TituloPropiedad[] @relation("TituloEmitio")
+  titulosAprobados       TituloPropiedad[] @relation("TituloAprobo")
+  cesionesRegistradas    CesionDerechos[]  @relation("CesionRegistro")
+  cesionesAprobadas      CesionDerechos[]  @relation("CesionAprobo")
+  permisosRegistrados    Permiso[]         @relation("PermisoRegistro")
+  permisosAprobados      Permiso[]         @relation("PermisoAprobo")
+  reconocimientos        Reconocimiento[]
+  reimpresiones          Reimpresion[]
+  bitacoras              Bitacora[]
+  incidenciasRegistradas Incidencia[]
+
+  @@map("usuarios")
+}
+
+model Persona {
+  personaId            Int      @id @default(autoincrement()) @map("persona_id")
+  nombreCompleto       String   @db.VarChar(200) @map("nombre_completo")
+  curp                 String?  @db.Char(18)
+  domicilio            String?  @db.VarChar(300)
+  colonia              String?  @db.VarChar(150)
+  telefono             String?  @db.VarChar(25)
+  correoElectronico    String?  @db.VarChar(150) @map("correo_electronico")
+  identificacionTipo   String?  @db.VarChar(50) @map("identificacion_tipo")
+  identificacionNumero String?  @db.VarChar(50) @map("identificacion_numero")
+  fechaRegistro        DateTime @default(now()) @map("fecha_registro")
+
+  titulos     TituloPropiedad[]
+  cesionesCedente    CesionDerechos[] @relation("Cedente")
+  cesionesCesionario CesionDerechos[] @relation("Cesionario")
+  permisos    Permiso[]
+
+  @@map("personas")
+}
+
+model Fallecido {
+  fallecidoId         Int       @id @default(autoincrement()) @map("fallecido_id")
+  nombreCompleto      String    @db.VarChar(200) @map("nombre_completo")
+  fechaNacimiento     DateTime? @db.Date @map("fecha_nacimiento")
+  fechaFallecimiento  DateTime? @db.Date @map("fecha_fallecimiento")
+  actaDefuncionNumero String?   @db.VarChar(100) @map("acta_defuncion_numero")
+  actaDefuncionFolio  String?   @db.VarChar(100) @map("acta_defuncion_folio")
+  actaDefuncionFecha  DateTime? @db.Date @map("acta_defuncion_fecha")
+  causaFallecimiento  String?   @db.VarChar(300) @map("causa_fallecimiento")
+  esNoReclamado       Boolean   @default(false) @map("es_no_reclamado")
+  descripcionHallazgo String?   @db.VarChar(500) @map("descripcion_hallazgo")
+  numeroCaso          String?   @db.VarChar(60) @map("numero_caso")
+  posibleNombre       String?   @db.VarChar(200) @map("posible_nombre")
+  horaFallecimiento   DateTime? @db.Time(0) @map("hora_fallecimiento")
+  fechaLevantamiento  DateTime? @db.Date @map("fecha_levantamiento")
+  lugarLevantamiento  String?   @db.VarChar(250) @map("lugar_levantamiento")
+  ministerioPublico   String?   @db.VarChar(200) @map("ministerio_publico")
+  reconocido          Boolean   @default(false)
+  fechaRegistro       DateTime  @default(now()) @map("fecha_registro")
+
+  permisos        Permiso[]
+  reconocimientos Reconocimiento[]
+
+  @@map("fallecidos")
+}
+
+model Lote {
+  loteId            Int      @id @default(autoincrement()) @map("lote_id")
+  panteonId         Int      @map("panteon_id")
+  tipoLoteId        Int      @map("tipo_lote_id")
+  numeroManzana     String   @db.VarChar(20) @map("numero_manzana")
+  numeroLote        String   @db.VarChar(20) @map("numero_lote")
+  seccion           String?  @db.VarChar(50)
+  zona              String?  @db.VarChar(50)
+  dimensiones       String?  @db.VarChar(100)
+  comprobantePago   String?  @db.VarChar(200) @map("comprobante_pago")
+  colindanciaNorte  String?  @db.VarChar(200) @map("colindancia_norte")
+  colindanciaSur    String?  @db.VarChar(200) @map("colindancia_sur")
+  colindanciaEste   String?  @db.VarChar(200) @map("colindancia_este")
+  colindanciaOeste  String?  @db.VarChar(200) @map("colindancia_oeste")
+  claveLegado       String?  @db.VarChar(50) @map("clave_legado")
+  estado            String   @default("DISPONIBLE") @db.VarChar(20)
+  esFosaComun       Boolean  @default(false) @map("es_fosa_comun")
+  fechaRegistro     DateTime @default(now()) @map("fecha_registro")
+
+  panteon         Panteon          @relation(fields: [panteonId], references: [panteonId])
+  tipoLote        TipoLote         @relation(fields: [tipoLoteId], references: [tipoLoteId])
+  titulos         TituloPropiedad[]
+  cesiones        CesionDerechos[]
+  permisos        Permiso[]
+  reconocimientos Reconocimiento[]
+  incidencias     Incidencia[]
+
+  @@unique([panteonId, seccion, numeroManzana, numeroLote], name: "uq_lotes_ubicacion")
+  @@map("lotes")
+}
+
+model TituloPropiedad {
+  tituloId        Int       @id @default(autoincrement()) @map("titulo_id")
+  loteId          Int       @map("lote_id")
+  titularId       Int       @map("titular_id")
+  folio           String    @unique @db.VarChar(50)
+  fechaEmision    DateTime? @db.Date @map("fecha_emision")
+  usuarioEmitioId Int       @map("usuario_emitio_id")
+  usuarioAproboId Int?      @map("usuario_aprobo_id")
+  fechaAprobacion DateTime? @map("fecha_aprobacion")
+  estado          String    @default("VIGENTE") @db.VarChar(20)
+  estadoEntrega   String    @default("PENDIENTE_ENTREGA") @db.VarChar(30) @map("estado_entrega")
+  fechaEntrega    DateTime? @db.Date @map("fecha_entrega")
+  rutaDocumento   String?   @db.VarChar(500) @map("ruta_documento")
+  fechaCreacion   DateTime  @default(now()) @map("fecha_creacion")
+
+  lote            Lote             @relation(fields: [loteId], references: [loteId])
+  titular         Persona          @relation(fields: [titularId], references: [personaId])
+  usuarioEmitio   Usuario          @relation("TituloEmitio", fields: [usuarioEmitioId], references: [usuarioId])
+  usuarioAprobo   Usuario?         @relation("TituloAprobo", fields: [usuarioAproboId], references: [usuarioId])
+  cesiones        CesionDerechos[]
+  reimpresiones   Reimpresion[]
+
+  @@map("titulos_propiedad")
+}
+
+model CesionDerechos {
+  cesionId          Int       @id @default(autoincrement()) @map("cesion_id")
+  tituloId          Int       @map("titulo_id")
+  loteId            Int       @map("lote_id")
+  cedenteId         Int       @map("cedente_id")
+  cesionarioId      Int       @map("cesionario_id")
+  folio             String    @unique @db.VarChar(50)
+  fechaCesion       DateTime  @db.Date @map("fecha_cesion")
+  usuarioRegistroId Int       @map("usuario_registro_id")
+  usuarioAproboId   Int?      @map("usuario_aprobo_id")
+  fechaAprobacion   DateTime? @map("fecha_aprobacion")
+  estado            String    @default("VIGENTE") @db.VarChar(20)
+  rutaDocumento     String?   @db.VarChar(500) @map("ruta_documento")
+  fechaCreacion     DateTime  @default(now()) @map("fecha_creacion")
+
+  titulo          TituloPropiedad @relation(fields: [tituloId], references: [tituloId])
+  lote            Lote            @relation(fields: [loteId], references: [loteId])
+  cedente         Persona         @relation("Cedente", fields: [cedenteId], references: [personaId])
+  cesionario      Persona         @relation("Cesionario", fields: [cesionarioId], references: [personaId])
+  usuarioRegistro Usuario         @relation("CesionRegistro", fields: [usuarioRegistroId], references: [usuarioId])
+  usuarioAprobo   Usuario?        @relation("CesionAprobo", fields: [usuarioAproboId], references: [usuarioId])
+  reimpresiones   Reimpresion[]
+
+  @@map("cesion_derechos")
+}
+
+model Permiso {
+  permisoId         Int       @id @default(autoincrement()) @map("permiso_id")
+  tipoTramiteId     Int       @map("tipo_tramite_id")
+  loteId            Int?      @map("lote_id")
+  solicitanteId     Int       @map("solicitante_id")
+  fallecidoId       Int?      @map("fallecido_id")
+  folio             String    @unique @db.VarChar(50)
+  fechaSolicitud    DateTime? @db.Date @map("fecha_solicitud")
+  fechaEmision      DateTime? @map("fecha_emision")
+  usuarioRegistroId Int       @map("usuario_registro_id")
+  usuarioAproboId   Int?      @map("usuario_aprobo_id")
+  estado            String    @default("PENDIENTE") @db.VarChar(20)
+  motivoExhumacion  String?   @db.VarChar(300) @map("motivo_exhumacion")
+  destinoRestos     String?   @db.VarChar(300) @map("destino_restos")
+  ubicacionDeposito String?   @db.VarChar(300) @map("ubicacion_deposito")
+  tipoObra          String?   @db.VarChar(100) @map("tipo_obra")
+  descripcionObra   String?   @db.VarChar(500) @map("descripcion_obra")
+  esDonacion        Boolean   @default(false) @map("es_donacion")
+  numeroRecibo      String?   @db.VarChar(50) @map("numero_recibo")
+  funeraria         String?   @db.VarChar(150)
+  instanciaSolicita String?   @db.VarChar(250) @map("instancia_solicita")
+  rutaDocumento     String?   @db.VarChar(500) @map("ruta_documento")
+  fechaCreacion     DateTime  @default(now()) @map("fecha_creacion")
+
+  tipoTramite     TipoTramite      @relation(fields: [tipoTramiteId], references: [tipoTramiteId])
+  lote            Lote?            @relation(fields: [loteId], references: [loteId])
+  solicitante     Persona          @relation(fields: [solicitanteId], references: [personaId])
+  fallecido       Fallecido?       @relation(fields: [fallecidoId], references: [fallecidoId])
+  usuarioRegistro Usuario          @relation("PermisoRegistro", fields: [usuarioRegistroId], references: [usuarioId])
+  usuarioAprobo   Usuario?         @relation("PermisoAprobo", fields: [usuarioAproboId], references: [usuarioId])
+  reconocimientos Reconocimiento[]
+  reimpresiones   Reimpresion[]
+
+  @@map("permisos")
+}
+
+model Reconocimiento {
+  reconocimientoId    Int       @id @default(autoincrement()) @map("reconocimiento_id")
+  fallecidoId         Int       @map("fallecido_id")
+  loteId              Int?      @map("lote_id")
+  nombreAnterior      String    @db.VarChar(200) @map("nombre_anterior")
+  nombreIdentificado  String    @db.VarChar(200) @map("nombre_identificado")
+  fechaReconocimiento DateTime? @db.Date @map("fecha_reconocimiento")
+  medioIdentificacion String?   @db.VarChar(300) @map("medio_identificacion")
+  instanciaSolicita   String?   @db.VarChar(250) @map("instancia_solicita")
+  numeroActaDefuncion String?   @db.VarChar(50) @map("numero_acta_defuncion")
+  ministerioPublico   String?   @db.VarChar(200) @map("ministerio_publico")
+  observaciones       String?   @db.VarChar(600)
+  permisoExhumacionId Int?      @map("permiso_exhumacion_id")
+  usuarioRegistroId   Int?      @map("usuario_registro_id")
+  fechaRegistro       DateTime  @default(now()) @db.Timestamp(0) @map("fecha_registro")
+
+  fallecido         Fallecido @relation(fields: [fallecidoId], references: [fallecidoId])
+  lote              Lote?     @relation(fields: [loteId], references: [loteId])
+  permisoExhumacion Permiso?  @relation(fields: [permisoExhumacionId], references: [permisoId])
+  usuarioRegistro   Usuario?  @relation(fields: [usuarioRegistroId], references: [usuarioId])
+
+  @@index([fallecidoId], name: "ix_reconocimientos_fallecido")
+  @@index([fechaReconocimiento], name: "ix_reconocimientos_fecha")
+  @@map("reconocimientos")
+}
+
+model Reimpresion {
+  reimpresionId    Int      @id @default(autoincrement()) @map("reimpresion_id")
+  permisoId        Int?     @map("permiso_id")
+  tituloId         Int?     @map("titulo_id")
+  cesionId         Int?     @map("cesion_id")
+  usuarioId        Int      @map("usuario_id")
+  fechaReimpresion DateTime @default(now()) @map("fecha_reimpresion")
+  motivo           String   @db.VarChar(300)
+  rutaDocumento    String?  @db.VarChar(500) @map("ruta_documento")
+
+  permiso Permiso?         @relation(fields: [permisoId], references: [permisoId])
+  titulo  TituloPropiedad? @relation(fields: [tituloId], references: [tituloId])
+  cesion  CesionDerechos?  @relation(fields: [cesionId], references: [cesionId])
+  usuario Usuario          @relation(fields: [usuarioId], references: [usuarioId])
+
+  @@map("reimpresiones")
+}
+
+model Bitacora {
+  bitacoraId  BigInt   @id @default(autoincrement()) @map("bitacora_id")
+  usuarioId   Int?     @map("usuario_id")
+  accion      String   @db.VarChar(50)
+  tabla       String?  @db.VarChar(100)
+  registroId  Int?     @map("registro_id")
+  descripcion String?  @db.VarChar(500)
+  ipAcceso    String?  @db.VarChar(50) @map("ip_acceso")
+  fechaHora   DateTime @default(now()) @map("fecha_hora")
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [usuarioId])
+
+  @@map("bitacoras")
+}
+
+model Incidencia {
+  incidenciaId      Int       @id @default(autoincrement()) @map("incidencia_id")
+  panteonId         Int       @map("panteon_id")
+  loteId            Int?      @map("lote_id")
+  seccion           String?   @db.VarChar(100)
+  numeroManzana     String?   @db.VarChar(50) @map("numero_manzana")
+  numeroLote        String?   @db.VarChar(50) @map("numero_lote")
+  tipo              String    @db.VarChar(60)
+  descripcion       String    @db.VarChar(1000)
+  fechaIncidencia   DateTime  @db.Date @map("fecha_incidencia")
+  reportadoPor      String?   @db.VarChar(200) @map("reportado_por")
+  estado            String    @default("REPORTADA") @db.VarChar(20)
+  fechaAtencion     DateTime? @db.Date @map("fecha_atencion")
+  atendidoPor       String?   @db.VarChar(200) @map("atendido_por")
+  resolucion        String?   @db.VarChar(1000)
+  usuarioRegistroId Int?      @map("usuario_registro_id")
+  fechaRegistro     DateTime  @default(now()) @db.Timestamp(3) @map("fecha_registro")
+
+  panteon         Panteon  @relation(fields: [panteonId], references: [panteonId])
+  lote            Lote?    @relation(fields: [loteId], references: [loteId])
+  usuarioRegistro Usuario? @relation(fields: [usuarioRegistroId], references: [usuarioId])
+
+  @@index([panteonId, fechaIncidencia], name: "ix_incidencias_panteon_fecha")
+  @@index([estado], name: "ix_incidencias_estado")
+  @@map("incidencias")
+}
