@@ -22,7 +22,9 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<
   // servidor; aquí, sin este redirect, la SPA se queda mostrando una pantalla
   // rota con errores 401 silenciosos en vez de mandar a /login como se espera.
   if (res.status === 401 && !ruta.startsWith("/auth/")) {
-    window.location.href = "/login";
+    // Con HashRouter, la app siempre vive en BASE_URL/index.html -- la ruta
+    // real la decide todo lo que va después de "#".
+    window.location.href = `${import.meta.env.BASE_URL}#/login`;
     return new Promise<T>(() => {});
   }
 
