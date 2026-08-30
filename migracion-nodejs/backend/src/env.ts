@@ -16,6 +16,11 @@ export const env = {
 
 // Misma protección que Program.cs tenía en el proyecto .NET: nunca arrancar en
 // producción con una llave por defecto o demasiado corta para firmar JWT.
+// El valor de .env.example es público (el repo lo es) -- que sea "largo" no
+// lo hace secreto, así que se rechaza también por coincidencia exacta.
 if (env.isProduction && env.jwtSecret.length < 32) {
   throw new Error("JWT_SECRET debe tener al menos 32 caracteres en producción.");
+}
+if (env.isProduction && env.jwtSecret === "cambia-esto-por-una-llave-de-al-menos-32-caracteres") {
+  throw new Error("JWT_SECRET sigue siendo el valor de ejemplo de .env.example -- genera uno propio.");
 }
