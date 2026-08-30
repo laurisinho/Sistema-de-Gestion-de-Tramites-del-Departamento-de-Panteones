@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { api, API_URL } from "../../lib/api";
+import { api } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
+import { BotonImprimir } from "../../components/BotonImprimir";
 
 interface CesionFila {
   cesionId: number;
@@ -83,15 +84,12 @@ export function CesionesLista() {
                       <td>{new Date(c.fechaCesion).toLocaleDateString("es-MX", { timeZone: "UTC" })}</td>
                       <td>
                         <div className="tabla-acciones">
-                          <a
-                            href={`${API_URL}/cesiones/${c.cesionId}/pdf`}
-                            target="_blank"
-                            rel="noreferrer"
+                          <BotonImprimir
+                            ruta={`/cesiones/${c.cesionId}/pdf`}
+                            nombreArchivo={`cesion-${c.folio}.pdf`}
                             className="boton-secundario boton-sm"
                             title="Imprimir"
-                          >
-                            <i className="bi bi-printer" />
-                          </a>
+                          />
                           {c.estado !== "CANCELADO" && (
                             <Link to={`/reimpresiones?tipo=CESION&id=${c.cesionId}`} className="boton-secundario boton-sm" title="Reimprimir con sello">
                               <i className="bi bi-printer-fill" />

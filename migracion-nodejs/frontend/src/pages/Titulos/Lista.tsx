@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { api, API_URL, ApiError } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { BotonImprimir } from "../../components/BotonImprimir";
 
 interface Panteon {
   panteonId: number;
@@ -180,15 +181,12 @@ export function TitulosLista() {
                       <td>{t.fechaEmision ? new Date(t.fechaEmision).toLocaleDateString("es-MX") : "—"}</td>
                       <td>
                         <div className="tabla-acciones">
-                          <a
-                            href={`${API_URL}/titulos/${t.tituloId}/pdf`}
-                            target="_blank"
-                            rel="noreferrer"
+                          <BotonImprimir
+                            ruta={`/titulos/${t.tituloId}/pdf`}
+                            nombreArchivo={`titulo-${t.folio}.pdf`}
                             className="boton-secundario boton-sm"
                             title="Imprimir"
-                          >
-                            <i className="bi bi-printer" />
-                          </a>
+                          />
                           <Link to={`/titulos/${t.tituloId}`} className="boton boton-sm" title="Ver">
                             <i className="bi bi-eye" />
                           </Link>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { API_URL } from "../../lib/api";
+import { BotonDescarga } from "../../components/BotonDescarga";
 
 const anioActual = new Date().getFullYear();
 const trimActual = Math.floor(new Date().getMonth() / 3) + 1;
@@ -61,9 +61,7 @@ export function NoReclamadosReporte() {
                 <option value="3">3º (Jul – Sep)</option>
                 <option value="4">4º (Oct – Dic)</option>
               </select>
-              <a className="boton" href={`${API_URL}/no-reclamados/reportes/sepultados?${paramsTrimestral}`} target="_blank" rel="noreferrer">
-                <i className="bi bi-download" />
-              </a>
+              <BotonDescarga className="boton" icono="bi-download" ruta={`/no-reclamados/reportes/sepultados?${paramsTrimestral}`} />
             </div>
           </div>
         </div>
@@ -81,9 +79,7 @@ export function NoReclamadosReporte() {
             <div className="barra-filtros" style={{ marginBottom: 0 }}>
               <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} title="Desde" />
               <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} title="Hasta" />
-              <a className="boton" href={`${API_URL}/no-reclamados/reportes/sepultados?${paramsRango}`} target="_blank" rel="noreferrer">
-                <i className="bi bi-download" />
-              </a>
+              <BotonDescarga className="boton" icono="bi-download" ruta={`/no-reclamados/reportes/sepultados?${paramsRango}`} />
             </div>
           </div>
         </div>
@@ -115,9 +111,9 @@ export function NoReclamadosReporte() {
                 <option value="3">3º (Jul – Sep)</option>
                 <option value="4">4º (Oct – Dic)</option>
               </select>
-              <a className="boton" href={`${API_URL}/no-reclamados/reportes/identificados?${paramsIdent}`} target="_blank" rel="noreferrer">
-                <i className="bi bi-download" /> Generar
-              </a>
+              <BotonDescarga className="boton" icono="bi-download" ruta={`/no-reclamados/reportes/identificados?${paramsIdent}`}>
+                Generar
+              </BotonDescarga>
               <Link className="boton-secundario" to="/no-reclamados/reconocidos">
                 <i className="bi bi-eye" /> Ver
               </Link>

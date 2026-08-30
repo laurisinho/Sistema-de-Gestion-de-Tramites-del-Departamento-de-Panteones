@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "../lib/api";
+import { setToken, clearToken } from "../lib/token";
 
 export interface Usuario {
   usuarioId: number;
@@ -29,15 +30,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(nombreUsuario: string, password: string) {
-    const r = await api<{ usuario: Usuario }>("/auth/login", {
+    const r = await api<{ usuario: Usuario; token: string }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ nombreUsuario, password }),
     });
+    setToken(r.token);
     setUsuario(r.usuario);
   }
 
   async function logout() {
     await api("/auth/logout", { method: "POST" }).catch(() => {});
+    clearToken();
     setUsuario(null);
   }
 

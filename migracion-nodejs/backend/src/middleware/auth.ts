@@ -47,7 +47,14 @@ export function cookieOpciones(req: Request) {
 }
 
 export function requiereAuth(req: Request, res: Response, next: NextFunction) {
-  const token = req.cookies?.[COOKIE_NAME];
+  // El header gana: es lo que manda el frontend real (github.io -> onrender.com)
+  // desde que se descubrió que varios navegadores (Brave, Safari y cada vez más
+  // Chrome) bloquean por privacidad la cookie entre sitios distintos sin
+  // importar cómo se configure SameSite/Secure. La cookie queda como respaldo
+  // para cuando frontend y backend sí comparten origen (desarrollo local).
+  const encabezado = req.headers.authorization;
+  const tokenHeader = encabezado?.startsWith("Bearer ") ? encabezado.slice(7) : undefined;
+  const token = tokenHeader ?? req.cookies?.[COOKIE_NAME];
   if (!token) return res.status(401).json({ error: "No autenticado" });
 
   try {

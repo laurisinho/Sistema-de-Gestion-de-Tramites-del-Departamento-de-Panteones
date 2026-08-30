@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { api, API_URL, ApiError } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { BotonImprimir } from "../../components/BotonImprimir";
 
 interface Panteon {
   panteonId: number;
@@ -167,15 +168,12 @@ export function PermisosLista() {
                       <td>{new Date(p.fechaCreacion).toLocaleDateString("es-MX")}</td>
                       <td>
                         <div className="tabla-acciones">
-                          <a
-                            href={`${API_URL}/permisos/${p.permisoId}/pdf`}
-                            target="_blank"
-                            rel="noreferrer"
+                          <BotonImprimir
+                            ruta={`/permisos/${p.permisoId}/pdf`}
+                            nombreArchivo={`permiso-${p.folio}.pdf`}
                             className="boton-secundario boton-sm"
                             title="Imprimir"
-                          >
-                            <i className="bi bi-printer" />
-                          </a>
+                          />
                           <Link to={`/permisos/${p.permisoId}`} className="boton boton-sm" title="Ver">
                             <i className="bi bi-eye" />
                           </Link>

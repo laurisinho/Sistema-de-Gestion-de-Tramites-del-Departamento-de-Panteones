@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, API_URL } from "../../lib/api";
+import { api, descargarArchivo } from "../../lib/api";
 
 interface EventoLote {
   fecha: string | null;
@@ -140,9 +140,21 @@ export function LoteExpediente() {
                   </div>
                   <div className="exp-tl-titulo">
                     {e.enlace?.endsWith("/pdf") ? (
-                      <a href={`${API_URL}${e.enlace}`} target="_blank" rel="noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
+                      <button
+                        type="button"
+                        onClick={() => descargarArchivo(e.enlace!).catch(() => alert("No se pudo generar el documento."))}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          font: "inherit",
+                          cursor: "pointer",
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
+                      >
                         {tituloTexto}
-                      </a>
+                      </button>
                     ) : e.enlace ? (
                       <Link to={e.enlace} style={{ textDecoration: "none", color: "inherit" }}>
                         {tituloTexto}

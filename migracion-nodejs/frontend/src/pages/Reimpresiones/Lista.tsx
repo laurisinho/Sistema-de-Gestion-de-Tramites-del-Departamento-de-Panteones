@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError, API_URL } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
+import { getToken } from "../../lib/token";
 
 interface ReimpresionFila {
   reimpresionId: number;
@@ -86,10 +87,14 @@ export function ReimpresionesLista() {
     setExito(null);
     setEnviando(true);
     try {
+      const token = getToken();
       const res = await fetch(`${API_URL}/reimpresiones`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ tipo: seleccion.tipo, id: seleccion.id, motivo }),
       });
       if (!res.ok) {

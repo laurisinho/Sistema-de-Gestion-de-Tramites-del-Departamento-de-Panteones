@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, API_URL, ApiError } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { BotonImprimir } from "../../components/BotonImprimir";
 
 interface TituloDetalle {
   tituloId: number;
@@ -85,9 +86,9 @@ export function TituloDetalle() {
           Título {data.folio}
         </h2>
         <div className="page-header-acciones">
-          <a href={`${API_URL}/titulos/${id}/pdf`} target="_blank" rel="noreferrer" className="boton-secundario">
-            <i className="bi bi-printer" /> Imprimir
-          </a>
+          <BotonImprimir ruta={`/titulos/${id}/pdf`} nombreArchivo={`titulo-${data.folio}.pdf`} className="boton-secundario">
+            {" "}Imprimir
+          </BotonImprimir>
           <Link className="boton-secundario" to={`/reimpresiones?tipo=TITULO&id=${id}`}>
             <i className="bi bi-printer-fill" /> Reimprimir con sello
           </Link>

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { api, API_URL } from "../../lib/api";
+import { api } from "../../lib/api";
+import { BotonDescarga } from "../../components/BotonDescarga";
 
 interface ReconocimientoFila {
   reconocimientoId: number;
@@ -56,9 +57,9 @@ export function NoReclamadosReconocidos() {
           De no reconocidas a reconocidas
         </h2>
         <div className="page-header-acciones">
-          <a className="boton-secundario" href={`${API_URL}/no-reclamados/reportes/identificados?${paramsReporte}`} target="_blank" rel="noreferrer">
-            <i className="bi bi-file-earmark-excel" /> Reporte Excel
-          </a>
+          <BotonDescarga className="boton-secundario" icono="bi-file-earmark-excel" ruta={`/no-reclamados/reportes/identificados?${paramsReporte}`}>
+            Reporte Excel
+          </BotonDescarga>
           <Link className="boton-secundario" to="/no-reclamados">
             <i className="bi bi-arrow-left" /> No reclamados
           </Link>

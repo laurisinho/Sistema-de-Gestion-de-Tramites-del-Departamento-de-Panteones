@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { api, API_URL } from "../../lib/api";
+import { api } from "../../lib/api";
+import { BotonDescarga } from "../../components/BotonDescarga";
 
 interface Resumen {
   totalNoReclamados: number;
@@ -86,14 +87,13 @@ export function ReportesIndex() {
                 ))}
               </select>
             </div>
-            <a
+            <BotonDescarga
               className="boton"
-              href={`${API_URL}/reportes/movimientos/excel?${new URLSearchParams({ anio: String(anio), ...(mes ? { mes: String(mes) } : {}) })}`}
-              target="_blank"
-              rel="noreferrer"
+              icono="bi-file-earmark-excel"
+              ruta={`/reportes/movimientos/excel?${new URLSearchParams({ anio: String(anio), ...(mes ? { mes: String(mes) } : {}) })}`}
             >
-              <i className="bi bi-file-earmark-excel" /> Generar Excel
-            </a>
+              Generar Excel
+            </BotonDescarga>
           </div>
         </div>
       </div>
@@ -147,9 +147,9 @@ export function ReportesIndex() {
               </div>
             </div>
             <div className="barra-filtros" style={{ marginBottom: 0 }}>
-              <a className="boton" href={`${API_URL}/incidencias/reporte?${paramsIncidencias}`} target="_blank" rel="noreferrer">
-                <i className="bi bi-file-earmark-excel" /> Generar Excel
-              </a>
+              <BotonDescarga className="boton" icono="bi-file-earmark-excel" ruta={`/incidencias/reporte?${paramsIncidencias}`}>
+                Generar Excel
+              </BotonDescarga>
               <Link className="boton-secundario" to="/incidencias">
                 <i className="bi bi-eye" /> Ver y capturar
               </Link>
@@ -194,9 +194,9 @@ export function ReportesIndex() {
                   <option value="4">4º (Oct–Dic)</option>
                 </select>
               </div>
-              <a className="boton" href={`${API_URL}/no-reclamados/reportes/sepultados?${paramsNoReclamados}`} target="_blank" rel="noreferrer">
-                <i className="bi bi-file-earmark-excel" /> Generar Excel
-              </a>
+              <BotonDescarga className="boton" icono="bi-file-earmark-excel" ruta={`/no-reclamados/reportes/sepultados?${paramsNoReclamados}`}>
+                Generar Excel
+              </BotonDescarga>
             </div>
           </div>
         </div>
@@ -238,9 +238,9 @@ export function ReportesIndex() {
                   <option value="4">4º (Oct–Dic)</option>
                 </select>
               </div>
-              <a className="boton" href={`${API_URL}/no-reclamados/reportes/identificados?${paramsNoReclamados}`} target="_blank" rel="noreferrer">
-                <i className="bi bi-file-earmark-excel" /> Generar Excel
-              </a>
+              <BotonDescarga className="boton" icono="bi-file-earmark-excel" ruta={`/no-reclamados/reportes/identificados?${paramsNoReclamados}`}>
+                Generar Excel
+              </BotonDescarga>
             </div>
           </div>
         </div>

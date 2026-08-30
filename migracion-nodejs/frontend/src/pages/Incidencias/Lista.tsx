@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { api, API_URL, ApiError } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { BotonDescarga } from "../../components/BotonDescarga";
 
 interface Panteon {
   panteonId: number;
@@ -122,9 +123,9 @@ export function IncidenciasLista() {
           Incidencias en panteones
         </h2>
         <div className="page-header-acciones">
-          <a className="boton-secundario" href={`${API_URL}/incidencias/reporte?${paramsExcel}`} target="_blank" rel="noreferrer">
-            <i className="bi bi-file-earmark-excel" /> Exportar a Excel
-          </a>
+          <BotonDescarga ruta={`/incidencias/reporte?${paramsExcel}`} className="boton-secundario" icono="bi-file-earmark-excel">
+            Exportar a Excel
+          </BotonDescarga>
           <Link className="boton" to="/incidencias/nueva">
             <i className="bi bi-plus-circle" /> Nueva incidencia
           </Link>

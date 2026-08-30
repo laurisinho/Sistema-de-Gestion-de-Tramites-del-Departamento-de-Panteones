@@ -50,6 +50,9 @@ authRouter.post("/login", asyncHandler(async (req, res) => {
       nombreCompleto: usuario.nombreCompleto,
       rol: usuario.rol.nombre,
     },
+    // La cookie no sirve entre sitios distintos en varios navegadores; el
+    // frontend guarda este token y lo manda por header en cada petición.
+    token,
   });
 }));
 
