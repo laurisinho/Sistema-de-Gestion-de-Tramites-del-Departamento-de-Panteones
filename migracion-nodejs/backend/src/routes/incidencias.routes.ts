@@ -2,14 +2,14 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { requiereAuth } from "../middleware/auth";
+import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import ExcelJS from "exceljs";
 import { prepararHoja, cerrarHoja, escribirFecha, type ColDef } from "../lib/excel";
 
 export const incidenciasRouter = Router();
-incidenciasRouter.use(requiereAuth);
+incidenciasRouter.use(requiereAuth, requiereEscritura);
 
 // Mismos catálogos estáticos que Models/Entities/Incidencia.cs.
 export const ESTADOS_INCIDENCIA = ["REPORTADA", "EN_PROCESO", "ATENDIDA"] as const;

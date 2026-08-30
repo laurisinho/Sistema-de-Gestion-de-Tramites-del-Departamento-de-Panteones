@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requiereAuth } from "../middleware/auth";
+import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { renderPdf } from "../lib/pdf";
@@ -10,7 +10,7 @@ import { tituloHtml } from "../templates/titulo.template";
 import { cesionHtml, type TituloCedidoParaPdf } from "../templates/cesion.template";
 
 export const reimpresionesRouter = Router();
-reimpresionesRouter.use(requiereAuth);
+reimpresionesRouter.use(requiereAuth, requiereEscritura);
 
 reimpresionesRouter.get(
   "/",

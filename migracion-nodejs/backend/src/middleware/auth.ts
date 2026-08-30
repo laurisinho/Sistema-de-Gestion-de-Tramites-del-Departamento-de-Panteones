@@ -66,6 +66,19 @@ export function requiereAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+// El .NET original nunca llegó a restringir nada por rol (solo exigía sesión
+// iniciada) -- los 4 roles existían solo como descripción en la base, sin
+// ningún permiso real detrás. "Consulta" se documenta como "sin posibilidad
+// de edición", así que se hace cumplir aquí: puede hacer cualquier GET, pero
+// ningún método que escriba. Se aplica junto con requiereAuth a nivel de
+// router para que ningún endpoint de escritura se quede afuera por descuido.
+export function requiereEscritura(req: Request, res: Response, next: NextFunction) {
+  if (req.usuario?.rol === "Consulta" && req.method !== "GET") {
+    return res.status(403).json({ error: "Tu rol (Consulta) solo tiene permiso de lectura." });
+  }
+  next();
+}
+
 export function requiereRol(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.usuario) return res.status(401).json({ error: "No autenticado" });

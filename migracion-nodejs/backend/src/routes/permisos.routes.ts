@@ -2,14 +2,14 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Permiso } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { requiereAuth } from "../middleware/auth";
+import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { renderPdf } from "../lib/pdf";
 import { permisoHtml } from "../templates/permiso.template";
 
 export const permisosRouter = Router();
-permisosRouter.use(requiereAuth);
+permisosRouter.use(requiereAuth, requiereEscritura);
 
 function str(v: unknown): string | undefined {
   const s = typeof v === "string" ? v.trim() : "";

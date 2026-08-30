@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requiereAuth } from "../middleware/auth";
+import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import ExcelJS from "exceljs";
 import { prepararHoja, cerrarHoja, escribirFecha, fechaHoraTexto, GUINDA, type ColDef } from "../lib/excel";
 
 export const noReclamadosRouter = Router();
-noReclamadosRouter.use(requiereAuth);
+noReclamadosRouter.use(requiereAuth, requiereEscritura);
 
 function str(v: unknown): string | undefined {
   const s = typeof v === "string" ? v.trim() : "";
