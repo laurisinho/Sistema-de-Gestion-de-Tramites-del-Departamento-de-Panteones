@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { api, API_URL } from "../../lib/api";
+import { api, API_URL, ApiError } from "../../lib/api";
+import { ConfirmModal } from "../../components/ConfirmModal";
 
 interface Panteon {
   panteonId: number;
@@ -27,6 +28,12 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
   ATENDIDA: "Atendida",
 };
 
+const CLASE_ESTADO: Record<string, string> = {
+  REPORTADA: "badge-danger",
+  EN_PROCESO: "badge-warning",
+  ATENDIDA: "badge-success",
+};
+
 function ubicacionTexto(i: IncidenciaFila): string {
   const partes = [
     i.seccion ? `Secc. ${i.seccion}` : null,
@@ -40,12 +47,19 @@ export function IncidenciasLista() {
   const queryClient = useQueryClient();
   const location = useLocation();
   const exito = (location.state as { exito?: string } | null)?.exito;
+
   const [panteonId, setPanteonId] = useState("");
   const [estado, setEstado] = useState("");
   const [tipo, setTipo] = useState("");
   const [q, setQ] = useState("");
-  const [desde, setDesde] = useState("");
-  const [hasta, setHasta] = useState("");
+  const [filtros, setFiltros] = useState({ panteonId: "", estado: "", tipo: "", q: "" });
+
+  const [aAtender, setAAtender] = useState<IncidenciaFila | null>(null);
+  const [estadoAtender, setEstadoAtender] = useState("EN_PROCESO");
+  const [atendidoPor, setAtendidoPor] = useState("");
+  const [resolucion, setResolucion] = useState("");
+  const [aEliminar, setAEliminar] = useState<IncidenciaFila | null>(null);
+  const [errorAtender, setErrorAtender] = useState<string | null>(null);
 
   const { data: panteones } = useQuery({
     queryKey: ["catalogos", "panteones"],
@@ -57,28 +71,47 @@ export function IncidenciasLista() {
   });
 
   const { data } = useQuery({
-    queryKey: ["incidencias", panteonId, estado, tipo, q],
+    queryKey: ["incidencias", filtros],
     queryFn: () => {
       const params = new URLSearchParams();
-      if (panteonId) params.set("panteonId", panteonId);
-      if (estado) params.set("estado", estado);
-      if (tipo) params.set("tipo", tipo);
-      if (q) params.set("q", q);
+      if (filtros.panteonId) params.set("panteonId", filtros.panteonId);
+      if (filtros.estado) params.set("estado", filtros.estado);
+      if (filtros.tipo) params.set("tipo", filtros.tipo);
+      if (filtros.q) params.set("q", filtros.q);
       return api<{ lista: IncidenciaFila[]; reportadas: number; enProceso: number; atendidas: number }>(
         `/incidencias?${params}`
       );
     },
   });
 
+  const paramsExcel = new URLSearchParams({
+    ...(filtros.panteonId ? { panteonId: filtros.panteonId } : {}),
+    ...(filtros.estado ? { estado: filtros.estado } : {}),
+    ...(filtros.tipo ? { tipo: filtros.tipo } : {}),
+  });
+
   const atender = useMutation({
-    mutationFn: ({ id, estado }: { id: number; estado: string }) =>
-      api(`/incidencias/${id}/atender`, { method: "PATCH", body: JSON.stringify({ estado }) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incidencias"] }),
+    mutationFn: () =>
+      api(`/incidencias/${aAtender!.incidenciaId}/atender`, {
+        method: "PATCH",
+        body: JSON.stringify({ estado: estadoAtender, atendidoPor: atendidoPor || undefined, resolucion: resolucion || undefined }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidencias"] });
+      setAAtender(null);
+      setAtendidoPor("");
+      setResolucion("");
+      setErrorAtender(null);
+    },
+    onError: (err) => setErrorAtender(err instanceof ApiError ? err.message : "No se pudo actualizar"),
   });
 
   const eliminar = useMutation({
     mutationFn: (id: number) => api(`/incidencias/${id}`, { method: "DELETE" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incidencias"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidencias"] });
+      setAEliminar(null);
+    },
   });
 
   return (
@@ -89,8 +122,11 @@ export function IncidenciasLista() {
           Incidencias en panteones
         </h2>
         <div className="page-header-acciones">
+          <a className="boton-secundario" href={`${API_URL}/incidencias/reporte?${paramsExcel}`} target="_blank" rel="noreferrer">
+            <i className="bi bi-file-earmark-excel" /> Exportar a Excel
+          </a>
           <Link className="boton" to="/incidencias/nueva">
-            <i className="bi bi-plus-circle" /> Reportar incidencia
+            <i className="bi bi-plus-circle" /> Nueva incidencia
           </Link>
         </div>
       </div>
@@ -102,82 +138,82 @@ export function IncidenciasLista() {
       )}
 
       {data && (
-        <div className="tarjetas" style={{ marginBottom: 20 }}>
-          <div className="tarjeta" style={{ cursor: "default" }}>
-            <span className="tarjeta-icono">
-              <i className="bi bi-flag" />
-            </span>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{data.reportadas}</div>
-              <div className="text-muted" style={{ fontSize: 12 }}>Reportadas</div>
+        <div className="detalle-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 20 }}>
+          <div className="card">
+            <div className="card-body">
+              <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1, color: "#b02a37" }}>{data.reportadas}</div>
+              <div className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>Reportadas</div>
             </div>
           </div>
-          <div className="tarjeta" style={{ cursor: "default" }}>
-            <span className="tarjeta-icono">
-              <i className="bi bi-hourglass-split" />
-            </span>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{data.enProceso}</div>
-              <div className="text-muted" style={{ fontSize: 12 }}>En proceso</div>
+          <div className="card">
+            <div className="card-body">
+              <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1, color: "#8a6207" }}>{data.enProceso}</div>
+              <div className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>En proceso</div>
             </div>
           </div>
-          <div className="tarjeta" style={{ cursor: "default" }}>
-            <span className="tarjeta-icono">
-              <i className="bi bi-check-circle" />
-            </span>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{data.atendidas}</div>
-              <div className="text-muted" style={{ fontSize: 12 }}>Atendidas</div>
+          <div className="card">
+            <div className="card-body">
+              <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1, color: "#157347" }}>{data.atendidas}</div>
+              <div className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>Atendidas</div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="barra-filtros">
-        <select value={panteonId} onChange={(e) => setPanteonId(e.target.value)}>
-          <option value="">Todos los panteones</option>
-          {panteones?.map((p) => (
-            <option key={p.panteonId} value={p.panteonId}>
-              {p.nombre}
-            </option>
-          ))}
-        </select>
-        <select value={estado} onChange={(e) => setEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {Object.entries(ETIQUETAS_ESTADO).map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
-            </option>
-          ))}
-        </select>
-        <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-          <option value="">Todos los tipos</option>
-          {tipos?.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <input placeholder="Buscar..." value={q} onChange={(e) => setQ(e.target.value)} />
-      </div>
-
-      <div className="barra-filtros">
-        <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} title="Desde" />
-        <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} title="Hasta" />
-        <a
-          className="boton-secundario"
-          href={`${API_URL}/incidencias/reporte?${new URLSearchParams({
-            ...(panteonId ? { panteonId } : {}),
-            ...(estado ? { estado } : {}),
-            ...(tipo ? { tipo } : {}),
-            ...(desde ? { desde } : {}),
-            ...(hasta ? { hasta } : {}),
-          })}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <i className="bi bi-file-earmark-excel" /> Descargar reporte
-        </a>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-body">
+          <form
+            className="form-grid"
+            style={{ gridTemplateColumns: "repeat(4, 1fr)", maxWidth: "none", alignItems: "flex-end" }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              setFiltros({ panteonId, estado, tipo, q });
+            }}
+          >
+            <div className="form-campo">
+              <label>Panteón</label>
+              <select value={panteonId} onChange={(e) => setPanteonId(e.target.value)}>
+                <option value="">Todos</option>
+                {panteones?.map((p) => (
+                  <option key={p.panteonId} value={p.panteonId}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-campo">
+              <label>Estado</label>
+              <select value={estado} onChange={(e) => setEstado(e.target.value)}>
+                <option value="">Todos</option>
+                {Object.entries(ETIQUETAS_ESTADO).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-campo">
+              <label>Tipo</label>
+              <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                <option value="">Todos</option>
+                {tipos?.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-campo" style={{ flexDirection: "row", gap: 8 }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                <label>Buscar</label>
+                <input placeholder="Texto..." value={q} onChange={(e) => setQ(e.target.value)} />
+              </div>
+              <button className="boton" type="submit">
+                <i className="bi bi-funnel" /> Filtrar
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <div className="card">
@@ -192,10 +228,11 @@ export function IncidenciasLista() {
               <table className="tabla">
                 <thead>
                   <tr>
+                    <th>Folio</th>
                     <th>Fecha</th>
                     <th>Panteón</th>
-                    <th>Ubicación</th>
                     <th>Tipo</th>
+                    <th>Ubicación</th>
                     <th>Descripción</th>
                     <th>Estado</th>
                     <th></th>
@@ -204,41 +241,51 @@ export function IncidenciasLista() {
                 <tbody>
                   {data.lista.length === 0 && (
                     <tr>
-                      <td colSpan={7}>Sin incidencias registradas.</td>
+                      <td colSpan={8}>Sin incidencias registradas.</td>
                     </tr>
                   )}
                   {data.lista.map((i) => (
                     <tr key={i.incidenciaId}>
-                      <td>{new Date(i.fechaIncidencia).toLocaleDateString("es-MX", { timeZone: "UTC" })}</td>
-                      <td>{i.panteon.nombre}</td>
-                      <td className="tabla-col-ancha">{ubicacionTexto(i)}</td>
-                      <td>{i.tipo}</td>
-                      <td className="tabla-col-ancha" style={{ minWidth: 220 }}>{i.descripcion}</td>
+                      <td style={{ fontWeight: 600 }}>{i.incidenciaId}</td>
                       <td>
-                        <select
-                          value={i.estado}
-                          onChange={(e) => atender.mutate({ id: i.incidenciaId, estado: e.target.value })}
-                          style={{ padding: "4px 8px", fontSize: 12.5, borderRadius: 7 }}
-                        >
-                          {Object.entries(ETIQUETAS_ESTADO).map(([v, l]) => (
-                            <option key={v} value={v}>
-                              {l}
-                            </option>
-                          ))}
-                        </select>
+                        <small>{new Date(i.fechaIncidencia).toLocaleDateString("es-MX", { timeZone: "UTC" })}</small>
+                      </td>
+                      <td>
+                        <small>{i.panteon.nombre}</small>
+                      </td>
+                      <td>
+                        <small>{i.tipo}</small>
+                      </td>
+                      <td className="tabla-col-ancha">
+                        <small className="text-muted">{ubicacionTexto(i)}</small>
+                      </td>
+                      <td className="tabla-col-ancha" style={{ minWidth: 220 }}>
+                        <small>{i.descripcion}</small>
+                      </td>
+                      <td>
+                        <span className={`badge ${CLASE_ESTADO[i.estado] ?? "badge-secondary"}`}>{ETIQUETAS_ESTADO[i.estado] ?? i.estado}</span>
                       </td>
                       <td>
                         <div className="tabla-acciones">
+                          {i.estado !== "ATENDIDA" && (
+                            <button
+                              className="boton-secundario boton-sm"
+                              title="Atender"
+                              onClick={() => {
+                                setEstadoAtender(i.estado === "EN_PROCESO" ? "ATENDIDA" : "EN_PROCESO");
+                                setAtendidoPor("");
+                                setResolucion("");
+                                setErrorAtender(null);
+                                setAAtender(i);
+                              }}
+                            >
+                              <i className="bi bi-check2-square" />
+                            </button>
+                          )}
                           <Link to={`/incidencias/${i.incidenciaId}/editar`} className="boton-secundario boton-sm" title="Editar">
                             <i className="bi bi-pencil" />
                           </Link>
-                          <button
-                            className="boton-secundario boton-sm"
-                            onClick={() => {
-                              if (confirm("¿Eliminar esta incidencia?")) eliminar.mutate(i.incidenciaId);
-                            }}
-                            title="Eliminar"
-                          >
+                          <button className="boton-peligro boton-sm" onClick={() => setAEliminar(i)} title="Eliminar">
                             <i className="bi bi-trash" />
                           </button>
                         </div>
@@ -251,6 +298,92 @@ export function IncidenciasLista() {
           )}
         </div>
       </div>
+
+      {aAtender && (
+        <div className="modal-overlay" onClick={() => setAAtender(null)}>
+          <div className="modal-caja" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-encabezado">
+              <h3>
+                <i className="bi bi-check2-square" /> Atender incidencia
+              </h3>
+              <button type="button" className="modal-cerrar" onClick={() => setAAtender(null)} aria-label="Cerrar">
+                <i className="bi bi-x-lg" />
+              </button>
+            </div>
+            <div className="modal-cuerpo">
+              <div className="form-grid una-col">
+                <div className="form-campo">
+                  <label>Estado</label>
+                  <select value={estadoAtender} onChange={(e) => setEstadoAtender(e.target.value)}>
+                    <option value="EN_PROCESO">En proceso</option>
+                    <option value="ATENDIDA">Atendida</option>
+                  </select>
+                </div>
+                <div className="form-campo">
+                  <label>Atendido por</label>
+                  <input value={atendidoPor} onChange={(e) => setAtendidoPor(e.target.value)} placeholder="Nombre de quien atiende" />
+                </div>
+                <div className="form-campo">
+                  <label>Resolución</label>
+                  <textarea
+                    value={resolucion}
+                    onChange={(e) => setResolucion(e.target.value)}
+                    placeholder="Qué se hizo para resolverla"
+                    rows={3}
+                    style={{
+                      padding: "0.48rem 0.8rem",
+                      border: "1px solid var(--input-border)",
+                      borderRadius: 9,
+                      fontSize: 13.5,
+                      background: "var(--input-bg)",
+                      color: "var(--text-base)",
+                      fontFamily: "inherit",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+              </div>
+              {errorAtender && (
+                <p className="aviso-error" style={{ marginTop: 12, marginBottom: 0 }}>
+                  {errorAtender}
+                </p>
+              )}
+            </div>
+            <div className="modal-pie">
+              <button
+                type="button"
+                className="boton-secundario"
+                onClick={() => {
+                  setAAtender(null);
+                  setErrorAtender(null);
+                }}
+                disabled={atender.isPending}
+              >
+                Cancelar
+              </button>
+              <button type="button" className="boton" onClick={() => atender.mutate()} disabled={atender.isPending}>
+                <i className="bi bi-check-circle" /> {atender.isPending ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        abierto={!!aEliminar}
+        titulo="Confirmar eliminación"
+        mensaje={
+          <>
+            ¿Eliminar la incidencia <strong>#{aEliminar?.incidenciaId}</strong>?
+          </>
+        }
+        nota="Esta acción no se puede deshacer."
+        textoConfirmar="Sí, eliminar"
+        iconoConfirmar="bi-trash"
+        cargando={eliminar.isPending}
+        onCancelar={() => setAEliminar(null)}
+        onConfirmar={() => aEliminar && eliminar.mutate(aEliminar.incidenciaId)}
+      />
     </div>
   );
 }

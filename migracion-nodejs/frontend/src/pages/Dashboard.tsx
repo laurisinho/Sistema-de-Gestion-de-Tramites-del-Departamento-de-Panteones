@@ -83,7 +83,7 @@ export function Dashboard() {
             </div>
           </Link>
           <Link to="/permisos" className="tarjeta">
-            <span className="tarjeta-icono">
+            <span className="tarjeta-icono icon-blue">
               <i className="bi bi-file-earmark-check" />
             </span>
             <div>
@@ -92,7 +92,7 @@ export function Dashboard() {
             </div>
           </Link>
           <Link to="/titulos" className="tarjeta">
-            <span className="tarjeta-icono">
+            <span className="tarjeta-icono icon-orange">
               <i className="bi bi-envelope-arrow-up" />
             </span>
             <div>
@@ -112,7 +112,7 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="form-grid" style={{ gridTemplateColumns: "2fr 1fr", alignItems: "start" }}>
+      <div className="detalle-grid" style={{ gridTemplateColumns: "2fr 1fr", alignItems: "start" }}>
         <div className="card" style={{ margin: 0 }}>
           <div className="card-header-guinda">
             <span>
@@ -153,7 +153,7 @@ export function Dashboard() {
                           <small>{p.fechaSolicitud ? new Date(p.fechaSolicitud).toLocaleDateString("es-MX", { timeZone: "UTC" }) : "—"}</small>
                         </td>
                         <td>
-                          <Link to={`/permisos/${p.permisoId}`} className="boton-secundario" title="Ver">
+                          <Link to={`/permisos/${p.permisoId}`} className="boton boton-sm" title="Ver">
                             <i className="bi bi-eye" />
                           </Link>
                         </td>

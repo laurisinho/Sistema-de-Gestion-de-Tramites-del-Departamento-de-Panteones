@@ -299,10 +299,13 @@ lotesRouter.get(
         fecha: limpia(p.fechaSolicitud),
         tipo: p.tipoTramite?.nombre ?? clave,
         titulo: p.fallecido?.nombreCompleto ?? p.solicitante?.nombreCompleto ?? "Sin nombre registrado",
-        detalle: detalle ?? null,
+        // Un permiso CANCELADO no representa un movimiento real (sepultura,
+        // exhumación...) y sin esta nota se leía en la línea de tiempo igual
+        // que uno vigente -- títulos y cesiones ya marcan su estado, permisos no.
+        detalle: p.estado === "CANCELADO" ? junta(detalle, "Permiso cancelado") : (detalle ?? null),
         folio: p.folio,
-        icono,
-        color,
+        icono: p.estado === "CANCELADO" ? "bi-slash-circle" : icono,
+        color: p.estado === "CANCELADO" ? "gris" : color,
         enlace: `/permisos/${p.permisoId}/pdf`,
       });
     }

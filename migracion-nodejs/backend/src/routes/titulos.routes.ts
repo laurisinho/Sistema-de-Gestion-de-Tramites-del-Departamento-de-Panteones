@@ -105,15 +105,39 @@ titulosRouter.get(
   })
 );
 
+// Puerto exacto de BusquedaController.Detalle: además del título en sí, trae
+// los fallecidos sepultados en el lote y el historial completo de permisos,
+// para que el expediente cuente la historia completa del lote de un vistazo.
 titulosRouter.get(
   "/:id",
   asyncHandler(async (req, res) => {
     const titulo = await prisma.tituloPropiedad.findUnique({
       where: { tituloId: Number(req.params.id) },
-      include: { titular: true, lote: { include: { panteon: true } }, usuarioEmitio: { select: { nombreCompleto: true } } },
+      include: {
+        titular: true,
+        lote: { include: { panteon: true, tipoLote: true } },
+        usuarioEmitio: { select: { nombreCompleto: true } },
+      },
     });
     if (!titulo) return res.status(404).json({ error: "Título no encontrado" });
-    res.json({ titulo });
+
+    const [fallecidos, permisos] = await Promise.all([
+      prisma.permiso.findMany({
+        where: { loteId: titulo.loteId, tipoTramite: { clave: "SEP" }, fallecidoId: { not: null } },
+        select: { fallecido: { select: { fallecidoId: true, nombreCompleto: true, fechaFallecimiento: true } } },
+      }),
+      prisma.permiso.findMany({
+        where: { loteId: titulo.loteId },
+        include: { tipoTramite: true, solicitante: true },
+        orderBy: { fechaCreacion: "desc" },
+      }),
+    ]);
+
+    res.json({
+      titulo,
+      fallecidos: fallecidos.map((p) => p.fallecido!),
+      permisos,
+    });
   })
 );
 
@@ -196,66 +220,79 @@ titulosRouter.post(
       }
     }
 
-    // Folio por ubicación con la clave legible del panteón: {ClavePanteon}-{manzana}-{lote}
-    // ej. PC-1A-13, PJE-10-16
-    const clave = panteon.clave?.trim() || `P${vm.panteonId}`;
-    const claveBase = `${clave}-${limpiarComponente(manzana)}-${limpiarComponente(lote)}`;
-    let folio = claveBase;
-    let n = 2;
-    while (await prisma.tituloPropiedad.findUnique({ where: { folio } })) {
-      folio = `${claveBase}-${n++}`;
+    // Persona, lote y título se confirman juntos: si el título fallara después de
+    // crear la persona y el lote (p. ej. choque de folio entre dos capturistas
+    // simultáneos), sin transacción quedarían un titular huérfano y un lote
+    // marcado OCUPADO sin ningún título -- visibles en búsquedas y expedientes.
+    try {
+      const resultado = await prisma.$transaction(async (tx) => {
+        // Folio por ubicación con la clave legible del panteón: {ClavePanteon}-{manzana}-{lote}
+        // ej. PC-1A-13, PJE-10-16
+        const clave = panteon.clave?.trim() || `P${vm.panteonId}`;
+        const claveBase = `${clave}-${limpiarComponente(manzana)}-${limpiarComponente(lote)}`;
+        let folio = claveBase;
+        let n = 2;
+        while (await tx.tituloPropiedad.findUnique({ where: { folio } })) {
+          folio = `${claveBase}-${n++}`;
+        }
+
+        const titular = await tx.persona.create({
+          data: {
+            nombreCompleto: vm.nombreTitular.trim(),
+            telefono: vm.telefonoTitular,
+            domicilio: vm.domicilioTitular,
+            colonia: vm.coloniaTitular,
+            identificacionTipo: vm.numeroINE?.trim() ? "INE" : undefined,
+            identificacionNumero: vm.numeroINE,
+          },
+        });
+
+        const nuevoLote = await tx.lote.create({
+          data: {
+            panteonId: vm.panteonId,
+            tipoLoteId: vm.tipoLoteId,
+            numeroManzana: manzana,
+            numeroLote: lote,
+            seccion: panteon.usaColindancias ? null : vm.seccion,
+            dimensiones: "1.50 m de frente por 2.50 m de largo",
+            colindanciaNorte: panteon.usaColindancias ? vm.colindanciaNorte : null,
+            colindanciaSur: panteon.usaColindancias ? vm.colindanciaSur : null,
+            colindanciaEste: panteon.usaColindancias ? vm.colindanciaEste : null,
+            colindanciaOeste: panteon.usaColindancias ? vm.colindanciaOeste : null,
+            claveLegado: folio,
+            estado: "OCUPADO",
+          },
+        });
+
+        const titulo = await tx.tituloPropiedad.create({
+          data: {
+            loteId: nuevoLote.loteId,
+            titularId: titular.personaId,
+            folio,
+            fechaEmision: vm.fechaEmision ?? hoy(),
+            usuarioEmitioId: usuarioId,
+            estado: "VIGENTE",
+            estadoEntrega: "PENDIENTE_ENTREGA",
+          },
+        });
+
+        return { titulo, titular, folio };
+      });
+
+      await registrarBitacora(
+        usuarioId,
+        Acciones.Crear,
+        "titulos_propiedad",
+        resultado.titulo.tituloId,
+        `Título de propiedad ${resultado.folio} emitido a ${resultado.titular.nombreCompleto}`,
+        req.ip
+      );
+
+      res.status(201).json({ tituloId: resultado.titulo.tituloId, folio: resultado.folio });
+    } catch (err) {
+      console.error("Error al emitir título (rollback aplicado):", err);
+      res.status(500).json({ error: "No se pudo emitir el título. No se guardó ningún cambio; inténtalo de nuevo." });
     }
-
-    const titular = await prisma.persona.create({
-      data: {
-        nombreCompleto: vm.nombreTitular.trim(),
-        telefono: vm.telefonoTitular,
-        domicilio: vm.domicilioTitular,
-        colonia: vm.coloniaTitular,
-        identificacionTipo: vm.numeroINE?.trim() ? "INE" : undefined,
-        identificacionNumero: vm.numeroINE,
-      },
-    });
-
-    const nuevoLote = await prisma.lote.create({
-      data: {
-        panteonId: vm.panteonId,
-        tipoLoteId: vm.tipoLoteId,
-        numeroManzana: manzana,
-        numeroLote: lote,
-        seccion: panteon.usaColindancias ? null : vm.seccion,
-        dimensiones: "1.50 m de frente por 2.50 m de largo",
-        colindanciaNorte: panteon.usaColindancias ? vm.colindanciaNorte : null,
-        colindanciaSur: panteon.usaColindancias ? vm.colindanciaSur : null,
-        colindanciaEste: panteon.usaColindancias ? vm.colindanciaEste : null,
-        colindanciaOeste: panteon.usaColindancias ? vm.colindanciaOeste : null,
-        claveLegado: folio,
-        estado: "OCUPADO",
-      },
-    });
-
-    const titulo = await prisma.tituloPropiedad.create({
-      data: {
-        loteId: nuevoLote.loteId,
-        titularId: titular.personaId,
-        folio,
-        fechaEmision: vm.fechaEmision ?? hoy(),
-        usuarioEmitioId: usuarioId,
-        estado: "VIGENTE",
-        estadoEntrega: "PENDIENTE_ENTREGA",
-      },
-    });
-
-    await registrarBitacora(
-      usuarioId,
-      Acciones.Crear,
-      "titulos_propiedad",
-      titulo.tituloId,
-      `Título de propiedad ${folio} emitido a ${titular.nombreCompleto}`,
-      req.ip
-    );
-
-    res.status(201).json({ tituloId: titulo.tituloId, folio });
   })
 );
 
@@ -330,40 +367,45 @@ titulosRouter.put(
     const vm = parseo.data;
     const usaColindancias = titulo.lote.numeroManzana === "S/N";
 
-    await prisma.persona.update({
-      where: { personaId: titulo.titularId },
-      data: {
-        nombreCompleto: vm.nombreTitular.trim(),
-        telefono: vm.telefonoTitular,
-        domicilio: vm.domicilioTitular,
-        colonia: vm.coloniaTitular,
-      },
-    });
+    // El original .NET confirma titular + lote + título con un solo
+    // SaveChangesAsync; aquí eran 3 updates sueltos y una falla a la mitad
+    // dejaba el expediente editado a medias sin que el usuario lo notara.
+    await prisma.$transaction(async (tx) => {
+      await tx.persona.update({
+        where: { personaId: titulo.titularId },
+        data: {
+          nombreCompleto: vm.nombreTitular.trim(),
+          telefono: vm.telefonoTitular,
+          domicilio: vm.domicilioTitular,
+          colonia: vm.coloniaTitular,
+        },
+      });
 
-    await prisma.lote.update({
-      where: { loteId: titulo.loteId },
-      data: usaColindancias
-        ? {
-            colindanciaNorte: vm.colindanciaNorte,
-            colindanciaSur: vm.colindanciaSur,
-            colindanciaEste: vm.colindanciaEste,
-            colindanciaOeste: vm.colindanciaOeste,
-          }
-        : {
-            numeroManzana: vm.numeroManzana?.trim() || titulo.lote.numeroManzana,
-            numeroLote: vm.numeroLote?.trim() || titulo.lote.numeroLote,
-            seccion: vm.seccion,
-          },
-    });
+      await tx.lote.update({
+        where: { loteId: titulo.loteId },
+        data: usaColindancias
+          ? {
+              colindanciaNorte: vm.colindanciaNorte,
+              colindanciaSur: vm.colindanciaSur,
+              colindanciaEste: vm.colindanciaEste,
+              colindanciaOeste: vm.colindanciaOeste,
+            }
+          : {
+              numeroManzana: vm.numeroManzana?.trim() || titulo.lote.numeroManzana,
+              numeroLote: vm.numeroLote?.trim() || titulo.lote.numeroLote,
+              seccion: vm.seccion,
+            },
+      });
 
-    await prisma.tituloPropiedad.update({
-      where: { tituloId: id },
-      data: {
-        fechaEmision: vm.fechaEmision,
-        estado: vm.estado,
-        estadoEntrega: vm.estadoEntrega,
-        fechaEntrega: vm.fechaEntrega,
-      },
+      await tx.tituloPropiedad.update({
+        where: { tituloId: id },
+        data: {
+          fechaEmision: vm.fechaEmision,
+          estado: vm.estado,
+          estadoEntrega: vm.estadoEntrega,
+          fechaEntrega: vm.fechaEntrega,
+        },
+      });
     });
 
     await registrarBitacora(req.usuario!.usuarioId, Acciones.Editar, "titulos_propiedad", id, `Título ${titulo.folio} editado`, req.ip);

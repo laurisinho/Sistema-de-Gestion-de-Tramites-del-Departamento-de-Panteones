@@ -37,11 +37,15 @@ reportesRouter.get(
     const [totalExpedientesVigentes, permisosEsteMes, titulosPendientesEntrega, totalFallecidos, permisosDelMes, ultimosPermisos, panteones] =
       await Promise.all([
         prisma.tituloPropiedad.count({ where: { estado: "VIGENTE" } }),
-        prisma.permiso.count({ where: { fechaCreacion: rangoMes, estado: { not: "CANCELADO" } } }),
+        // Cuenta por FechaSolicitud (fecha del trámite), no fechaCreacion (fecha
+        // de captura): un permiso solicitado el 30 y capturado el 1 del mes
+        // siguiente cuenta en el mes del trámite, no en el de la captura.
+        // Puerto exacto de HomeController.Index.
+        prisma.permiso.count({ where: { fechaSolicitud: rangoMes, estado: { not: "CANCELADO" } } }),
         prisma.tituloPropiedad.count({ where: { estado: "VIGENTE", estadoEntrega: { not: "ENTREGADO" } } }),
         prisma.fallecido.count(),
         prisma.permiso.findMany({
-          where: { fechaCreacion: rangoMes, estado: { not: "CANCELADO" } },
+          where: { fechaSolicitud: rangoMes, estado: { not: "CANCELADO" } },
           select: { tipoTramite: { select: { clave: true } } },
         }),
         prisma.permiso.findMany({
@@ -58,12 +62,14 @@ reportesRouter.get(
 
     const contarTipo = (clave: string) => permisosDelMes.filter((p) => p.tipoTramite.clave === clave).length;
 
+    // Todos los panteones activos, incluidos los que aún no tienen títulos
+    // vigentes -- filtrarlos los hacía desaparecer de la gráfica. Puerto
+    // exacto de HomeController.Index (GetValueOrDefault(..., 0)).
     const porPanteon = panteones
       .map((p) => ({
         nombre: p.nombre,
         titulosVigentes: p.lotes.reduce((acc, l) => acc + l.titulos.length, 0),
       }))
-      .filter((p) => p.titulosVigentes > 0)
       .sort((a, b) => b.titulosVigentes - a.titulosVigentes);
 
     const anioActual = ahora.getFullYear();

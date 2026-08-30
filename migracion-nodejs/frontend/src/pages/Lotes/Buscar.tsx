@@ -105,6 +105,7 @@ export function LotesBuscar() {
                     <th>Sección</th>
                     <th>Manzana</th>
                     <th>Lote</th>
+                    <th>Clave</th>
                     <th>Estado</th>
                     <th>Titular</th>
                     <th>Permisos</th>
@@ -114,7 +115,7 @@ export function LotesBuscar() {
                 <tbody>
                   {resultados.length === 0 && (
                     <tr>
-                      <td colSpan={8}>Sin resultados.</td>
+                      <td colSpan={9}>Sin resultados.</td>
                     </tr>
                   )}
                   {resultados.map((l) => (
@@ -123,6 +124,9 @@ export function LotesBuscar() {
                       <td>{l.seccion ?? "—"}</td>
                       <td>{l.numeroManzana}</td>
                       <td>{l.numeroLote}</td>
+                      <td>
+                        <small className="text-muted">{l.claveLegado ?? "—"}</small>
+                      </td>
                       <td>
                         <span className={claseEstado(l.esFosaComun ? "FOSA_COMUN" : l.estado)}>
                           {l.esFosaComun ? "Fosa común" : l.estado}

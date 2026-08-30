@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { AdminRoute } from "./auth/AdminRoute";
 import { Layout } from "./components/Layout";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
@@ -30,6 +31,9 @@ import { IncidenciaEditar } from "./pages/Incidencias/Editar";
 import { ReportesIndex } from "./pages/Reportes/Index";
 import { BitacoraLista } from "./pages/Bitacora/Lista";
 import { ReimpresionesLista } from "./pages/Reimpresiones/Lista";
+import { UsuariosLista } from "./pages/Usuarios/Lista";
+import { UsuarioNuevo } from "./pages/Usuarios/Nuevo";
+import { UsuarioEditar } from "./pages/Usuarios/Editar";
 
 export default function App() {
   return (
@@ -71,6 +75,30 @@ export default function App() {
             <Route path="/reportes" element={<ReportesIndex />} />
             <Route path="/bitacora" element={<BitacoraLista />} />
             <Route path="/reimpresiones" element={<ReimpresionesLista />} />
+            <Route
+              path="/usuarios"
+              element={
+                <AdminRoute>
+                  <UsuariosLista />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/usuarios/nuevo"
+              element={
+                <AdminRoute>
+                  <UsuarioNuevo />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/usuarios/:id/editar"
+              element={
+                <AdminRoute>
+                  <UsuarioEditar />
+                </AdminRoute>
+              }
+            />
           </Route>
         </Routes>
       </AuthProvider>

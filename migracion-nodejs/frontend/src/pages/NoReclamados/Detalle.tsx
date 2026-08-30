@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
+import { ConfirmModal } from "../../components/ConfirmModal";
 
 interface Fallecido {
   fallecidoId: number;
@@ -27,6 +29,7 @@ interface Reconocimiento {
   medioIdentificacion: string | null;
   instanciaSolicita: string | null;
   permisoExhumacionId: number | null;
+  permisoExhumacion: { folio: string } | null;
 }
 
 interface DetalleData {
@@ -51,6 +54,7 @@ export function NoReclamadoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [confirmando, setConfirmando] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["no-reclamados", id],
@@ -124,8 +128,10 @@ export function NoReclamadoDetalle() {
                   <tr>
                     <td className="text-muted">Exhumación</td>
                     <td>
-                      {rec.permisoExhumacionId != null ? (
-                        <span className="badge badge-info">Con permiso</span>
+                      {rec.permisoExhumacion ? (
+                        <Link to={`/permisos/${rec.permisoExhumacionId}`} className="badge badge-info">
+                          {rec.permisoExhumacion.folio}
+                        </Link>
                       ) : (
                         <span className="badge badge-warning">Pendiente — el lote sigue ocupado</span>
                       )}
@@ -138,8 +144,8 @@ export function NoReclamadoDetalle() {
         </div>
       )}
 
-      <div className="form-grid" style={{ gridTemplateColumns: "7fr 5fr", alignItems: "start" }}>
-        <div className="card" style={{ margin: 0 }}>
+      <div className="detalle-grid" style={{ gridTemplateColumns: "7fr 5fr" }}>
+        <div className="card">
           <div className="card-header-guinda">
             <span>
               <i className="bi bi-person" /> Identificación
@@ -234,17 +240,28 @@ export function NoReclamadoDetalle() {
         </div>
       </div>
 
-      <button
-        className="boton-secundario"
-        onClick={() => {
-          if (confirm("¿Eliminar este registro? Solo se puede si no tiene un permiso vinculado.")) eliminar.mutate();
-        }}
-      >
+      <button className="boton-peligro" onClick={() => setConfirmando(true)}>
         <i className="bi bi-trash" /> Eliminar
       </button>
       {eliminar.isError && (
         <p className="aviso-error">{eliminar.error instanceof ApiError ? eliminar.error.message : "No se pudo eliminar"}</p>
       )}
+
+      <ConfirmModal
+        abierto={confirmando}
+        titulo="Confirmar eliminación"
+        mensaje={
+          <>
+            ¿Desea eliminar el registro de <strong>{f.nombreCompleto}</strong>?
+          </>
+        }
+        nota="Solo se puede eliminar si no tiene un permiso vinculado."
+        textoConfirmar="Sí, eliminar"
+        iconoConfirmar="bi-trash"
+        cargando={eliminar.isPending}
+        onCancelar={() => setConfirmando(false)}
+        onConfirmar={() => eliminar.mutate()}
+      />
     </div>
   );
 }

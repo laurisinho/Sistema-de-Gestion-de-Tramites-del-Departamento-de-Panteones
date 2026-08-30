@@ -126,6 +126,7 @@ noReclamadosRouter.get(
     const lote = await primerLoteDe(id);
     const ultimoReconocimiento = await prisma.reconocimiento.findFirst({
       where: { fallecidoId: id },
+      include: { permisoExhumacion: { select: { folio: true } } },
       orderBy: { fechaReconocimiento: "desc" },
     });
 
@@ -202,30 +203,37 @@ noReclamadosRouter.post(
 
     const lote = await primerLoteDe(id);
 
-    const reconocimiento = await prisma.reconocimiento.create({
-      data: {
-        fallecidoId: f.fallecidoId,
-        loteId: lote?.loteId,
-        nombreAnterior: f.nombreCompleto,
-        nombreIdentificado: vm.nombreIdentificado.trim(),
-        fechaReconocimiento: vm.fechaReconocimiento,
-        medioIdentificacion: vm.medioIdentificacion.trim(),
-        instanciaSolicita: vm.instanciaSolicita?.trim(),
-        numeroActaDefuncion: vm.numeroActaDefuncion?.trim(),
-        ministerioPublico: vm.ministerioPublico?.trim(),
-        observaciones: vm.observaciones?.trim(),
-        usuarioRegistroId: usuarioId,
-      },
-    });
+    // Crear el reconocimiento y marcar reconocido=true deben confirmarse juntos:
+    // si el update fallara solo, el guard de arriba (f.reconocido) no lo detecta
+    // en un reintento y se crearía un segundo reconocimiento contradictorio.
+    const reconocimiento = await prisma.$transaction(async (tx) => {
+      const rec = await tx.reconocimiento.create({
+        data: {
+          fallecidoId: f.fallecidoId,
+          loteId: lote?.loteId,
+          nombreAnterior: f.nombreCompleto,
+          nombreIdentificado: vm.nombreIdentificado.trim(),
+          fechaReconocimiento: vm.fechaReconocimiento,
+          medioIdentificacion: vm.medioIdentificacion.trim(),
+          instanciaSolicita: vm.instanciaSolicita?.trim(),
+          numeroActaDefuncion: vm.numeroActaDefuncion?.trim(),
+          ministerioPublico: vm.ministerioPublico?.trim(),
+          observaciones: vm.observaciones?.trim(),
+          usuarioRegistroId: usuarioId,
+        },
+      });
 
-    await prisma.fallecido.update({
-      where: { fallecidoId: f.fallecidoId },
-      data: {
-        reconocido: true,
-        posibleNombre: vm.nombreIdentificado.trim(),
-        numeroCaso: vm.numeroCaso?.trim() || f.numeroCaso,
-        actaDefuncionNumero: vm.numeroActaDefuncion?.trim() || f.actaDefuncionNumero,
-      },
+      await tx.fallecido.update({
+        where: { fallecidoId: f.fallecidoId },
+        data: {
+          reconocido: true,
+          posibleNombre: vm.nombreIdentificado.trim(),
+          numeroCaso: vm.numeroCaso?.trim() || f.numeroCaso,
+          actaDefuncionNumero: vm.numeroActaDefuncion?.trim() || f.actaDefuncionNumero,
+        },
+      });
+
+      return rec;
     });
 
     await registrarBitacora(

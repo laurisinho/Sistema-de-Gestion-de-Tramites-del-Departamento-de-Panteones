@@ -39,3 +39,14 @@ catalogosRouter.get(
     res.json({ tiposTramite });
   })
 );
+
+catalogosRouter.get(
+  "/roles",
+  asyncHandler(async (_req, res) => {
+    const roles = await prisma.rol.findMany({
+      where: { activo: true },
+      orderBy: { nombre: "asc" },
+    });
+    res.json({ roles });
+  })
+);

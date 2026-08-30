@@ -104,6 +104,10 @@
   box-shadow: 0 0 10px rgba(245, 180, 0, 0.55);
 }
 
+/* Sub-enlace sin ícono propio, anidado visualmente bajo el enlace anterior */
+.shell-link-sub { padding-left: 2.7rem; font-size: 0.79rem; font-weight: 400; }
+.shell-link-sub.activo { font-weight: 600; }
+
 /* ── Grupo colapsable ── */
 .nav-group-head {
   display: flex;
@@ -305,7 +309,26 @@ html.dark .page-header h2 { color: #d9d4dc; }
 }
 .form-campo input:focus, .form-campo select:focus, .form-campo textarea:focus { outline: none; border-color: var(--guinda); box-shadow: 0 0 0 4px var(--ring); }
 .form-campo.span2 { grid-column: 1 / -1; }
+
+/* Campo de solo-lectura que muestra el resultado de una búsqueda (expediente
+   enlazado, lote seleccionado): distinto de un input real para que se note
+   que no se escribe directamente ahí. */
+.campo-resultado {
+  flex: 1; display: flex; align-items: center;
+  padding: 0.48rem 0.8rem; border: 1px solid var(--input-border); border-radius: 9px;
+  font-size: 13.5px; background: var(--bg-body); color: var(--text-muted);
+  min-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.campo-resultado.lleno { color: var(--text-base); font-weight: 600; background: var(--input-bg); }
 html.dark .form-campo input::placeholder, html.dark .barra-filtros input::placeholder { color: #6b6475; }
+
+/* Grid de tarjetas para pantallas de detalle: las tarjetas de una misma fila
+   quedan a la misma altura (equivalente al row/col-md-6/h-100 de Bootstrap
+   del sistema original), evitando huecos como el que dejaba el flex anidado. */
+.detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+.detalle-grid > .card { margin: 0; }
+.detalle-grid .span2 { grid-column: 1 / -1; }
+@media (max-width: 860px) { .detalle-grid { grid-template-columns: 1fr; } }
 
 /* ═══════════ BUTTONS ═══════════ */
 .boton {
@@ -331,8 +354,81 @@ html.dark .boton { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
 .boton-secundario:active { transform: translateY(1px); }
 html.dark .boton-secundario { border-color: var(--border); background: transparent; }
 
+/* Variante para acciones destructivas (cancelar/eliminar) — se distingue en rojo, igual que btn-outline-danger del sistema original */
+.boton-peligro {
+  background: transparent; color: #b02a37; border: 1px solid #e3a5ac; padding: 0.5rem 1.1rem; border-radius: 9px;
+  cursor: pointer; font-size: 13.5px; font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.boton-peligro:hover:not(:disabled) { background: #b02a37; border-color: #b02a37; color: #fff; text-decoration: none; }
+.boton-peligro:active:not(:disabled) { transform: translateY(1px); }
+.boton-peligro:disabled { opacity: 0.55; cursor: default; }
+html.dark .boton-peligro { color: #f79ba3; border-color: #7f1d1d; }
+html.dark .boton-peligro:hover:not(:disabled) { background: #7f1d1d; color: #fff; }
+
+/* Variante sólida para el botón de confirmar en diálogos destructivos */
+.boton-peligro-solido {
+  background: #b02a37; color: #fff; border: none; padding: 0.5rem 1.1rem; border-radius: 9px;
+  cursor: pointer; font-size: 13.5px; font-weight: 600;
+  box-shadow: 0 1px 3px rgba(176, 42, 55, 0.35);
+  transition: background 0.15s ease, transform 0.1s ease;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.boton-peligro-solido:hover:not(:disabled) { background: #93222d; }
+.boton-peligro-solido:active:not(:disabled) { transform: translateY(1px); }
+.boton-peligro-solido:disabled { opacity: 0.6; cursor: default; }
+
+/* ═══════════ TARJETAS DE REPORTE ═══════════ */
+.rep-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow-card); height: 100%;
+  display: flex; flex-direction: column;
+}
+.rep-head { padding: 1.1rem 1.25rem 0.5rem; }
+.rep-titulo { font-size: 1.02rem; font-weight: 700; color: var(--text-base); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+.rep-desc { font-size: 0.85rem; color: var(--text-sub); margin: 0.35rem 0 0; line-height: 1.5; }
+.rep-body { padding: 0.5rem 1.25rem 1.25rem; margin-top: auto; }
+.rep-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.rep-chip {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem;
+  border-radius: 20px; background: rgba(107, 18, 41, 0.1); color: #6b1229;
+}
+html.dark .rep-chip { background: rgba(192, 74, 99, 0.18); color: #e493a5; }
+.rep-chip.alerta { background: rgba(239, 68, 68, 0.13); color: #b02a37; }
+html.dark .rep-chip.alerta { background: rgba(239, 68, 68, 0.16); color: #f79ba3; }
+
+/* ═══════════ MODAL DE CONFIRMACIÓN ═══════════ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(20, 8, 13, 0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000; padding: 16px;
+}
+.modal-caja {
+  background: var(--bg-card); color: var(--text-base);
+  border-radius: 14px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  width: 100%; max-width: 440px; overflow: hidden;
+}
+.modal-encabezado {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.1rem 1.3rem; border-bottom: 1px solid var(--border);
+}
+.modal-encabezado h3 { margin: 0; font-size: 16.5px; display: flex; align-items: center; gap: 8px; color: var(--guinda); }
+.modal-encabezado h3 i { color: #b02a37; }
+.modal-cerrar {
+  background: none; border: none; cursor: pointer; color: var(--text-sub); font-size: 15px;
+  padding: 4px; line-height: 1; border-radius: 6px;
+}
+.modal-cerrar:hover { background: var(--hover-row); color: var(--text-base); }
+.modal-cuerpo { padding: 1.3rem; font-size: 14px; }
+.modal-pie {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 1rem 1.3rem; border-top: 1px solid var(--border);
+}
+
 /* Variante compacta para acciones de fila en tablas (ver/editar/cancelar/imprimir) */
-.boton.boton-sm, .boton-secundario.boton-sm {
+.boton.boton-sm, .boton-secundario.boton-sm, .boton-peligro.boton-sm {
   padding: 5px 9px;
   font-size: 12.5px;
   border-radius: 7px;
@@ -356,11 +452,15 @@ html.dark .badge-info { background: rgba(56, 189, 248, 0.13); color: #85d3f7; }
 html.dark .badge-secondary { background: rgba(255, 255, 255, 0.08); color: #a49aa4; }
 
 /* ═══════════ ALERTS ═══════════ */
-.aviso-error, .aviso-exito { border-radius: 11px; border: none; font-size: 0.875rem; padding: 0.65rem 1rem; border-left: 4px solid transparent; }
+.aviso-error, .aviso-exito, .aviso-advertencia, .aviso-info { border-radius: 11px; border: none; font-size: 0.875rem; padding: 0.65rem 1rem; border-left: 4px solid transparent; }
 .aviso-exito { background: #ebf7f0; color: #10613b; border-left-color: #2fb875; }
 .aviso-error { background: #fdefef; color: #9c2531; border-left-color: #e35d6a; }
+.aviso-advertencia { background: #fdf6e3; color: #7a5a06; border-left-color: #e0a800; }
+.aviso-info { background: #eaf3fc; color: #1a5a8a; border-left-color: #3d8bcb; }
 html.dark .aviso-exito { background: #0d2419; color: #7fe0ac; border-left-color: #1d7a4b; }
 html.dark .aviso-error { background: #290d12; color: #f5a1a9; border-left-color: #a13341; }
+html.dark .aviso-advertencia { background: #2a2007; color: #f0ce7a; border-left-color: #8a6207; }
+html.dark .aviso-info { background: #0d2130; color: #8ec4ec; border-left-color: #2a6da3; }
 
 /* ═══════════ TIMELINE ═══════════ */
 .tl { list-style: none; padding: 0; margin: 0; }
@@ -372,8 +472,62 @@ html.dark .aviso-error { background: #290d12; color: #f5a1a9; border-left-color:
 .tl-titulo { font-size: 13.5px; }
 .tl-detalle { font-size: 12.5px; color: var(--text-sub); }
 
+/* ═══════════ EXPEDIENTE DE LOTE ═══════════ */
+.exp-clave { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text-base); margin: 0; }
+.exp-sub { color: var(--text-sub); font-size: 0.9rem; }
+.exp-stats { display: flex; flex-wrap: wrap; gap: 2rem; }
+.exp-stat-n { font-size: 1.5rem; font-weight: 700; line-height: 1; color: var(--text-base); font-variant-numeric: tabular-nums; }
+.exp-stat-l { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600; margin-top: 0.3rem; }
+.exp-titulo-seccion { font-size: 0.95rem; font-weight: 700; color: var(--text-base); margin: 2rem 0 1rem; }
+
+/* Línea de tiempo con conector vertical, para el expediente de lote */
+.exp-tl { position: relative; padding-left: 2.4rem; list-style: none; margin: 0; }
+.exp-tl::before {
+  content: ""; position: absolute; left: 11px; top: 6px; bottom: 6px;
+  width: 2px; background: var(--border); border-radius: 2px;
+}
+.exp-tl-item { position: relative; padding-bottom: 1.5rem; }
+.exp-tl-item:last-child { padding-bottom: 0; }
+.exp-tl-dot {
+  position: absolute; left: -2.4rem; top: 1px;
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; border: 2px solid var(--bg-body);
+}
+.exp-tl-fecha { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.exp-tl-tipo { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; margin-left: 0.55rem; }
+.exp-tl-titulo { font-size: 0.95rem; font-weight: 600; color: var(--text-base); margin-top: 0.15rem; line-height: 1.35; }
+.exp-tl-detalle { font-size: 0.83rem; color: var(--text-sub); margin-top: 0.1rem; line-height: 1.45; }
+.exp-tl-sep {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; color: var(--text-muted);
+  margin: 0.25rem 0 1.1rem; padding-bottom: 0.5rem; border-bottom: 1px dashed var(--border);
+}
+.exp-tl-folio { font-size: 0.72rem; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.c-guinda { background: rgba(107, 18, 41, 0.12); color: #6b1229; }
+.c-dorado { background: rgba(245, 180, 0, 0.16); color: #8a6207; }
+.c-verde { background: rgba(34, 197, 94, 0.14); color: #157347; }
+.c-azul { background: rgba(56, 189, 248, 0.15); color: #0b6e99; }
+.c-gris { background: rgba(120, 113, 118, 0.14); color: #6c6168; }
+html.dark .c-guinda { background: rgba(192, 74, 99, 0.2); color: #e493a5; }
+html.dark .c-dorado { background: rgba(245, 180, 0, 0.16); color: #f0ce7a; }
+html.dark .c-verde { background: rgba(34, 197, 94, 0.16); color: #6ee7a0; }
+html.dark .c-azul { background: rgba(56, 189, 248, 0.16); color: #85d3f7; }
+html.dark .c-gris { background: rgba(255, 255, 255, 0.1); color: #a49aa4; }
+
+.t-guinda { color: #6b1229; }
+.t-dorado { color: #8a6207; }
+.t-verde { color: #157347; }
+.t-azul { color: #0b6e99; }
+.t-gris { color: #6c6168; }
+html.dark .t-guinda { color: #e493a5; }
+html.dark .t-dorado { color: #f0ce7a; }
+html.dark .t-verde { color: #6ee7a0; }
+html.dark .t-azul { color: #85d3f7; }
+html.dark .t-gris { color: #a49aa4; }
+
 /* ═══════════ STAT CARDS (dashboard) ═══════════ */
-.tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; max-width: 900px; }
+.tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; max-width: 960px; }
 .tarjeta {
   display: flex; align-items: center; gap: 1rem;
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.3rem;
@@ -390,10 +544,22 @@ html.dark .tarjeta:hover { background: var(--hover-row); }
 }
 html.dark .tarjeta-icono { background: rgba(176, 58, 84, 0.2); color: #e98aa0; }
 
+/* Variantes de color por tarjeta, igual que el sistema original */
+.tarjeta-icono.icon-blue { background: rgba(13, 110, 253, 0.12); color: #0d6efd; }
+.tarjeta-icono.icon-orange { background: rgba(255, 140, 0, 0.12); color: #e67e00; }
+.tarjeta-icono.icon-teal { background: rgba(13, 162, 148, 0.12); color: #0da294; }
+html.dark .tarjeta-icono.icon-blue { background: rgba(96, 165, 250, 0.18); color: #93c5fd; }
+html.dark .tarjeta-icono.icon-orange { background: rgba(251, 146, 60, 0.18); color: #fdba74; }
+html.dark .tarjeta-icono.icon-teal { background: rgba(45, 212, 191, 0.18); color: #5eead4; }
+
 .text-muted { color: var(--text-muted); }
 .font-monospace { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
 
 @media print {
   .shell-sidebar, .shell-topbar { display: none !important; }
   .shell-main { margin-left: 0 !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }

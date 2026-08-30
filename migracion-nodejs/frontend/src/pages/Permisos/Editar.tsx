@@ -110,7 +110,7 @@ export function PermisoEditar() {
       <div className="page-header">
         <h2>
           <i className="bi bi-pencil-square" />
-          Editar Permiso — {data.folio}
+          Editar Permiso — {data.tipoTramite.nombre}
         </h2>
         <div className="page-header-acciones">
           <Link className="boton-secundario" to="/permisos">
@@ -119,17 +119,17 @@ export function PermisoEditar() {
         </div>
       </div>
 
-      {error && (
-        <p className="aviso-error" style={{ marginBottom: 16 }}>
-          {error}
-        </p>
-      )}
+      {error && <p className="aviso-error" style={{ marginBottom: 16 }}>{error}</p>}
 
-      <div className="card">
-        <div className="card-body">
-          <form onSubmit={onSubmit}>
-            <h3>Solicitante</h3>
-            <div className="form-grid" style={{ marginBottom: 20 }}>
+      <form onSubmit={onSubmit}>
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header-guinda">
+            <span>
+              <i className="bi bi-person" /> Datos del Solicitante
+            </span>
+          </div>
+          <div className="card-body">
+            <div className="form-grid" style={{ maxWidth: "none" }}>
               <div className="form-campo span2">
                 <label>Nombre completo *</label>
                 <input value={nombreSolicitante} onChange={(e) => setNombreSolicitante(e.target.value)} required />
@@ -143,29 +143,47 @@ export function PermisoEditar() {
                 <input value={domicilioSolicitante} onChange={(e) => setDomicilioSolicitante(e.target.value)} />
               </div>
             </div>
+          </div>
+        </div>
 
-            {data.fallecido && (
-              <>
-                <h3>Difunto</h3>
-                <div className="form-grid" style={{ marginBottom: 20 }}>
-                  <div className="form-campo span2">
-                    <label>Nombre</label>
-                    <input value={nombreFallecido} onChange={(e) => setNombreFallecido(e.target.value)} />
-                  </div>
-                  <div className="form-campo">
-                    <label>Fecha de fallecimiento</label>
-                    <input type="date" value={fechaFallecimiento} onChange={(e) => setFechaFallecimiento(e.target.value)} />
-                  </div>
-                  <div className="form-campo">
-                    <label>Número de acta de defunción</label>
-                    <input value={actaDefuncionNumero} onChange={(e) => setActaDefuncionNumero(e.target.value)} />
-                  </div>
+        {data.fallecido && (
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="card-header-guinda">
+              <span>
+                <i className="bi bi-flower1" /> Datos del Fallecido
+              </span>
+            </div>
+            <div className="card-body">
+              <div className="form-grid" style={{ maxWidth: "none" }}>
+                <div className="form-campo span2">
+                  <label>Nombre completo</label>
+                  <input value={nombreFallecido} onChange={(e) => setNombreFallecido(e.target.value)} />
                 </div>
-              </>
-            )}
+                <div className="form-campo">
+                  <label>Fecha de fallecimiento</label>
+                  <input type="date" value={fechaFallecimiento} onChange={(e) => setFechaFallecimiento(e.target.value)} />
+                </div>
+                <div className="form-campo">
+                  <label>No. Acta de defunción</label>
+                  <input value={actaDefuncionNumero} onChange={(e) => setActaDefuncionNumero(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-            <h3>Trámite</h3>
-            <div className="form-grid" style={{ marginBottom: 20 }}>
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header-guinda">
+            <span>
+              <i className="bi bi-receipt" /> Datos del Trámite
+            </span>
+          </div>
+          <div className="card-body">
+            <div className="form-grid" style={{ maxWidth: "none" }}>
+              <div className="form-campo">
+                <label>Folio</label>
+                <input value={data.folio} readOnly disabled />
+              </div>
               <div className="form-campo">
                 <label>Fecha de solicitud</label>
                 <input type="date" value={fechaSolicitud} onChange={(e) => setFechaSolicitud(e.target.value)} />
@@ -180,7 +198,6 @@ export function PermisoEditar() {
                   ))}
                 </select>
               </div>
-
               {(clave === "SEP" || clave === "EXH" || clave === "CEN" || clave === "CON") && (
                 <div className="form-campo">
                   <label>Número de recibo</label>
@@ -188,52 +205,75 @@ export function PermisoEditar() {
                 </div>
               )}
               {(clave === "SEP" || clave === "EXH") && (
-                <div className="form-campo">
+                <div className="form-campo span2">
                   <label>Funeraria</label>
                   <input value={funeraria} onChange={(e) => setFuneraria(e.target.value)} />
                 </div>
               )}
               {clave === "SEP" && (
-                <div className="form-campo">
-                  <label>
+                <div className="form-campo" style={{ justifyContent: "flex-end" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <input type="checkbox" checked={esDonacion} onChange={(e) => setEsDonacion(e.target.checked)} /> Lote donado
                   </label>
                 </div>
               )}
             </div>
+          </div>
+        </div>
 
-            {clave === "EXH" && (
-              <div className="form-grid" style={{ marginBottom: 20 }}>
-                <div className="form-campo span2">
-                  <label>Motivo de exhumación</label>
+        {clave === "EXH" && (
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="card-header-guinda">
+              <span>
+                <i className="bi bi-info-circle" /> Datos de Exhumación
+              </span>
+            </div>
+            <div className="card-body">
+              <div className="form-grid" style={{ maxWidth: "none" }}>
+                <div className="form-campo">
+                  <label>Motivo</label>
                   <input value={motivoExhumacion} onChange={(e) => setMotivoExhumacion(e.target.value)} />
                 </div>
-                <div className="form-campo span2">
+                <div className="form-campo">
                   <label>Destino de los restos</label>
                   <input value={destinoRestos} onChange={(e) => setDestinoRestos(e.target.value)} />
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            {clave === "CON" && (
-              <div className="form-grid" style={{ marginBottom: 20 }}>
+        {clave === "CON" && (
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="card-header-guinda">
+              <span>
+                <i className="bi bi-tools" /> Datos de Construcción
+              </span>
+            </div>
+            <div className="card-body">
+              <div className="form-grid" style={{ maxWidth: "none" }}>
                 <div className="form-campo">
-                  <label>Tipo de construcción</label>
+                  <label>Tipo de obra</label>
                   <input value={tipoObra} onChange={(e) => setTipoObra(e.target.value)} />
                 </div>
                 <div className="form-campo span2">
-                  <label>Descripción de la obra</label>
+                  <label>Descripción</label>
                   <input value={descripcionObra} onChange={(e) => setDescripcionObra(e.target.value)} />
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            <button className="boton" type="submit" disabled={enviando}>
-              <i className="bi bi-check-circle" /> {enviando ? "Guardando..." : "Guardar cambios"}
-            </button>
-          </form>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button type="button" className="boton-secundario" onClick={() => navigate("/permisos")}>
+            Cancelar
+          </button>
+          <button className="boton" type="submit" disabled={enviando}>
+            <i className="bi bi-check-circle" /> {enviando ? "Guardando..." : "Guardar cambios"}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

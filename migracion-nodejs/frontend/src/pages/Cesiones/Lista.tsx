@@ -43,6 +43,7 @@ export function CesionesLista() {
           <span>
             <i className="bi bi-list-ul" /> Últimas cesiones
           </span>
+          <span className="badge badge-warning">{data?.length ?? 0} registro(s)</span>
         </div>
         <div className="card-body p-0">
           {isLoading && <p style={{ padding: "1rem 1.2rem" }}>Cargando...</p>}

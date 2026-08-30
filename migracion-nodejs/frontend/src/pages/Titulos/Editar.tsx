@@ -128,17 +128,17 @@ export function TituloEditar() {
         </div>
       </div>
 
-      {error && (
-        <p className="aviso-error" style={{ marginBottom: 16 }}>
-          {error}
-        </p>
-      )}
+      {error && <p className="aviso-error" style={{ marginBottom: 16 }}>{error}</p>}
 
-      <div className="card">
-        <div className="card-body">
-          <form onSubmit={onSubmit}>
-            <h3>Titular</h3>
-            <div className="form-grid" style={{ marginBottom: 20 }}>
+      <form onSubmit={onSubmit}>
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header-guinda">
+            <span>
+              <i className="bi bi-person" /> Datos del Titular
+            </span>
+          </div>
+          <div className="card-body">
+            <div className="form-grid" style={{ maxWidth: "none" }}>
               <div className="form-campo span2">
                 <label>Nombre completo *</label>
                 <input value={nombreTitular} onChange={(e) => setNombreTitular(e.target.value)} required />
@@ -156,9 +156,17 @@ export function TituloEditar() {
                 <input value={domicilioTitular} onChange={(e) => setDomicilioTitular(e.target.value)} />
               </div>
             </div>
+          </div>
+        </div>
 
-            <h3>Lote</h3>
-            <div className="form-grid" style={{ marginBottom: 20 }}>
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header-guinda">
+            <span>
+              <i className="bi bi-geo-alt" /> Datos del Lote
+            </span>
+          </div>
+          <div className="card-body">
+            <div className="form-grid" style={{ maxWidth: "none" }}>
               {usaColindancias ? (
                 <>
                   <div className="form-campo">
@@ -195,15 +203,27 @@ export function TituloEditar() {
                 </>
               )}
             </div>
+          </div>
+        </div>
 
-            <h3>Título</h3>
-            <div className="form-grid" style={{ marginBottom: 20 }}>
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header-guinda">
+            <span>
+              <i className="bi bi-award" /> Título de Propiedad
+            </span>
+          </div>
+          <div className="card-body">
+            <div className="form-grid" style={{ maxWidth: "none" }}>
+              <div className="form-campo">
+                <label>Folio</label>
+                <input value={data.folio} readOnly disabled />
+              </div>
               <div className="form-campo">
                 <label>Fecha de emisión</label>
                 <input type="date" value={fechaEmision} onChange={(e) => setFechaEmision(e.target.value)} />
               </div>
               <div className="form-campo">
-                <label>Estado</label>
+                <label>Estado del título</label>
                 <select value={estado} onChange={(e) => setEstado(e.target.value)}>
                   {ESTADOS.map((e) => (
                     <option key={e} value={e}>
@@ -227,13 +247,18 @@ export function TituloEditar() {
                 <input type="date" value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} />
               </div>
             </div>
-
-            <button className="boton" type="submit" disabled={enviando}>
-              <i className="bi bi-check-circle" /> {enviando ? "Guardando..." : "Guardar cambios"}
-            </button>
-          </form>
+          </div>
         </div>
-      </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button type="button" className="boton-secundario" onClick={() => navigate("/titulos")}>
+            Cancelar
+          </button>
+          <button className="boton" type="submit" disabled={enviando}>
+            <i className="bi bi-check-circle" /> {enviando ? "Guardando..." : "Guardar cambios"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

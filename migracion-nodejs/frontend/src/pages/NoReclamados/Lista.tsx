@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
+import { ConfirmModal } from "../../components/ConfirmModal";
 
 interface FallecidoFila {
   fallecidoId: number;
@@ -27,6 +28,8 @@ export function NoReclamadosLista() {
   const exito = (location.state as { exito?: string } | null)?.exito;
   const [q, setQ] = useState("");
   const [busqueda, setBusqueda] = useState("");
+  const [aEliminar, setAEliminar] = useState<FallecidoFila | null>(null);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["no-reclamados", busqueda],
@@ -36,8 +39,11 @@ export function NoReclamadosLista() {
 
   const eliminar = useMutation({
     mutationFn: (id: number) => api(`/no-reclamados/${id}`, { method: "DELETE" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["no-reclamados"] }),
-    onError: (err) => alert(err instanceof ApiError ? err.message : "No se pudo eliminar"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["no-reclamados"] });
+      setAEliminar(null);
+    },
+    onError: (err) => setErrorEliminar(err instanceof ApiError ? err.message : "No se pudo eliminar"),
   });
 
   return (
@@ -167,10 +173,11 @@ export function NoReclamadosLista() {
                             <i className="bi bi-pencil" />
                           </Link>
                           <button
-                            className="boton-secundario boton-sm"
+                            className="boton-peligro boton-sm"
                             title="Eliminar"
                             onClick={() => {
-                              if (confirm(`¿Eliminar el registro de "${f.nombreCompleto}"?`)) eliminar.mutate(f.fallecidoId);
+                              setAEliminar(f);
+                              setErrorEliminar(null);
                             }}
                           >
                             <i className="bi bi-trash" />
@@ -185,6 +192,25 @@ export function NoReclamadosLista() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        abierto={!!aEliminar}
+        titulo="Confirmar eliminación"
+        mensaje={
+          <>
+            ¿Desea eliminar el registro de <strong>{aEliminar?.nombreCompleto}</strong>?
+          </>
+        }
+        textoConfirmar="Sí, eliminar"
+        iconoConfirmar="bi-trash"
+        error={errorEliminar}
+        cargando={eliminar.isPending}
+        onCancelar={() => {
+          setAEliminar(null);
+          setErrorEliminar(null);
+        }}
+        onConfirmar={() => aEliminar && eliminar.mutate(aEliminar.fallecidoId)}
+      />
     </div>
   );
 }

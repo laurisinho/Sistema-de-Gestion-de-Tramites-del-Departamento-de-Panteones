@@ -43,11 +43,15 @@ bitacoraRouter.get(
       take: 250,
     });
 
-    const hoy = new Date(new Date().toDateString());
+    // Ancladas en UTC para coincidir con los filtros desde/hasta de arriba
+    // (también en UTC): si no, "Hoy" en las tarjetas y filtrar Desde=Hasta=hoy
+    // podían dar totales distintos según el huso horario del servidor.
+    const ahora2 = new Date();
+    const hoy = new Date(Date.UTC(ahora2.getUTCFullYear(), ahora2.getUTCMonth(), ahora2.getUTCDate()));
     const iniSemana = new Date(hoy);
-    iniSemana.setDate(iniSemana.getDate() - 6);
+    iniSemana.setUTCDate(iniSemana.getUTCDate() - 6);
     const ini14 = new Date(hoy);
-    ini14.setDate(ini14.getDate() - 13);
+    ini14.setUTCDate(ini14.getUTCDate() - 13);
 
     const [total, deHoy, deSemana, usuariosDistintos, actividad14, acciones, listaUsuarios] = await Promise.all([
       prisma.bitacora.count(),
@@ -68,9 +72,12 @@ bitacoraRouter.get(
     const grafica = [];
     for (let k = 0; k < 14; k++) {
       const d = new Date(ini14);
-      d.setDate(d.getDate() + k);
+      d.setUTCDate(d.getUTCDate() + k);
       const clave = d.toISOString().slice(0, 10);
-      grafica.push({ etiqueta: d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit" }), valor: conteoPorDia.get(clave) ?? 0 });
+      grafica.push({
+        etiqueta: d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", timeZone: "UTC" }),
+        valor: conteoPorDia.get(clave) ?? 0,
+      });
     }
 
     res.json({

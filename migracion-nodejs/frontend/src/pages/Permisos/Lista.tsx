@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
 import { api, API_URL, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
+import { ConfirmModal } from "../../components/ConfirmModal";
 
 interface Panteon {
   panteonId: number;
@@ -35,6 +36,8 @@ export function PermisosLista() {
   const [tipo, setTipo] = useState("");
   const [panteonId, setPanteonId] = useState("");
   const [filtros, setFiltros] = useState({ q: "", tipo: "", panteonId: "" });
+  const [aCancelar, setACancelar] = useState<PermisoFila | null>(null);
+  const [errorCancelar, setErrorCancelar] = useState<string | null>(null);
 
   const { data: panteones } = useQuery({
     queryKey: ["catalogos", "panteones"],
@@ -54,8 +57,11 @@ export function PermisosLista() {
 
   const cancelar = useMutation({
     mutationFn: (id: number) => api(`/permisos/${id}/cancelar`, { method: "POST" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["permisos"] }),
-    onError: (err) => alert(err instanceof ApiError ? err.message : "No se pudo cancelar"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["permisos"] });
+      setACancelar(null);
+    },
+    onError: (err) => setErrorCancelar(err instanceof ApiError ? err.message : "No se pudo cancelar"),
   });
 
   return (
@@ -170,7 +176,7 @@ export function PermisosLista() {
                           >
                             <i className="bi bi-printer" />
                           </a>
-                          <Link to={`/permisos/${p.permisoId}`} className="boton-secundario boton-sm" title="Ver">
+                          <Link to={`/permisos/${p.permisoId}`} className="boton boton-sm" title="Ver">
                             <i className="bi bi-eye" />
                           </Link>
                           {p.estado !== "CANCELADO" && (
@@ -179,11 +185,11 @@ export function PermisosLista() {
                                 <i className="bi bi-pencil" />
                               </Link>
                               <button
-                                className="boton-secundario boton-sm"
+                                className="boton-peligro boton-sm"
                                 title="Cancelar"
                                 onClick={() => {
-                                  if (confirm(`¿Cancelar el permiso ${p.folio}? No se elimina, queda marcado como cancelado.`))
-                                    cancelar.mutate(p.permisoId);
+                                  setACancelar(p);
+                                  setErrorCancelar(null);
                                 }}
                               >
                                 <i className="bi bi-x-circle" />
@@ -200,6 +206,26 @@ export function PermisosLista() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        abierto={!!aCancelar}
+        titulo="Confirmar cancelación"
+        mensaje={
+          <>
+            ¿Desea cancelar el permiso <strong>{aCancelar?.folio}</strong>?
+          </>
+        }
+        nota="El registro se marcará como cancelado y no se elimina de la base de datos."
+        error={errorCancelar}
+        textoConfirmar="Sí, cancelar"
+        iconoConfirmar="bi-x-circle"
+        cargando={cancelar.isPending}
+        onCancelar={() => {
+          setACancelar(null);
+          setErrorCancelar(null);
+        }}
+        onConfirmar={() => aCancelar && cancelar.mutate(aCancelar.permisoId)}
+      />
     </div>
   );
 }

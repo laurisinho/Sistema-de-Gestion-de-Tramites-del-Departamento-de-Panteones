@@ -14,7 +14,8 @@ export function CesionNueva() {
   const navigate = useNavigate();
 
   const [termino, setTermino] = useState("");
-  const [resultados, setResultados] = useState<TituloResultado[]>([]);
+  const [resultados, setResultados] = useState<TituloResultado[] | null>(null);
+  const [buscando, setBuscando] = useState(false);
   const [tituloSel, setTituloSel] = useState<TituloResultado | null>(null);
 
   const [nombreCesionario, setNombreCesionario] = useState("");
@@ -22,14 +23,20 @@ export function CesionNueva() {
   const [domicilioCesionario, setDomicilioCesionario] = useState("");
   const [coloniaCesionario, setColoniaCesionario] = useState("");
   const [ineCesionario, setIneCesionario] = useState("");
+  const [fechaCesion, setFechaCesion] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   async function buscar() {
     if (termino.trim().length < 2) return;
-    const r = await api<TituloResultado[]>(`/titulos/buscar?termino=${encodeURIComponent(termino)}`);
-    setResultados(r);
+    setBuscando(true);
+    try {
+      const r = await api<TituloResultado[]>(`/titulos/buscar?termino=${encodeURIComponent(termino)}`);
+      setResultados(r);
+    } finally {
+      setBuscando(false);
+    }
   }
 
   async function onSubmit(e: FormEvent) {
@@ -47,6 +54,7 @@ export function CesionNueva() {
           domicilioCesionario: domicilioCesionario || undefined,
           coloniaCesionario: coloniaCesionario || undefined,
           ineCesionario: ineCesionario || undefined,
+          fechaCesion: fechaCesion || undefined,
         }),
       });
       navigate("/cesiones", {
@@ -64,45 +72,87 @@ export function CesionNueva() {
       <div className="page-header">
         <h2>
           <i className="bi bi-arrow-left-right" />
-          Nueva cesión de derechos
+          Nueva Cesión de Derechos
         </h2>
-      </div>
-      <div className="card">
-      <div className="card-body">
-      <h3>Título a ceder</h3>
-      {tituloSel ? (
-        <div className="aviso-exito" style={{ marginBottom: 16 }}>
-          <strong>{tituloSel.folio}</strong> — {tituloSel.titular} — {tituloSel.panteon}, {tituloSel.ubicacion}{" "}
-          <button type="button" className="boton-secundario" onClick={() => setTituloSel(null)}>
-            Quitar
+        <div className="page-header-acciones">
+          <button type="button" className="boton-secundario" onClick={() => navigate("/cesiones")}>
+            <i className="bi bi-arrow-left" /> Regresar
           </button>
         </div>
-      ) : (
-        <>
-          <div className="barra-filtros">
+      </div>
+
+      {error && <p className="aviso-error">{error}</p>}
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-header-guinda">
+          <span>
+            <i className="bi bi-1-circle" /> Buscar el título a ceder
+          </span>
+        </div>
+        <div className="card-body">
+          <p className="text-muted" style={{ fontSize: 13, marginTop: 0 }}>
+            El dueño actual debe presentar su título. Búscalo por folio, nombre del titular o manzana/lote.
+          </p>
+          <div className="barra-filtros" style={{ marginBottom: 0 }}>
             <input
-              placeholder="Folio, titular, manzana o lote"
+              placeholder="Folio, titular, manzana o lote..."
               value={termino}
               onChange={(e) => setTermino(e.target.value)}
-              style={{ minWidth: 320 }}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscar())}
+              style={{ flex: 1, minWidth: 280 }}
             />
-            <button type="button" className="boton-secundario" onClick={buscar}>
-              Buscar
+            <button type="button" className="boton" onClick={buscar}>
+              <i className="bi bi-search" /> Buscar
             </button>
           </div>
-          {resultados.length > 0 && (
-            <div className="tabla-contenedor">
-              <table className="tabla" style={{ marginBottom: 16 }}>
+
+          {buscando && (
+            <p className="text-muted" style={{ fontSize: 13, marginBottom: 0 }}>
+              Buscando...
+            </p>
+          )}
+
+          {!buscando && resultados?.length === 0 && (
+            <p className="text-muted" style={{ fontSize: 13, marginBottom: 0 }}>
+              Sin títulos vigentes que coincidan.
+            </p>
+          )}
+
+          {!buscando && resultados && resultados.length > 0 && (
+            <div className="tabla-contenedor" style={{ marginTop: 12 }}>
+              <table className="tabla">
+                <thead>
+                  <tr>
+                    <th>Folio</th>
+                    <th>Titular</th>
+                    <th>Panteón</th>
+                    <th>Ubicación</th>
+                    <th></th>
+                  </tr>
+                </thead>
                 <tbody>
                   {resultados.map((t) => (
                     <tr key={t.tituloId}>
-                      <td>{t.folio}</td>
-                      <td>{t.titular}</td>
-                      <td>{t.panteon}</td>
-                      <td>{t.ubicacion}</td>
                       <td>
-                        <button type="button" className="boton-secundario boton-sm" onClick={() => setTituloSel(t)}>
-                          Usar este
+                        <small className="text-muted">{t.folio}</small>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{t.titular}</td>
+                      <td>
+                        <small>{t.panteon}</small>
+                      </td>
+                      <td>
+                        <small>{t.ubicacion}</small>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="boton boton-sm"
+                          onClick={() => {
+                            setTituloSel(t);
+                            setResultados(null);
+                          }}
+                        >
+                          <i className="bi bi-check-lg" /> Ceder
                         </button>
                       </td>
                     </tr>
@@ -111,43 +161,97 @@ export function CesionNueva() {
               </table>
             </div>
           )}
-        </>
-      )}
-
-      <form onSubmit={onSubmit}>
-        <h3>Cesionario (nuevo dueño)</h3>
-        <div className="form-grid" style={{ marginBottom: 20 }}>
-          <div className="form-campo span2">
-            <label>Nombre completo *</label>
-            <input value={nombreCesionario} onChange={(e) => setNombreCesionario(e.target.value)} required />
-          </div>
-          <div className="form-campo">
-            <label>Teléfono</label>
-            <input value={telefonoCesionario} onChange={(e) => setTelefonoCesionario(e.target.value)} />
-          </div>
-          <div className="form-campo">
-            <label>Colonia</label>
-            <input value={coloniaCesionario} onChange={(e) => setColoniaCesionario(e.target.value)} />
-          </div>
-          <div className="form-campo span2">
-            <label>Domicilio</label>
-            <input value={domicilioCesionario} onChange={(e) => setDomicilioCesionario(e.target.value)} />
-          </div>
-          <div className="form-campo">
-            <label>Número de INE</label>
-            <input value={ineCesionario} onChange={(e) => setIneCesionario(e.target.value)} />
-          </div>
         </div>
-
-        {error && <p className="aviso-error">{error}</p>}
-
-        <button className="boton" type="submit" disabled={enviando || !tituloSel}>
-          <i className="bi bi-check-circle" /> {enviando ? "Registrando..." : "Registrar cesión"}
-        </button>
-        {!tituloSel && <span style={{ marginLeft: 8, color: "var(--guinda)", fontSize: 13 }}>Selecciona un título primero.</span>}
-      </form>
       </div>
-      </div>
+
+      {tituloSel && (
+        <form onSubmit={onSubmit}>
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="card-header-guinda">
+              <span>
+                <i className="bi bi-2-circle" /> Título seleccionado (cedente)
+              </span>
+              <button type="button" className="boton-secundario boton-sm" onClick={() => setTituloSel(null)}>
+                Cambiar
+              </button>
+            </div>
+            <div className="card-body">
+              <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", maxWidth: "none" }}>
+                <div>
+                  <div className="text-muted" style={{ fontSize: 12.5 }}>Folio</div>
+                  <strong>{tituloSel.folio}</strong>
+                </div>
+                <div>
+                  <div className="text-muted" style={{ fontSize: 12.5 }}>Titular actual</div>
+                  <strong>{tituloSel.titular}</strong>
+                </div>
+                <div>
+                  <div className="text-muted" style={{ fontSize: 12.5 }}>Ubicación</div>
+                  <strong>
+                    {tituloSel.panteon} — {tituloSel.ubicacion}
+                  </strong>
+                </div>
+              </div>
+              <p className="aviso-advertencia" style={{ marginBottom: 0, marginTop: 16 }}>
+                <i className="bi bi-info-circle" /> Al registrar la cesión, este título quedará <strong>CEDIDO</strong> y se emitirá
+                uno <strong>nuevo VIGENTE</strong> al cesionario sobre el mismo lote.
+              </p>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="card-header-guinda">
+              <span>
+                <i className="bi bi-3-circle" /> Datos del cesionario (nuevo dueño)
+              </span>
+            </div>
+            <div className="card-body">
+              <div className="form-grid una-col" style={{ maxWidth: "none" }}>
+                <div className="form-campo">
+                  <label>Nombre completo *</label>
+                  <input
+                    value={nombreCesionario}
+                    onChange={(e) => setNombreCesionario(e.target.value)}
+                    placeholder="Puede incluir 'Y/O' para dos personas"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", maxWidth: "none", marginTop: 16 }}>
+                <div className="form-campo">
+                  <label>Teléfono</label>
+                  <input value={telefonoCesionario} onChange={(e) => setTelefonoCesionario(e.target.value)} />
+                </div>
+                <div className="form-campo">
+                  <label>Número de INE</label>
+                  <input value={ineCesionario} onChange={(e) => setIneCesionario(e.target.value)} maxLength={20} />
+                </div>
+                <div className="form-campo">
+                  <label>Fecha de la cesión</label>
+                  <input type="date" value={fechaCesion} onChange={(e) => setFechaCesion(e.target.value)} />
+                </div>
+                <div className="form-campo span2">
+                  <label>Domicilio</label>
+                  <input value={domicilioCesionario} onChange={(e) => setDomicilioCesionario(e.target.value)} />
+                </div>
+                <div className="form-campo">
+                  <label>Colonia</label>
+                  <input value={coloniaCesionario} onChange={(e) => setColoniaCesionario(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <button type="button" className="boton-secundario" onClick={() => navigate("/cesiones")}>
+              Cancelar
+            </button>
+            <button className="boton" type="submit" disabled={enviando}>
+              <i className="bi bi-check-circle" /> {enviando ? "Registrando..." : "Registrar cesión y emitir título"}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

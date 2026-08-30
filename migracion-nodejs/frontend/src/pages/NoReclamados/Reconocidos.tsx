@@ -173,12 +173,12 @@ export function NoReclamadosReconocidos() {
                   {data.lista.map((r) => (
                     <tr key={r.reconocimientoId}>
                       <td>{r.fechaReconocimiento ? new Date(r.fechaReconocimiento).toLocaleDateString("es-MX", { timeZone: "UTC" }) : "—"}</td>
-                      <td>
+                      <td className="tabla-col-ancha">
                         <small className="text-muted" style={{ textDecoration: "line-through" }}>
                           {r.nombreAnterior}
                         </small>
                       </td>
-                      <td>
+                      <td className="tabla-col-ancha">
                         <span style={{ fontWeight: 600 }}>{r.nombreIdentificado}</span>
                         {r.numeroActaDefuncion && (
                           <div>
@@ -198,7 +198,7 @@ export function NoReclamadosReconocidos() {
                           <small className="text-muted">—</small>
                         )}
                       </td>
-                      <td>
+                      <td className="tabla-col-ancha">
                         <small>{r.medioIdentificacion ?? "—"}</small>
                       </td>
                       <td>

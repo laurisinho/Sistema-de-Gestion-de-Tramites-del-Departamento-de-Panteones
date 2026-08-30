@@ -197,6 +197,7 @@ export function BitacoraLista() {
           <span>
             <i className="bi bi-list-ul" /> Registros
           </span>
+          <span className="badge badge-warning">{data?.registros.length ?? 0} evento(s)</span>
         </div>
         <div className="card-body">
           <ul className="tl">

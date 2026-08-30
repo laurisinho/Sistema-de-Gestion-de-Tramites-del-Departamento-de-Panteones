@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, API_URL, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
+import { ConfirmModal } from "../../components/ConfirmModal";
 
 interface PermisoDetalle {
   permisoId: number;
@@ -20,7 +22,16 @@ interface PermisoDetalle {
   tipoTramite: { clave: string; nombre: string };
   solicitante: { nombreCompleto: string; telefono: string | null; domicilio: string | null };
   fallecido: { nombreCompleto: string; fechaFallecimiento: string | null; actaDefuncionNumero: string | null } | null;
-  lote: { numeroManzana: string; numeroLote: string; seccion: string | null; panteon: { nombre: string } } | null;
+  lote: {
+    numeroManzana: string;
+    numeroLote: string;
+    seccion: string | null;
+    colindanciaNorte: string | null;
+    colindanciaSur: string | null;
+    colindanciaEste: string | null;
+    colindanciaOeste: string | null;
+    panteon: { nombre: string };
+  } | null;
   usuarioRegistro: { nombreCompleto: string } | null;
 }
 
@@ -32,6 +43,8 @@ export function PermisoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [confirmando, setConfirmando] = useState(false);
+  const [errorCancelar, setErrorCancelar] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["permisos", id],
     queryFn: () => api<{ permiso: PermisoDetalle }>(`/permisos/${id}`).then((r) => r.permiso),
@@ -43,11 +56,12 @@ export function PermisoDetalle() {
       queryClient.invalidateQueries({ queryKey: ["permisos"] });
       navigate("/permisos", { state: { exito: `Permiso ${data?.folio} cancelado.` } });
     },
-    onError: (err) => alert(err instanceof ApiError ? err.message : "No se pudo cancelar"),
+    onError: (err) => setErrorCancelar(err instanceof ApiError ? err.message : "No se pudo cancelar"),
   });
 
   if (!data) return <p>Cargando...</p>;
   const clave = data.tipoTramite.clave;
+  const usaColindancias = data.lote?.numeroManzana === "S/N";
 
   return (
     <div>
@@ -69,9 +83,10 @@ export function PermisoDetalle() {
                 <i className="bi bi-pencil" /> Editar
               </Link>
               <button
-                className="boton-secundario"
+                className="boton-peligro"
                 onClick={() => {
-                  if (confirm(`¿Cancelar el permiso ${data.folio}?`)) cancelar.mutate();
+                  setConfirmando(true);
+                  setErrorCancelar(null);
                 }}
               >
                 <i className="bi bi-x-circle" /> Cancelar
@@ -84,8 +99,14 @@ export function PermisoDetalle() {
         </div>
       </div>
 
-      <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
-        <div className="card" style={{ margin: 0 }}>
+      {data.estado === "CANCELADO" && (
+        <p className="aviso-error" style={{ marginBottom: 16 }}>
+          <i className="bi bi-exclamation-triangle" /> Este permiso está cancelado.
+        </p>
+      )}
+
+      <div className="detalle-grid">
+        <div className="card">
           <div className="card-header-guinda">
             <span>
               <i className="bi bi-file-earmark-text" /> Datos del Permiso
@@ -164,11 +185,37 @@ export function PermisoDetalle() {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="card" style={{ margin: 0 }}>
+        <div className="card">
+          <div className="card-header-guinda">
+            <span>
+              <i className="bi bi-person" /> Solicitante
+            </span>
+          </div>
+          <div className="card-body">
+            <table style={{ fontSize: 14, width: "100%" }}>
+              <tbody>
+                <tr>
+                  <td className="text-muted" style={{ width: "42%", paddingBottom: 8 }}>Nombre</td>
+                  <td style={{ paddingBottom: 8, fontWeight: 600 }}>{data.solicitante.nombreCompleto}</td>
+                </tr>
+                <tr>
+                  <td className="text-muted" style={{ paddingBottom: 8 }}>Teléfono</td>
+                  <td style={{ paddingBottom: 8 }}>{data.solicitante.telefono ?? "—"}</td>
+                </tr>
+                <tr>
+                  <td className="text-muted">Domicilio</td>
+                  <td>{data.solicitante.domicilio ?? "—"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {data.fallecido && (
+          <div className={`card${data.lote ? "" : " span2"}`}>
             <div className="card-header-guinda">
               <span>
-                <i className="bi bi-person" /> Solicitante
+                <i className="bi bi-flower1" /> Fallecido
               </span>
             </div>
             <div className="card-body">
@@ -176,66 +223,97 @@ export function PermisoDetalle() {
                 <tbody>
                   <tr>
                     <td className="text-muted" style={{ width: "42%", paddingBottom: 8 }}>Nombre</td>
-                    <td style={{ paddingBottom: 8, fontWeight: 600 }}>{data.solicitante.nombreCompleto}</td>
+                    <td style={{ paddingBottom: 8, fontWeight: 600 }}>{data.fallecido.nombreCompleto}</td>
                   </tr>
                   <tr>
-                    <td className="text-muted" style={{ paddingBottom: 8 }}>Teléfono</td>
-                    <td style={{ paddingBottom: 8 }}>{data.solicitante.telefono ?? "—"}</td>
+                    <td className="text-muted" style={{ paddingBottom: 8 }}>Fecha de fallecimiento</td>
+                    <td style={{ paddingBottom: 8 }}>{fecha(data.fallecido.fechaFallecimiento)}</td>
                   </tr>
                   <tr>
-                    <td className="text-muted">Domicilio</td>
-                    <td>{data.solicitante.domicilio ?? "—"}</td>
+                    <td className="text-muted">Acta de defunción</td>
+                    <td>{data.fallecido.actaDefuncionNumero ?? "—"}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
+        )}
 
-          {data.fallecido && (
-            <div className="card" style={{ margin: 0 }}>
-              <div className="card-header-guinda">
-                <span>
-                  <i className="bi bi-flower1" /> Fallecido
-                </span>
-              </div>
-              <div className="card-body">
-                <table style={{ fontSize: 14, width: "100%" }}>
-                  <tbody>
-                    <tr>
-                      <td className="text-muted" style={{ width: "42%", paddingBottom: 8 }}>Nombre</td>
-                      <td style={{ paddingBottom: 8, fontWeight: 600 }}>{data.fallecido.nombreCompleto}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-muted" style={{ paddingBottom: 8 }}>Fecha de fallecimiento</td>
-                      <td style={{ paddingBottom: 8 }}>{fecha(data.fallecido.fechaFallecimiento)}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-muted">Acta de defunción</td>
-                      <td>{data.fallecido.actaDefuncionNumero ?? "—"}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+        {data.lote && (
+          <div className={`card${data.fallecido ? "" : " span2"}`}>
+            <div className="card-header-guinda">
+              <span>
+                <i className="bi bi-clock-history" /> Lote
+              </span>
             </div>
-          )}
-
-          {data.lote && (
-            <div className="card" style={{ margin: 0 }}>
-              <div className="card-header-guinda">
-                <span>
-                  <i className="bi bi-clock-history" /> Lote
-                </span>
-              </div>
-              <div className="card-body">
-                <p style={{ fontSize: 14, margin: 0 }}>
-                  {data.lote.panteon.nombre}
-                  {data.lote.seccion ? ` · Secc. ${data.lote.seccion}` : ""} · Mz {data.lote.numeroManzana} · Lote {data.lote.numeroLote}
-                </p>
-              </div>
+            <div className="card-body">
+              <table style={{ fontSize: 14, width: "100%" }}>
+                <tbody>
+                  <tr>
+                    <td className="text-muted" style={{ width: "42%", paddingBottom: 8 }}>Panteón</td>
+                    <td style={{ paddingBottom: 8, fontWeight: 600 }}>{data.lote.panteon.nombre}</td>
+                  </tr>
+                  {usaColindancias ? (
+                    <>
+                      <tr>
+                        <td className="text-muted" style={{ paddingBottom: 8 }}>Norte</td>
+                        <td style={{ paddingBottom: 8 }}>{data.lote.colindanciaNorte ?? "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="text-muted" style={{ paddingBottom: 8 }}>Sur</td>
+                        <td style={{ paddingBottom: 8 }}>{data.lote.colindanciaSur ?? "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="text-muted" style={{ paddingBottom: 8 }}>Este</td>
+                        <td style={{ paddingBottom: 8 }}>{data.lote.colindanciaEste ?? "—"}</td>
+                      </tr>
+                      <tr>
+                        <td className="text-muted">Oeste</td>
+                        <td>{data.lote.colindanciaOeste ?? "—"}</td>
+                      </tr>
+                    </>
+                  ) : (
+                    <>
+                      <tr>
+                        <td className="text-muted" style={{ paddingBottom: 8 }}>Manzana</td>
+                        <td style={{ paddingBottom: 8 }}>{data.lote.numeroManzana}</td>
+                      </tr>
+                      <tr>
+                        <td className="text-muted" style={{ paddingBottom: 8 }}>Lote</td>
+                        <td style={{ paddingBottom: 8 }}>{data.lote.numeroLote}</td>
+                      </tr>
+                      <tr>
+                        <td className="text-muted">Sección</td>
+                        <td>{data.lote.seccion ?? "—"}</td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      <ConfirmModal
+        abierto={confirmando}
+        titulo="Confirmar cancelación"
+        mensaje={
+          <>
+            ¿Desea cancelar el permiso <strong>{data.folio}</strong>?
+          </>
+        }
+        nota="El registro se marcará como cancelado y no se elimina de la base de datos."
+        error={errorCancelar}
+        textoConfirmar="Sí, cancelar"
+        iconoConfirmar="bi-x-circle"
+        cargando={cancelar.isPending}
+        onCancelar={() => {
+          setConfirmando(false);
+          setErrorCancelar(null);
+        }}
+        onConfirmar={() => cancelar.mutate()}
+      />
     </div>
   );
 }

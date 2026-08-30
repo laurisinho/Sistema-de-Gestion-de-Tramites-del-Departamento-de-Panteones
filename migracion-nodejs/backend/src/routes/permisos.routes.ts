@@ -101,12 +101,14 @@ const nuevoPermisoSchema = z.object({
   esDonacion: z.boolean().default(false),
 });
 
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 // Folio correlativo por tipo de trámite que continúa la numeración existente.
 // Toma el número más alto usado en folios de ese tipo (incluye los migrados
 // LEG-SEP-000XX, que se ignoran porque su sufijo no es puramente numérico) y
 // suma 1. Ej: SEP-0066, SEP-0067, EXH-0001. Puerto exacto de GenerarFolioPermiso.
-async function generarFolioPermiso(clave: string, tipoTramiteId: number): Promise<string> {
-  const permisos = await prisma.permiso.findMany({
+async function generarFolioPermiso(clave: string, tipoTramiteId: number, tx: Tx): Promise<string> {
+  const permisos = await tx.permiso.findMany({
     where: { tipoTramiteId },
     select: { folio: true },
   });
@@ -123,7 +125,7 @@ async function generarFolioPermiso(clave: string, tipoTramiteId: number): Promis
   let siguiente = max + 1;
   for (;;) {
     const folio = `${clave}-${String(siguiente).padStart(4, "0")}`;
-    const existe = await prisma.permiso.findUnique({ where: { folio } });
+    const existe = await tx.permiso.findUnique({ where: { folio } });
     if (!existe) return folio;
     siguiente++;
   }
@@ -138,33 +140,33 @@ function ubicacionLote(lote: { claveLegado: string | null; numeroManzana: string
 // aunque quede vacío, así que NO se marca como disponible. Si el difunto tenía un
 // reconocimiento pendiente, se enlaza con este permiso para cerrar el ciclo
 // "no reclamado -> identificado -> exhumado". Puerto exacto de RegistrarExhumacionEnLote.
-async function registrarExhumacionEnLote(permiso: Permiso, usuarioId: number, ip?: string): Promise<void> {
+async function registrarExhumacionEnLote(permiso: Permiso, usuarioId: number, tx: Tx, ip?: string): Promise<void> {
   if (!permiso.loteId) return;
 
-  const lote = await prisma.lote.findUnique({ where: { loteId: permiso.loteId } });
+  const lote = await tx.lote.findUnique({ where: { loteId: permiso.loteId } });
   if (!lote) return;
 
   if (lote.esFosaComun) {
-    await prisma.lote.update({ where: { loteId: lote.loteId }, data: { estado: "DISPONIBLE" } });
+    await tx.lote.update({ where: { loteId: lote.loteId }, data: { estado: "DISPONIBLE" } });
   }
 
   // Lo normal es encontrarlo por difunto, porque el permiso ya se enlaza al
   // expediente existente. La búsqueda por lote queda de red: cubre el caso en
   // que el capturista escribió el nombre en vez de enlazarlo.
   let rec = permiso.fallecidoId
-    ? await prisma.reconocimiento.findFirst({
+    ? await tx.reconocimiento.findFirst({
         where: { fallecidoId: permiso.fallecidoId, permisoExhumacionId: null },
         orderBy: { fechaReconocimiento: "desc" },
       })
     : null;
 
-  rec ??= await prisma.reconocimiento.findFirst({
+  rec ??= await tx.reconocimiento.findFirst({
     where: { loteId: lote.loteId, permisoExhumacionId: null },
     orderBy: { fechaReconocimiento: "desc" },
   });
 
   if (rec) {
-    await prisma.reconocimiento.update({
+    await tx.reconocimiento.update({
       where: { reconocimientoId: rec.reconocimientoId },
       data: { permisoExhumacionId: permiso.permisoId },
     });
@@ -186,13 +188,13 @@ async function registrarExhumacionEnLote(permiso: Permiso, usuarioId: number, ip
 // Marca el lote como ocupado al sepultar o depositar cenizas. Sólo deja rastro
 // en bitácora cuando el estado de verdad cambió: casi todos los lotes ya están
 // ocupados y registrarlo siempre sería puro ruido. Puerto exacto de RegistrarOcupacionDeLote.
-async function registrarOcupacionDeLote(permiso: Permiso, usuarioId: number, ip?: string): Promise<void> {
+async function registrarOcupacionDeLote(permiso: Permiso, usuarioId: number, tx: Tx, ip?: string): Promise<void> {
   if (!permiso.loteId) return;
 
-  const lote = await prisma.lote.findUnique({ where: { loteId: permiso.loteId } });
+  const lote = await tx.lote.findUnique({ where: { loteId: permiso.loteId } });
   if (!lote || lote.estado === "OCUPADO") return;
 
-  await prisma.lote.update({ where: { loteId: lote.loteId }, data: { estado: "OCUPADO" } });
+  await tx.lote.update({ where: { loteId: lote.loteId }, data: { estado: "OCUPADO" } });
 
   const ubicacion = ubicacionLote(lote);
   await registrarBitacora(
@@ -232,88 +234,97 @@ permisosRouter.post(
 
     const usuarioId = req.usuario!.usuarioId;
 
-    const solicitante = await prisma.persona.create({
-      data: {
-        nombreCompleto: vm.nombreSolicitante,
-        telefono: vm.telefonoSolicitante,
-        domicilio: vm.domicilioSolicitante,
-      },
-    });
+    try {
+      const resultado = await prisma.$transaction(async (tx) => {
+        const solicitante = await tx.persona.create({
+          data: {
+            nombreCompleto: vm.nombreSolicitante,
+            telefono: vm.telefonoSolicitante,
+            domicilio: vm.domicilioSolicitante,
+          },
+        });
 
-    // Si el capturista eligió un expediente existente se reutiliza. Antes se
-    // creaba siempre un difunto nuevo, lo que dejaba huérfano al registro de no
-    // reclamado y salía sin lote en el reporte de Fiscalía -- es el bug que
-    // motivó todo este bloque, no simplificar de vuelta a "siempre crear".
-    let fallecido = vm.fallecidoId
-      ? await prisma.fallecido.findUnique({ where: { fallecidoId: vm.fallecidoId } })
-      : null;
+        // Si el capturista eligió un expediente existente se reutiliza. Antes se
+        // creaba siempre un difunto nuevo, lo que dejaba huérfano al registro de no
+        // reclamado y salía sin lote en el reporte de Fiscalía -- es el bug que
+        // motivó todo este bloque, no simplificar de vuelta a "siempre crear".
+        let fallecido = vm.fallecidoId
+          ? await tx.fallecido.findUnique({ where: { fallecidoId: vm.fallecidoId } })
+          : null;
 
-    if (fallecido) {
-      // Completa lo que le falte al expediente, sin pisar lo ya capturado.
-      const data: { fechaFallecimiento?: Date; actaDefuncionNumero?: string } = {};
-      if (!fallecido.fechaFallecimiento && vm.fechaFallecimiento) data.fechaFallecimiento = vm.fechaFallecimiento;
-      if (!fallecido.actaDefuncionNumero?.trim() && vm.actaDefuncionNumero) data.actaDefuncionNumero = vm.actaDefuncionNumero;
-      if (Object.keys(data).length > 0) {
-        fallecido = await prisma.fallecido.update({ where: { fallecidoId: fallecido.fallecidoId }, data });
-      }
-    }
+        if (fallecido) {
+          // Completa lo que le falte al expediente, sin pisar lo ya capturado.
+          const data: { fechaFallecimiento?: Date; actaDefuncionNumero?: string } = {};
+          if (!fallecido.fechaFallecimiento && vm.fechaFallecimiento) data.fechaFallecimiento = vm.fechaFallecimiento;
+          if (!fallecido.actaDefuncionNumero?.trim() && vm.actaDefuncionNumero) data.actaDefuncionNumero = vm.actaDefuncionNumero;
+          if (Object.keys(data).length > 0) {
+            fallecido = await tx.fallecido.update({ where: { fallecidoId: fallecido.fallecidoId }, data });
+          }
+        }
 
-    if (!fallecido && vm.nombreFallecido?.trim()) {
-      fallecido = await prisma.fallecido.create({
-        data: {
-          nombreCompleto: vm.nombreFallecido,
-          fechaFallecimiento: vm.fechaFallecimiento,
-          actaDefuncionNumero: vm.actaDefuncionNumero,
-        },
+        if (!fallecido && vm.nombreFallecido?.trim()) {
+          fallecido = await tx.fallecido.create({
+            data: {
+              nombreCompleto: vm.nombreFallecido,
+              fechaFallecimiento: vm.fechaFallecimiento,
+              actaDefuncionNumero: vm.actaDefuncionNumero,
+            },
+          });
+        }
+
+        const tipoTramite = await tx.tipoTramite.findFirstOrThrow({ where: { clave: vm.tipoClave } });
+        const folio = await generarFolioPermiso(vm.tipoClave, tipoTramite.tipoTramiteId, tx);
+
+        const permiso = await tx.permiso.create({
+          data: {
+            tipoTramiteId: tipoTramite.tipoTramiteId,
+            loteId: vm.loteId,
+            solicitanteId: solicitante.personaId,
+            fallecidoId: fallecido?.fallecidoId,
+            folio,
+            fechaSolicitud: new Date(new Date().toDateString()),
+            usuarioRegistroId: usuarioId,
+            estado: "APROBADO",
+            motivoExhumacion: vm.motivoExhumacion,
+            destinoRestos: vm.destinoRestos,
+            ubicacionDeposito: vm.ubicacionDeposito,
+            tipoObra: vm.tipoObra,
+            descripcionObra: vm.descripcionObra,
+            numeroRecibo: vm.numeroRecibo,
+            funeraria: vm.funeraria,
+            esDonacion: vm.esDonacion,
+          },
+        });
+
+        // Una exhumación retira los restos: en fosa común eso libera el lote.
+        if (vm.tipoClave === "EXH") {
+          await registrarExhumacionEnLote(permiso, usuarioId, tx, req.ip);
+        }
+
+        // Sepultar o depositar cenizas vuelve a ocupar el lote. Sin esto, un lote de
+        // fosa común liberado seguía anunciándose como disponible aunque ya se
+        // hubiera vuelto a usar.
+        if (vm.tipoClave === "SEP" || vm.tipoClave === "CEN") {
+          await registrarOcupacionDeLote(permiso, usuarioId, tx, req.ip);
+        }
+
+        return { permiso, folio, solicitante, tipoTramite };
       });
+
+      await registrarBitacora(
+        usuarioId,
+        Acciones.Crear,
+        "permisos",
+        resultado.permiso.permisoId,
+        `Permiso ${resultado.tipoTramite.nombre} ${resultado.folio} a nombre de ${resultado.solicitante.nombreCompleto}`,
+        req.ip
+      );
+
+      res.status(201).json({ permisoId: resultado.permiso.permisoId, folio: resultado.folio });
+    } catch (err) {
+      console.error("Error al registrar permiso (rollback aplicado):", err);
+      res.status(500).json({ error: "No se pudo generar el permiso. No se guardó ningún cambio; inténtalo de nuevo." });
     }
-
-    const tipoTramite = await prisma.tipoTramite.findFirstOrThrow({ where: { clave: vm.tipoClave } });
-    const folio = await generarFolioPermiso(vm.tipoClave, tipoTramite.tipoTramiteId);
-
-    const permiso = await prisma.permiso.create({
-      data: {
-        tipoTramiteId: tipoTramite.tipoTramiteId,
-        loteId: vm.loteId,
-        solicitanteId: solicitante.personaId,
-        fallecidoId: fallecido?.fallecidoId,
-        folio,
-        fechaSolicitud: new Date(new Date().toDateString()),
-        usuarioRegistroId: usuarioId,
-        estado: "APROBADO",
-        motivoExhumacion: vm.motivoExhumacion,
-        destinoRestos: vm.destinoRestos,
-        ubicacionDeposito: vm.ubicacionDeposito,
-        tipoObra: vm.tipoObra,
-        descripcionObra: vm.descripcionObra,
-        numeroRecibo: vm.numeroRecibo,
-        funeraria: vm.funeraria,
-        esDonacion: vm.esDonacion,
-      },
-    });
-
-    await registrarBitacora(
-      usuarioId,
-      Acciones.Crear,
-      "permisos",
-      permiso.permisoId,
-      `Permiso ${tipoTramite.nombre} ${folio} a nombre de ${solicitante.nombreCompleto}`,
-      req.ip
-    );
-
-    // Una exhumación retira los restos: en fosa común eso libera el lote.
-    if (vm.tipoClave === "EXH") {
-      await registrarExhumacionEnLote(permiso, usuarioId, req.ip);
-    }
-
-    // Sepultar o depositar cenizas vuelve a ocupar el lote. Sin esto, un lote de
-    // fosa común liberado seguía anunciándose como disponible aunque ya se
-    // hubiera vuelto a usar.
-    if (vm.tipoClave === "SEP" || vm.tipoClave === "CEN") {
-      await registrarOcupacionDeLote(permiso, usuarioId, req.ip);
-    }
-
-    res.status(201).json({ permisoId: permiso.permisoId, folio });
   })
 );
 
@@ -352,39 +363,45 @@ permisosRouter.put(
     }
     const vm = parseo.data;
 
-    await prisma.persona.update({
-      where: { personaId: permiso.solicitanteId },
-      data: {
-        nombreCompleto: vm.nombreSolicitante.trim(),
-        telefono: vm.telefonoSolicitante,
-        domicilio: vm.domicilioSolicitante,
-      },
-    });
-
-    if (permiso.fallecido && vm.nombreFallecido?.trim()) {
-      await prisma.fallecido.update({
-        where: { fallecidoId: permiso.fallecido.fallecidoId },
+    // El original .NET confirma solicitante + fallecido + permiso con un solo
+    // SaveChangesAsync; partirlo en 3 updates sueltos podía guardar, por
+    // ejemplo, la corrección del fallecido pero no el cambio de estado del
+    // permiso si el último paso fallaba, sin que el usuario lo notara.
+    await prisma.$transaction(async (tx) => {
+      await tx.persona.update({
+        where: { personaId: permiso.solicitanteId },
         data: {
-          nombreCompleto: vm.nombreFallecido.trim(),
-          fechaFallecimiento: vm.fechaFallecimiento,
-          actaDefuncionNumero: vm.actaDefuncionNumero,
+          nombreCompleto: vm.nombreSolicitante.trim(),
+          telefono: vm.telefonoSolicitante,
+          domicilio: vm.domicilioSolicitante,
         },
       });
-    }
 
-    await prisma.permiso.update({
-      where: { permisoId: id },
-      data: {
-        fechaSolicitud: vm.fechaSolicitud,
-        estado: vm.estado,
-        numeroRecibo: vm.numeroRecibo,
-        funeraria: vm.funeraria,
-        motivoExhumacion: vm.motivoExhumacion,
-        destinoRestos: vm.destinoRestos,
-        tipoObra: vm.tipoObra,
-        descripcionObra: vm.descripcionObra,
-        esDonacion: vm.esDonacion,
-      },
+      if (permiso.fallecido && vm.nombreFallecido?.trim()) {
+        await tx.fallecido.update({
+          where: { fallecidoId: permiso.fallecido.fallecidoId },
+          data: {
+            nombreCompleto: vm.nombreFallecido.trim(),
+            fechaFallecimiento: vm.fechaFallecimiento,
+            actaDefuncionNumero: vm.actaDefuncionNumero,
+          },
+        });
+      }
+
+      await tx.permiso.update({
+        where: { permisoId: id },
+        data: {
+          fechaSolicitud: vm.fechaSolicitud,
+          estado: vm.estado,
+          numeroRecibo: vm.numeroRecibo,
+          funeraria: vm.funeraria,
+          motivoExhumacion: vm.motivoExhumacion,
+          destinoRestos: vm.destinoRestos,
+          tipoObra: vm.tipoObra,
+          descripcionObra: vm.descripcionObra,
+          esDonacion: vm.esDonacion,
+        },
+      });
     });
 
     await registrarBitacora(req.usuario!.usuarioId, Acciones.Editar, "permisos", id, `Permiso ${permiso.folio} editado`, req.ip);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError, API_URL } from "../../lib/api";
+import { claseEstado } from "../../lib/badges";
 
 interface ReimpresionFila {
   reimpresionId: number;
@@ -22,14 +23,18 @@ interface BusquedaResultado {
   estado: string;
 }
 
-const MOTIVOS_FRECUENTES = [
+const MOTIVOS = [
   "Documento extraviado",
-  "Documento dañado",
+  "Documento dañado o deteriorado",
   "Copia adicional para el interesado",
-  "Corrección de datos",
+  "Corrección tras verificación de datos",
   "Uso administrativo interno",
   "Solicitud de otra dependencia",
 ];
+
+function bloqueado(estado: string): boolean {
+  return estado === "CANCELADO" || estado === "RECHAZADO";
+}
 
 export function ReimpresionesLista() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,10 +44,11 @@ export function ReimpresionesLista() {
   const [termino, setTermino] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [seleccion, setSeleccion] = useState<BusquedaResultado | null>(null);
-  const [motivo, setMotivo] = useState("");
+  const [motivo, setMotivo] = useState(MOTIVOS[0]);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
+  const [preseleccionBloqueada, setPreseleccionBloqueada] = useState<string | null>(null);
 
   const { data, refetch } = useQuery({
     queryKey: ["reimpresiones"],
@@ -59,7 +65,11 @@ export function ReimpresionesLista() {
 
   useEffect(() => {
     if (preseleccion) {
-      setSeleccion(preseleccion);
+      if (bloqueado(preseleccion.estado)) {
+        setPreseleccionBloqueada(`Este documento está ${preseleccion.estado} y no puede reimprimirse.`);
+      } else {
+        setSeleccion(preseleccion);
+      }
       setSearchParams({}, { replace: true });
     }
   }, [preseleccion, setSearchParams]);
@@ -80,7 +90,7 @@ export function ReimpresionesLista() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo: seleccion.tipo, id: seleccion.id, motivo: motivo || undefined }),
+        body: JSON.stringify({ tipo: seleccion.tipo, id: seleccion.id, motivo }),
       });
       if (!res.ok) {
         const cuerpo = await res.json().catch(() => null);
@@ -91,7 +101,7 @@ export function ReimpresionesLista() {
       window.open(url, "_blank");
       setExito(`Reimpresión de ${seleccion.folio} generada correctamente.`);
       setSeleccion(null);
-      setMotivo("");
+      setMotivo(MOTIVOS[0]);
       setTermino("");
       setBusqueda("");
       refetch();
@@ -120,6 +130,11 @@ export function ReimpresionesLista() {
           </span>
         </div>
         <div className="card-body">
+          {preseleccionBloqueada && !seleccion && (
+            <p className="aviso-error" style={{ marginBottom: 16 }}>
+              <i className="bi bi-lock" /> {preseleccionBloqueada}
+            </p>
+          )}
           {seleccion ? (
             <div className="aviso-exito" style={{ marginBottom: 16 }}>
               <strong>
@@ -139,7 +154,14 @@ export function ReimpresionesLista() {
                   onChange={(e) => setTermino(e.target.value)}
                   style={{ minWidth: 300 }}
                 />
-                <button type="button" className="boton-secundario" onClick={() => setBusqueda(termino)}>
+                <button
+                  type="button"
+                  className="boton-secundario"
+                  onClick={() => {
+                    setPreseleccionBloqueada(null);
+                    setBusqueda(termino);
+                  }}
+                >
                   <i className="bi bi-search" /> Buscar
                 </button>
               </div>
@@ -166,11 +188,26 @@ export function ReimpresionesLista() {
                           <td>{r.folio}</td>
                           <td>{r.nombre}</td>
                           <td>{r.extra}</td>
-                          <td>{r.estado}</td>
                           <td>
-                            <button type="button" className="boton-secundario boton-sm" onClick={() => setSeleccion(r)}>
-                              Usar este
-                            </button>
+                            <span className={claseEstado(r.estado)}>{r.estado}</span>
+                          </td>
+                          <td>
+                            {bloqueado(r.estado) ? (
+                              <small className="text-muted">
+                                <i className="bi bi-lock" /> No disponible
+                              </small>
+                            ) : (
+                              <button
+                                type="button"
+                                className="boton-secundario boton-sm"
+                                onClick={() => {
+                                  setPreseleccionBloqueada(null);
+                                  setSeleccion(r);
+                                }}
+                              >
+                                Usar este
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -184,27 +221,14 @@ export function ReimpresionesLista() {
           {seleccion && (
             <div className="form-grid una-col" style={{ marginBottom: 16, maxWidth: 480 }}>
               <div className="form-campo">
-                <label>Motivo de la reimpresión</label>
-                <select
-                  value={MOTIVOS_FRECUENTES.includes(motivo) || motivo === "" ? motivo : "__otro__"}
-                  onChange={(e) => setMotivo(e.target.value === "__otro__" ? " " : e.target.value)}
-                >
-                  <option value="">Selecciona...</option>
-                  {MOTIVOS_FRECUENTES.map((m) => (
+                <label>Motivo de la reimpresión *</label>
+                <select value={motivo} onChange={(e) => setMotivo(e.target.value)} required>
+                  {MOTIVOS.map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>
                   ))}
-                  <option value="__otro__">Otro (escribir abajo)</option>
                 </select>
-                {!MOTIVOS_FRECUENTES.includes(motivo) && motivo !== "" && (
-                  <input
-                    value={motivo.trim()}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    placeholder="Describe el motivo"
-                    style={{ marginTop: 6 }}
-                  />
-                )}
               </div>
             </div>
           )}
@@ -220,10 +244,11 @@ export function ReimpresionesLista() {
       </div>
 
       <div className="card">
-        <div className="card-header-guinda">
+        <div className="card-header-guinda" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>
-            <i className="bi bi-clock-history" /> Historial
+            <i className="bi bi-clock-history" /> Historial de reimpresiones
           </span>
+          {data && <span className="badge badge-warning">{data.length} registro(s)</span>}
         </div>
         <div className="card-body p-0">
           {data && (
@@ -231,26 +256,43 @@ export function ReimpresionesLista() {
               <table className="tabla">
                 <thead>
                   <tr>
-                    <th>Fecha</th>
-                    <th>Documento</th>
+                    <th>Tipo</th>
+                    <th>Folio</th>
                     <th>Motivo</th>
                     <th>Usuario</th>
+                    <th>Fecha y hora</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.length === 0 && (
                     <tr>
-                      <td colSpan={4}>Sin reimpresiones registradas.</td>
+                      <td colSpan={5}>Sin reimpresiones registradas.</td>
                     </tr>
                   )}
-                  {data.map((r) => (
-                    <tr key={r.reimpresionId}>
-                      <td>{new Date(r.fechaReimpresion).toLocaleString("es-MX")}</td>
-                      <td>{r.permiso?.folio ?? r.titulo?.folio ?? r.cesion?.folio ?? "—"}</td>
-                      <td>{r.motivo}</td>
-                      <td>{r.usuario.nombreCompleto}</td>
-                    </tr>
-                  ))}
+                  {data.map((r) => {
+                    const doc = r.permiso
+                      ? { tipo: "PERMISO", folio: r.permiso.folio, clase: "badge-info" }
+                      : r.titulo
+                        ? { tipo: "TÍTULO", folio: r.titulo.folio, clase: "badge-success" }
+                        : r.cesion
+                          ? { tipo: "CESIÓN", folio: r.cesion.folio, clase: "badge-warning" }
+                          : { tipo: "—", folio: "—", clase: "badge-secondary" };
+                    return (
+                      <tr key={r.reimpresionId}>
+                        <td>
+                          <span className={`badge ${doc.clase}`}>{doc.tipo}</span>
+                        </td>
+                        <td>
+                          <small className="text-muted">{doc.folio}</small>
+                        </td>
+                        <td>{r.motivo}</td>
+                        <td>{r.usuario.nombreCompleto}</td>
+                        <td>
+                          <small>{new Date(r.fechaReimpresion).toLocaleString("es-MX")}</small>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -15,6 +15,7 @@ const CLASES: Record<string, string> = {
   OCUPADO: "badge-guinda",
   FOSA_COMUN: "badge-warning",
   CEDIDO: "badge-info",
+  INACTIVO: "badge-secondary",
 };
 
 export function claseEstado(estado: string): string {

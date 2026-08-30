@@ -16,6 +16,16 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<
     headers: { "Content-Type": "application/json", ...opciones.headers },
   });
 
+  // Un 401 fuera del propio flujo de login significa que la cookie murió a
+  // mitad de la sesión (expiró o el servidor la invalidó). El original .NET
+  // resuelve esto solo porque cada navegación es una petición nueva al
+  // servidor; aquí, sin este redirect, la SPA se queda mostrando una pantalla
+  // rota con errores 401 silenciosos en vez de mandar a /login como se espera.
+  if (res.status === 401 && !ruta.startsWith("/auth/")) {
+    window.location.href = "/login";
+    return new Promise<T>(() => {});
+  }
+
   const cuerpo = await res.json().catch(() => null);
 
   if (!res.ok) {
