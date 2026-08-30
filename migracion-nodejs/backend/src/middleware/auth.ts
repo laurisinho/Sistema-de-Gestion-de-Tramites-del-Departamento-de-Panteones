@@ -25,10 +25,21 @@ export function firmarToken(payload: TokenPayload): string {
 }
 
 export function cookieOpciones(req: Request) {
+  // En local, frontend y backend comparten origen (localhost) y no hay HTTPS,
+  // así que "strict" + secure dinámico basta -- igual que el .NET original.
+  // En producción viven en dominios distintos (GitHub Pages + Render), y un
+  // navegador nunca manda una cookie "strict" entre sitios distintos, sin
+  // importar el CORS: hace falta "none", que a su vez exige Secure.
+  if (env.isProduction) {
+    return {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none" as const,
+      maxAge: 8 * 60 * 60 * 1000,
+    };
+  }
   return {
     httpOnly: true,
-    // Igual que en el .NET original: Secure fijo en true rompe el login en
-    // silencio si todavía no hay HTTPS (p. ej. en la red local del piloto).
     secure: req.secure,
     sameSite: "strict" as const,
     maxAge: 8 * 60 * 60 * 1000,
