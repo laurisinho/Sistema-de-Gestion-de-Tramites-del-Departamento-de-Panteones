@@ -43,7 +43,9 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 // datos caída) cae aquí en vez de dejar la request colgada o tumbar el proceso.
 const manejadorErrores: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ error: "Error interno del servidor" });
+  // DIAGNÓSTICO TEMPORAL: exponer el mensaje real para depurar el 500 de los
+  // PDFs en Render. Revertir antes de dejarlo -- nunca debe quedar así.
+  res.status(500).json({ error: "Error interno del servidor", detalle: String(err?.stack ?? err) });
 };
 app.use(manejadorErrores);
 
