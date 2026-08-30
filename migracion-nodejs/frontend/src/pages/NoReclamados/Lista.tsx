@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { useAuth } from "../../auth/AuthContext";
 
 interface FallecidoFila {
   fallecidoId: number;
@@ -23,6 +24,8 @@ function fecha(f: string | null): string {
 }
 
 export function NoReclamadosLista() {
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const queryClient = useQueryClient();
   const location = useLocation();
   const exito = (location.state as { exito?: string } | null)?.exito;
@@ -63,9 +66,11 @@ export function NoReclamadosLista() {
           <Link className="boton-secundario" to="/no-reclamados/reporte">
             <i className="bi bi-file-earmark-excel" /> Reporte Excel
           </Link>
-          <Link className="boton" to="/no-reclamados/nuevo">
-            <i className="bi bi-plus-circle" /> Nuevo registro
-          </Link>
+          {puedeEscribir && (
+            <Link className="boton" to="/no-reclamados/nuevo">
+              <i className="bi bi-plus-circle" /> Nuevo registro
+            </Link>
+          )}
         </div>
       </div>
 
@@ -164,24 +169,28 @@ export function NoReclamadosLista() {
                           <Link to={`/no-reclamados/${f.fallecidoId}`} className="boton boton-sm" title="Ver">
                             <i className="bi bi-eye" />
                           </Link>
-                          {!f.reconocido && (
-                            <Link to={`/no-reclamados/${f.fallecidoId}/reconocer`} className="boton-secundario boton-sm" title="Reconocer">
-                              <i className="bi bi-person-check" />
-                            </Link>
+                          {puedeEscribir && (
+                            <>
+                              {!f.reconocido && (
+                                <Link to={`/no-reclamados/${f.fallecidoId}/reconocer`} className="boton-secundario boton-sm" title="Reconocer">
+                                  <i className="bi bi-person-check" />
+                                </Link>
+                              )}
+                              <Link to={`/no-reclamados/${f.fallecidoId}/editar`} className="boton-secundario boton-sm" title="Editar">
+                                <i className="bi bi-pencil" />
+                              </Link>
+                              <button
+                                className="boton-peligro boton-sm"
+                                title="Eliminar"
+                                onClick={() => {
+                                  setAEliminar(f);
+                                  setErrorEliminar(null);
+                                }}
+                              >
+                                <i className="bi bi-trash" />
+                              </button>
+                            </>
                           )}
-                          <Link to={`/no-reclamados/${f.fallecidoId}/editar`} className="boton-secundario boton-sm" title="Editar">
-                            <i className="bi bi-pencil" />
-                          </Link>
-                          <button
-                            className="boton-peligro boton-sm"
-                            title="Eliminar"
-                            onClick={() => {
-                              setAEliminar(f);
-                              setErrorEliminar(null);
-                            }}
-                          >
-                            <i className="bi bi-trash" />
-                          </button>
                         </div>
                       </td>
                     </tr>

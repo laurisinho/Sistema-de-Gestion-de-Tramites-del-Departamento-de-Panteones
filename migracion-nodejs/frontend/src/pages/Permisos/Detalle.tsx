@@ -5,6 +5,7 @@ import { api, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { BotonImprimir } from "../../components/BotonImprimir";
+import { useAuth } from "../../auth/AuthContext";
 
 interface PermisoDetalle {
   permisoId: number;
@@ -41,6 +42,8 @@ function fecha(f: string | null): string {
 }
 
 export function PermisoDetalle() {
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -75,10 +78,12 @@ export function PermisoDetalle() {
           <BotonImprimir ruta={`/permisos/${id}/pdf`} nombreArchivo={`permiso-${data.folio}.pdf`} className="boton-secundario">
             {" "}Imprimir
           </BotonImprimir>
-          <Link className="boton-secundario" to={`/reimpresiones?tipo=PERMISO&id=${id}`}>
-            <i className="bi bi-printer-fill" /> Reimprimir con sello
-          </Link>
-          {data.estado !== "CANCELADO" && (
+          {puedeEscribir && (
+            <Link className="boton-secundario" to={`/reimpresiones?tipo=PERMISO&id=${id}`}>
+              <i className="bi bi-printer-fill" /> Reimprimir con sello
+            </Link>
+          )}
+          {data.estado !== "CANCELADO" && puedeEscribir && (
             <>
               <Link className="boton-secundario" to={`/permisos/${id}/editar`}>
                 <i className="bi bi-pencil" /> Editar

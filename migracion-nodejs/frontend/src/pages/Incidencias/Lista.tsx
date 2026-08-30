@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { BotonDescarga } from "../../components/BotonDescarga";
+import { useAuth } from "../../auth/AuthContext";
 
 interface Panteon {
   panteonId: number;
@@ -45,6 +46,8 @@ function ubicacionTexto(i: IncidenciaFila): string {
 }
 
 export function IncidenciasLista() {
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const queryClient = useQueryClient();
   const location = useLocation();
   const exito = (location.state as { exito?: string } | null)?.exito;
@@ -126,9 +129,11 @@ export function IncidenciasLista() {
           <BotonDescarga ruta={`/incidencias/reporte?${paramsExcel}`} className="boton-secundario" icono="bi-file-earmark-excel">
             Exportar a Excel
           </BotonDescarga>
-          <Link className="boton" to="/incidencias/nueva">
-            <i className="bi bi-plus-circle" /> Nueva incidencia
-          </Link>
+          {puedeEscribir && (
+            <Link className="boton" to="/incidencias/nueva">
+              <i className="bi bi-plus-circle" /> Nueva incidencia
+            </Link>
+          )}
         </div>
       </div>
 
@@ -268,27 +273,31 @@ export function IncidenciasLista() {
                       </td>
                       <td>
                         <div className="tabla-acciones">
-                          {i.estado !== "ATENDIDA" && (
-                            <button
-                              className="boton-secundario boton-sm"
-                              title="Atender"
-                              onClick={() => {
-                                setEstadoAtender(i.estado === "EN_PROCESO" ? "ATENDIDA" : "EN_PROCESO");
-                                setAtendidoPor("");
-                                setResolucion("");
-                                setErrorAtender(null);
-                                setAAtender(i);
-                              }}
-                            >
-                              <i className="bi bi-check2-square" />
-                            </button>
+                          {puedeEscribir && (
+                            <>
+                              {i.estado !== "ATENDIDA" && (
+                                <button
+                                  className="boton-secundario boton-sm"
+                                  title="Atender"
+                                  onClick={() => {
+                                    setEstadoAtender(i.estado === "EN_PROCESO" ? "ATENDIDA" : "EN_PROCESO");
+                                    setAtendidoPor("");
+                                    setResolucion("");
+                                    setErrorAtender(null);
+                                    setAAtender(i);
+                                  }}
+                                >
+                                  <i className="bi bi-check2-square" />
+                                </button>
+                              )}
+                              <Link to={`/incidencias/${i.incidenciaId}/editar`} className="boton-secundario boton-sm" title="Editar">
+                                <i className="bi bi-pencil" />
+                              </Link>
+                              <button className="boton-peligro boton-sm" onClick={() => setAEliminar(i)} title="Eliminar">
+                                <i className="bi bi-trash" />
+                              </button>
+                            </>
                           )}
-                          <Link to={`/incidencias/${i.incidenciaId}/editar`} className="boton-secundario boton-sm" title="Editar">
-                            <i className="bi bi-pencil" />
-                          </Link>
-                          <button className="boton-peligro boton-sm" onClick={() => setAEliminar(i)} title="Eliminar">
-                            <i className="bi bi-trash" />
-                          </button>
                         </div>
                       </td>
                     </tr>

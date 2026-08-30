@@ -5,6 +5,7 @@ import { api, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { BotonImprimir } from "../../components/BotonImprimir";
+import { useAuth } from "../../auth/AuthContext";
 
 interface Panteon {
   panteonId: number;
@@ -30,6 +31,8 @@ const TIPOS = [
 ];
 
 export function PermisosLista() {
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const location = useLocation();
   const queryClient = useQueryClient();
   const exito = (location.state as { exito?: string } | null)?.exito;
@@ -73,11 +76,12 @@ export function PermisosLista() {
           Gestión de Permisos
         </h2>
         <div className="page-header-acciones">
-          {TIPOS.map((t) => (
-            <Link key={t.clave} className="boton" to={`/permisos/nuevo?tipo=${t.clave}`}>
-              <i className="bi bi-plus" /> {t.nombre}
-            </Link>
-          ))}
+          {puedeEscribir &&
+            TIPOS.map((t) => (
+              <Link key={t.clave} className="boton" to={`/permisos/nuevo?tipo=${t.clave}`}>
+                <i className="bi bi-plus" /> {t.nombre}
+              </Link>
+            ))}
         </div>
       </div>
 
@@ -177,7 +181,7 @@ export function PermisosLista() {
                           <Link to={`/permisos/${p.permisoId}`} className="boton boton-sm" title="Ver">
                             <i className="bi bi-eye" />
                           </Link>
-                          {p.estado !== "CANCELADO" && (
+                          {p.estado !== "CANCELADO" && puedeEscribir && (
                             <>
                               <Link to={`/permisos/${p.permisoId}/editar`} className="boton-secundario boton-sm" title="Editar">
                                 <i className="bi bi-pencil" />

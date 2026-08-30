@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { useAuth } from "../../auth/AuthContext";
 
 interface Fallecido {
   fallecidoId: number;
@@ -51,6 +52,8 @@ function hora(f: string | null): string | null {
 }
 
 export function NoReclamadoDetalle() {
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -82,14 +85,18 @@ export function NoReclamadoDetalle() {
           Persona No Reclamada
         </h2>
         <div className="page-header-acciones">
-          {!f.reconocido && (
-            <Link className="boton" to={`/no-reclamados/${id}/reconocer`}>
-              <i className="bi bi-person-check" /> Reconocer
-            </Link>
+          {puedeEscribir && (
+            <>
+              {!f.reconocido && (
+                <Link className="boton" to={`/no-reclamados/${id}/reconocer`}>
+                  <i className="bi bi-person-check" /> Reconocer
+                </Link>
+              )}
+              <Link className="boton-secundario" to={`/no-reclamados/${id}/editar`}>
+                <i className="bi bi-pencil" /> Editar
+              </Link>
+            </>
           )}
-          <Link className="boton-secundario" to={`/no-reclamados/${id}/editar`}>
-            <i className="bi bi-pencil" /> Editar
-          </Link>
           <Link className="boton-secundario" to="/no-reclamados">
             <i className="bi bi-arrow-left" /> Regresar
           </Link>
@@ -240,9 +247,11 @@ export function NoReclamadoDetalle() {
         </div>
       </div>
 
-      <button className="boton-peligro" onClick={() => setConfirmando(true)}>
-        <i className="bi bi-trash" /> Eliminar
-      </button>
+      {puedeEscribir && (
+        <button className="boton-peligro" onClick={() => setConfirmando(true)}>
+          <i className="bi bi-trash" /> Eliminar
+        </button>
+      )}
       {eliminar.isError && (
         <p className="aviso-error">{eliminar.error instanceof ApiError ? eliminar.error.message : "No se pudo eliminar"}</p>
       )}

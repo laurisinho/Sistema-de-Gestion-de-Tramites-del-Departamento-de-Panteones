@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
 import { BotonImprimir } from "../../components/BotonImprimir";
+import { useAuth } from "../../auth/AuthContext";
 
 interface CesionFila {
   cesionId: number;
@@ -15,6 +16,8 @@ interface CesionFila {
 }
 
 export function CesionesLista() {
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const location = useLocation();
   const exito = (location.state as { exito?: string } | null)?.exito;
 
@@ -31,9 +34,11 @@ export function CesionesLista() {
           Cesión de Derechos
         </h2>
         <div className="page-header-acciones">
-          <Link className="boton" to="/cesiones/nueva">
-            <i className="bi bi-plus-circle" /> Nueva cesión
-          </Link>
+          {puedeEscribir && (
+            <Link className="boton" to="/cesiones/nueva">
+              <i className="bi bi-plus-circle" /> Nueva cesión
+            </Link>
+          )}
         </div>
       </div>
 
@@ -90,7 +95,7 @@ export function CesionesLista() {
                             className="boton-secundario boton-sm"
                             title="Imprimir"
                           />
-                          {c.estado !== "CANCELADO" && (
+                          {c.estado !== "CANCELADO" && puedeEscribir && (
                             <Link to={`/reimpresiones?tipo=CESION&id=${c.cesionId}`} className="boton-secundario boton-sm" title="Reimprimir con sello">
                               <i className="bi bi-printer-fill" />
                             </Link>

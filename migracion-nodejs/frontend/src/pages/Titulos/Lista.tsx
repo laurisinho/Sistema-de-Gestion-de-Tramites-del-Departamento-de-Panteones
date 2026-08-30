@@ -5,6 +5,7 @@ import { api, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { BotonImprimir } from "../../components/BotonImprimir";
+import { useAuth } from "../../auth/AuthContext";
 
 interface Panteon {
   panteonId: number;
@@ -29,6 +30,8 @@ const ESTADOS_ENTREGA = [
 ];
 
 export function TitulosLista() {
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const location = useLocation();
   const queryClient = useQueryClient();
   const exito = (location.state as { exito?: string } | null)?.exito;
@@ -78,9 +81,11 @@ export function TitulosLista() {
           Títulos de Propiedad
         </h2>
         <div className="page-header-acciones">
-          <Link className="boton" to="/titulos/nuevo">
-            <i className="bi bi-plus-circle" /> Nuevo título
-          </Link>
+          {puedeEscribir && (
+            <Link className="boton" to="/titulos/nuevo">
+              <i className="bi bi-plus-circle" /> Nuevo título
+            </Link>
+          )}
         </div>
       </div>
 
@@ -162,7 +167,7 @@ export function TitulosLista() {
                         <span className={claseEstado(t.estado)}>{t.estado}</span>
                       </td>
                       <td>
-                        {t.estado === "CANCELADO" ? (
+                        {t.estado === "CANCELADO" || !puedeEscribir ? (
                           <span className={claseEstado(t.estadoEntrega)}>{t.estadoEntrega.replaceAll("_", " ")}</span>
                         ) : (
                           <select
@@ -190,7 +195,7 @@ export function TitulosLista() {
                           <Link to={`/titulos/${t.tituloId}`} className="boton boton-sm" title="Ver">
                             <i className="bi bi-eye" />
                           </Link>
-                          {t.estado !== "CANCELADO" && (
+                          {t.estado !== "CANCELADO" && puedeEscribir && (
                             <>
                               <Link to={`/titulos/${t.tituloId}/editar`} className="boton-secundario boton-sm" title="Editar">
                                 <i className="bi bi-pencil" />

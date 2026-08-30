@@ -5,6 +5,7 @@ import { api, ApiError } from "../../lib/api";
 import { claseEstado } from "../../lib/badges";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { BotonImprimir } from "../../components/BotonImprimir";
+import { useAuth } from "../../auth/AuthContext";
 
 interface TituloDetalle {
   tituloId: number;
@@ -55,6 +56,8 @@ function fecha(f: string | null): string {
 }
 
 export function TituloDetalle() {
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -89,10 +92,12 @@ export function TituloDetalle() {
           <BotonImprimir ruta={`/titulos/${id}/pdf`} nombreArchivo={`titulo-${data.folio}.pdf`} className="boton-secundario">
             {" "}Imprimir
           </BotonImprimir>
-          <Link className="boton-secundario" to={`/reimpresiones?tipo=TITULO&id=${id}`}>
-            <i className="bi bi-printer-fill" /> Reimprimir con sello
-          </Link>
-          {data.estado !== "CANCELADO" && (
+          {puedeEscribir && (
+            <Link className="boton-secundario" to={`/reimpresiones?tipo=TITULO&id=${id}`}>
+              <i className="bi bi-printer-fill" /> Reimprimir con sello
+            </Link>
+          )}
+          {data.estado !== "CANCELADO" && puedeEscribir && (
             <>
               <Link className="boton-secundario" to={`/titulos/${id}/editar`}>
                 <i className="bi bi-pencil" /> Editar

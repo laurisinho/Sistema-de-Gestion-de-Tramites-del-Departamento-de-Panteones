@@ -28,10 +28,10 @@ interface DashboardData {
 }
 
 const ACCESOS = [
-  { to: "/lotes", icono: "bi-clock-history", label: "Buscar lote / expediente" },
-  { to: "/permisos/nuevo", icono: "bi-file-earmark-plus", label: "Nuevo permiso" },
-  { to: "/titulos/nuevo", icono: "bi-award", label: "Nuevo título" },
-  { to: "/cesiones/nueva", icono: "bi-arrow-left-right", label: "Nueva cesión" },
+  { to: "/lotes", icono: "bi-clock-history", label: "Buscar lote / expediente", escritura: false },
+  { to: "/permisos/nuevo", icono: "bi-file-earmark-plus", label: "Nuevo permiso", escritura: true },
+  { to: "/titulos/nuevo", icono: "bi-award", label: "Nuevo título", escritura: true },
+  { to: "/cesiones/nueva", icono: "bi-arrow-left-right", label: "Nueva cesión", escritura: true },
 ];
 
 function Barra({ etiqueta, valor, max, color }: { etiqueta: string; valor: number; max: number; color: string }) {
@@ -235,7 +235,7 @@ export function Dashboard() {
       <div className="card">
         <div className="card-body" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span className="text-muted" style={{ fontSize: 13 }}>Accesos rápidos:</span>
-          {ACCESOS.map((a) => (
+          {ACCESOS.filter((a) => !a.escritura || usuario?.rol !== "Consulta").map((a) => (
             <Link key={a.to} to={a.to} className={a.to === "/lotes" ? "boton-secundario" : "boton"} style={{ fontSize: 13 }}>
               <i className={`bi ${a.icono}`} /> {a.label}
             </Link>
