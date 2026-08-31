@@ -45,12 +45,42 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<
   return cuerpo as T;
 }
 
+// Único método que existe en la web para que el usuario elija dónde guardar
+// un archivo (ningún sitio puede imponer una ruta): el diálogo nativo de
+// "Guardar como" vía File System Access API. Solo Chromium (Chrome, Edge,
+// Brave) lo soporta -- en Firefox/Safari simplemente no existe la función.
+// El navegador recuerda la última carpeta usada por este sitio, así que a
+// partir de la segunda vez ya "sabe" dónde guardarlo.
+interface DestinoGuardado {
+  createWritable(): Promise<{ write(datos: Blob): Promise<void>; close(): Promise<void> }>;
+}
+
+async function elegirDestinoGuardado(nombreSugerido: string): Promise<DestinoGuardado | null> {
+  const showSaveFilePicker = (window as unknown as {
+    showSaveFilePicker?: (opciones: { suggestedName: string }) => Promise<DestinoGuardado>;
+  }).showSaveFilePicker;
+  if (!showSaveFilePicker) return null;
+  return showSaveFilePicker({ suggestedName: nombreSugerido });
+}
+
 // Los botones de imprimir eran <a href> directos a la API: una navegación de
 // enlace normal no puede llevar el header Authorization, así que dependían
 // por completo de la cookie -- justo la que los navegadores con protección
 // de privacidad bloquean entre sitios distintos. Se descarga por JS en su
 // lugar, con el mismo token que usa el resto de la app.
 export async function descargarArchivo(ruta: string, nombreRespaldo = "documento"): Promise<void> {
+  // Debe pedirse ANTES del fetch: el navegador solo abre este diálogo como
+  // reacción directa al clic del usuario, no después de esperar una petición
+  // de red -- si tardamos en pedirlo, deja de contar como "gesto del usuario"
+  // y el navegador lo rechaza.
+  let destino: DestinoGuardado | null;
+  try {
+    destino = await elegirDestinoGuardado(nombreRespaldo);
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") return; // el usuario cerró el diálogo sin elegir nada
+    destino = null; // cualquier otro problema (permiso denegado, etc.) -> descarga normal
+  }
+
   const token = getToken();
   const res = await fetch(`${API_URL}${ruta}`, {
     credentials: "include",
@@ -62,11 +92,18 @@ export async function descargarArchivo(ruta: string, nombreRespaldo = "documento
     throw new ApiError(res.status, cuerpo?.error ?? "No se pudo generar el documento");
   }
 
+  const blob = await res.blob();
+
+  if (destino) {
+    const escritura = await destino.createWritable();
+    await escritura.write(blob);
+    await escritura.close();
+    return;
+  }
+
   // Las rutas de descarga ya mandan el nombre real en Content-Disposition;
   // el respaldo solo aplica si por algo faltara.
   const nombreServidor = res.headers.get("Content-Disposition")?.match(/filename="?([^"]+)"?/)?.[1];
-
-  const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const enlace = document.createElement("a");
   enlace.href = url;
