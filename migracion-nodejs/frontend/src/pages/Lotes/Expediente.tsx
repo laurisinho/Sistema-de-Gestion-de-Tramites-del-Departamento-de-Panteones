@@ -142,7 +142,11 @@ export function LoteExpediente() {
                     {e.enlace?.endsWith("/pdf") ? (
                       <button
                         type="button"
-                        onClick={() => descargarArchivo(e.enlace!).catch(() => alert("No se pudo generar el documento."))}
+                        onClick={() =>
+                          descargarArchivo(e.enlace!, "documento", { verEnNavegador: true }).catch(() =>
+                            alert("No se pudo generar el documento.")
+                          )
+                        }
                         style={{
                           background: "none",
                           border: "none",

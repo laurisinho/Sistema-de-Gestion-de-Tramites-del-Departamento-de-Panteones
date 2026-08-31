@@ -18,7 +18,7 @@ export function BotonImprimir({ ruta, nombreArchivo, className, title, children 
   async function onClick() {
     setGenerando(true);
     try {
-      await descargarArchivo(ruta, nombreArchivo);
+      await descargarArchivo(ruta, nombreArchivo, { verEnNavegador: true });
     } catch {
       alert("No se pudo generar el documento. Intenta de nuevo en unos segundos.");
     } finally {

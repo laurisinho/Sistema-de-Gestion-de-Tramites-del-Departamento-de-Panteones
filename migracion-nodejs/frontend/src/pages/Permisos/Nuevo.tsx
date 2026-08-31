@@ -371,7 +371,9 @@ export function PermisoNuevo() {
                 <label>Lote seleccionado</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   <div className={`campo-resultado${loteSel ? " lleno" : ""}`}>
-                    {loteSel ? `${loteSel.panteon} · Mz ${loteSel.manzana} L ${loteSel.lote}` : "Sin seleccionar"}
+                    {loteSel
+                      ? `${loteSel.panteon} · ${loteSel.seccion ? `Secc. ${loteSel.seccion} · ` : ""}Mz ${loteSel.manzana} L ${loteSel.lote}`
+                      : "Sin seleccionar"}
                   </div>
                   {loteSel && (
                     <button type="button" className="boton-secundario" title="Quitar selección" onClick={() => setLoteSel(null)}>
@@ -397,7 +399,7 @@ export function PermisoNuevo() {
                         <td style={{ fontWeight: 600 }}>{l.titular}</td>
                         <td className="text-muted">
                           <small>
-                            {l.panteon} — Mz {l.manzana} L {l.lote}
+                            {l.panteon} — {l.seccion && `Secc. ${l.seccion} · `}Mz {l.manzana} L {l.lote}
                           </small>
                         </td>
                         <td>{!l.tieneTitulo && !l.esFosaComun && <span className="badge badge-danger">Sin título vigente</span>}</td>

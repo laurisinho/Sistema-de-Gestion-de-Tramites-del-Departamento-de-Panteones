@@ -68,16 +68,25 @@ async function elegirDestinoGuardado(nombreSugerido: string): Promise<DestinoGua
 // por completo de la cookie -- justo la que los navegadores con protección
 // de privacidad bloquean entre sitios distintos. Se descarga por JS en su
 // lugar, con el mismo token que usa el resto de la app.
-export async function descargarArchivo(ruta: string, nombreRespaldo = "documento"): Promise<void> {
-  // Debe pedirse ANTES del fetch: el navegador solo abre este diálogo como
-  // reacción directa al clic del usuario, no después de esperar una petición
-  // de red -- si tardamos en pedirlo, deja de contar como "gesto del usuario"
-  // y el navegador lo rechaza.
+export async function descargarArchivo(
+  ruta: string,
+  nombreRespaldo = "documento",
+  opciones: { verEnNavegador?: boolean } = {}
+): Promise<void> {
+  // La pestaña se abre YA, mientras el clic sigue "fresco": si se espera a
+  // tener el archivo listo para abrirla, el navegador ya no lo cuenta como
+  // reacción directa al usuario y la trata como pop-up no solicitado.
+  const pestanaVista = opciones.verEnNavegador ? window.open("", "_blank") : null;
+
+  // Este diálogo también debe pedirse ANTES del fetch, por la misma razón.
   let destino: DestinoGuardado | null;
   try {
     destino = await elegirDestinoGuardado(nombreRespaldo);
   } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") return; // el usuario cerró el diálogo sin elegir nada
+    if (err instanceof DOMException && err.name === "AbortError") {
+      pestanaVista?.close();
+      return; // el usuario cerró el diálogo sin elegir nada
+    }
     destino = null; // cualquier otro problema (permiso denegado, etc.) -> descarga normal
   }
 
@@ -88,11 +97,16 @@ export async function descargarArchivo(ruta: string, nombreRespaldo = "documento
   });
 
   if (!res.ok) {
+    pestanaVista?.close();
     const cuerpo = await res.json().catch(() => null);
     throw new ApiError(res.status, cuerpo?.error ?? "No se pudo generar el documento");
   }
 
   const blob = await res.blob();
+
+  if (pestanaVista) {
+    pestanaVista.location.href = URL.createObjectURL(blob);
+  }
 
   if (destino) {
     const escritura = await destino.createWritable();
