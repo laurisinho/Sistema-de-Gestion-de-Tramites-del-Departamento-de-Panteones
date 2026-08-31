@@ -61,7 +61,12 @@ export function NoReclamadosReporte() {
                 <option value="3">3º (Jul – Sep)</option>
                 <option value="4">4º (Oct – Dic)</option>
               </select>
-              <BotonDescarga className="boton" icono="bi-download" ruta={`/no-reclamados/reportes/sepultados?${paramsTrimestral}`} />
+              <BotonDescarga
+                className="boton"
+                icono="bi-download"
+                nombreArchivo="no-reclamados-trimestral.xlsx"
+                ruta={`/no-reclamados/reportes/sepultados?${paramsTrimestral}`}
+              />
             </div>
           </div>
         </div>
@@ -79,7 +84,12 @@ export function NoReclamadosReporte() {
             <div className="barra-filtros" style={{ marginBottom: 0 }}>
               <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} title="Desde" />
               <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} title="Hasta" />
-              <BotonDescarga className="boton" icono="bi-download" ruta={`/no-reclamados/reportes/sepultados?${paramsRango}`} />
+              <BotonDescarga
+                className="boton"
+                icono="bi-download"
+                nombreArchivo="no-reclamados-rango.xlsx"
+                ruta={`/no-reclamados/reportes/sepultados?${paramsRango}`}
+              />
             </div>
           </div>
         </div>
@@ -111,7 +121,7 @@ export function NoReclamadosReporte() {
                 <option value="3">3º (Jul – Sep)</option>
                 <option value="4">4º (Oct – Dic)</option>
               </select>
-              <BotonDescarga className="boton" icono="bi-download" ruta={`/no-reclamados/reportes/identificados?${paramsIdent}`}>
+              <BotonDescarga className="boton" icono="bi-download" nombreArchivo="identificados.xlsx" ruta={`/no-reclamados/reportes/identificados?${paramsIdent}`}>
                 Generar
               </BotonDescarga>
               <Link className="boton-secundario" to="/no-reclamados/reconocidos">

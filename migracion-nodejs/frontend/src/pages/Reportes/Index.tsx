@@ -90,6 +90,7 @@ export function ReportesIndex() {
             <BotonDescarga
               className="boton"
               icono="bi-file-earmark-excel"
+              nombreArchivo="movimientos.xlsx"
               ruta={`/reportes/movimientos/excel?${new URLSearchParams({ anio: String(anio), ...(mes ? { mes: String(mes) } : {}) })}`}
             >
               Generar Excel
@@ -147,7 +148,7 @@ export function ReportesIndex() {
               </div>
             </div>
             <div className="barra-filtros" style={{ marginBottom: 0 }}>
-              <BotonDescarga className="boton" icono="bi-file-earmark-excel" ruta={`/incidencias/reporte?${paramsIncidencias}`}>
+              <BotonDescarga className="boton" icono="bi-file-earmark-excel" nombreArchivo="incidencias.xlsx" ruta={`/incidencias/reporte?${paramsIncidencias}`}>
                 Generar Excel
               </BotonDescarga>
               <Link className="boton-secundario" to="/incidencias">
@@ -194,7 +195,7 @@ export function ReportesIndex() {
                   <option value="4">4º (Oct–Dic)</option>
                 </select>
               </div>
-              <BotonDescarga className="boton" icono="bi-file-earmark-excel" ruta={`/no-reclamados/reportes/sepultados?${paramsNoReclamados}`}>
+              <BotonDescarga className="boton" icono="bi-file-earmark-excel" nombreArchivo="no-reclamados-sepultados.xlsx" ruta={`/no-reclamados/reportes/sepultados?${paramsNoReclamados}`}>
                 Generar Excel
               </BotonDescarga>
             </div>
@@ -238,7 +239,7 @@ export function ReportesIndex() {
                   <option value="4">4º (Oct–Dic)</option>
                 </select>
               </div>
-              <BotonDescarga className="boton" icono="bi-file-earmark-excel" ruta={`/no-reclamados/reportes/identificados?${paramsNoReclamados}`}>
+              <BotonDescarga className="boton" icono="bi-file-earmark-excel" nombreArchivo="identificados.xlsx" ruta={`/no-reclamados/reportes/identificados?${paramsNoReclamados}`}>
                 Generar Excel
               </BotonDescarga>
             </div>

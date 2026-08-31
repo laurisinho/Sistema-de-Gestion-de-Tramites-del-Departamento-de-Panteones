@@ -126,7 +126,7 @@ export function IncidenciasLista() {
           Incidencias en panteones
         </h2>
         <div className="page-header-acciones">
-          <BotonDescarga ruta={`/incidencias/reporte?${paramsExcel}`} className="boton-secundario" icono="bi-file-earmark-excel">
+          <BotonDescarga ruta={`/incidencias/reporte?${paramsExcel}`} nombreArchivo="incidencias.xlsx" className="boton-secundario" icono="bi-file-earmark-excel">
             Exportar a Excel
           </BotonDescarga>
           {puedeEscribir && (

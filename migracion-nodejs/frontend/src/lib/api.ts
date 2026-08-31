@@ -55,12 +55,27 @@ interface DestinoGuardado {
   createWritable(): Promise<{ write(datos: Blob): Promise<void>; close(): Promise<void> }>;
 }
 
+// Sin esto, el diálogo no sabe qué extensión proponer y lo deja en "Todos
+// los archivos" -- justo lo que causaba que los reportes se guardaran como
+// "documento" sin .xlsx y Windows ya no supiera abrirlos con Excel.
+function tiposParaExtension(nombre: string): { description: string; accept: Record<string, string[]> }[] | undefined {
+  const ext = nombre.split(".").pop()?.toLowerCase();
+  if (ext === "pdf") return [{ description: "PDF", accept: { "application/pdf": [".pdf"] } }];
+  if (ext === "xlsx") {
+    return [{ description: "Excel", accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] } }];
+  }
+  return undefined;
+}
+
 async function elegirDestinoGuardado(nombreSugerido: string): Promise<DestinoGuardado | null> {
   const showSaveFilePicker = (window as unknown as {
-    showSaveFilePicker?: (opciones: { suggestedName: string }) => Promise<DestinoGuardado>;
+    showSaveFilePicker?: (opciones: {
+      suggestedName: string;
+      types?: { description: string; accept: Record<string, string[]> }[];
+    }) => Promise<DestinoGuardado>;
   }).showSaveFilePicker;
   if (!showSaveFilePicker) return null;
-  return showSaveFilePicker({ suggestedName: nombreSugerido });
+  return showSaveFilePicker({ suggestedName: nombreSugerido, types: tiposParaExtension(nombreSugerido) });
 }
 
 // Los botones de imprimir eran <a href> directos a la API: una navegación de

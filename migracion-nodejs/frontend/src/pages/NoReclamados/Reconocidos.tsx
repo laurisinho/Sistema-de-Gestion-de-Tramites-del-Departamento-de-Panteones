@@ -57,7 +57,7 @@ export function NoReclamadosReconocidos() {
           De no reconocidas a reconocidas
         </h2>
         <div className="page-header-acciones">
-          <BotonDescarga className="boton-secundario" icono="bi-file-earmark-excel" ruta={`/no-reclamados/reportes/identificados?${paramsReporte}`}>
+          <BotonDescarga className="boton-secundario" icono="bi-file-earmark-excel" nombreArchivo="identificados.xlsx" ruta={`/no-reclamados/reportes/identificados?${paramsReporte}`}>
             Reporte Excel
           </BotonDescarga>
           <Link className="boton-secundario" to="/no-reclamados">
