@@ -2,3 +2,8 @@ node_modules/
 dist/
 .env
 *.log
+
+# Extractos y reportes de scripts de migración: traen datos reales (nombres,
+# domicilios, teléfonos) que nunca deben llegar al repo público -- solo el
+# script (.ts) en sí se versiona, nunca su salida.
+scripts/*.json
