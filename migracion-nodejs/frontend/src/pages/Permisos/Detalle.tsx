@@ -205,12 +205,8 @@ export function PermisoDetalle() {
                   <td style={{ paddingBottom: 8, fontWeight: 600 }}>{data.solicitante.nombreCompleto}</td>
                 </tr>
                 <tr>
-                  <td className="text-muted" style={{ paddingBottom: 8 }}>Teléfono</td>
-                  <td style={{ paddingBottom: 8 }}>{data.solicitante.telefono ?? "—"}</td>
-                </tr>
-                <tr>
-                  <td className="text-muted">Domicilio</td>
-                  <td>{data.solicitante.domicilio ?? "—"}</td>
+                  <td className="text-muted">Teléfono</td>
+                  <td>{data.solicitante.telefono ?? "—"}</td>
                 </tr>
               </tbody>
             </table>

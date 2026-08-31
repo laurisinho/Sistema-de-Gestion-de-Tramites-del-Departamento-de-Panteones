@@ -46,7 +46,6 @@ export function PermisoNuevo() {
 
   const [nombreSolicitante, setNombreSolicitante] = useState("");
   const [telefonoSolicitante, setTelefonoSolicitante] = useState("");
-  const [domicilioSolicitante, setDomicilioSolicitante] = useState("");
 
   const [fallecidoTermino, setFallecidoTermino] = useState("");
   const [fallecidoResultados, setFallecidoResultados] = useState<FallecidoResultado[]>([]);
@@ -123,7 +122,6 @@ export function PermisoNuevo() {
         tipoClave,
         nombreSolicitante,
         telefonoSolicitante: telefonoSolicitante || undefined,
-        domicilioSolicitante: domicilioSolicitante || undefined,
         loteId: loteSel?.loteId,
       };
       if (fallecidoSel) {
@@ -204,7 +202,7 @@ export function PermisoNuevo() {
             </span>
           </div>
           <div className="card-body">
-            <div className="form-grid" style={{ gridTemplateColumns: "5fr 3fr 4fr", maxWidth: "none" }}>
+            <div className="form-grid" style={{ gridTemplateColumns: "2fr 1fr", maxWidth: "none" }}>
               <div className="form-campo">
                 <label>Nombre completo *</label>
                 <input
@@ -217,10 +215,6 @@ export function PermisoNuevo() {
               <div className="form-campo">
                 <label>Teléfono</label>
                 <input value={telefonoSolicitante} onChange={(e) => setTelefonoSolicitante(e.target.value)} placeholder="10 dígitos" />
-              </div>
-              <div className="form-campo">
-                <label>Domicilio</label>
-                <input value={domicilioSolicitante} onChange={(e) => setDomicilioSolicitante(e.target.value)} placeholder="Calle y número" />
               </div>
             </div>
           </div>

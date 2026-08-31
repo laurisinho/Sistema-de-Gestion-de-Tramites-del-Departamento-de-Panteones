@@ -32,7 +32,6 @@ export function PermisoEditar() {
 
   const [nombreSolicitante, setNombreSolicitante] = useState("");
   const [telefonoSolicitante, setTelefonoSolicitante] = useState("");
-  const [domicilioSolicitante, setDomicilioSolicitante] = useState("");
   const [nombreFallecido, setNombreFallecido] = useState("");
   const [fechaFallecimiento, setFechaFallecimiento] = useState("");
   const [actaDefuncionNumero, setActaDefuncionNumero] = useState("");
@@ -53,7 +52,6 @@ export function PermisoEditar() {
     if (!data || cargado) return;
     setNombreSolicitante(data.solicitante.nombreCompleto);
     setTelefonoSolicitante(data.solicitante.telefono ?? "");
-    setDomicilioSolicitante(data.solicitante.domicilio ?? "");
     setNombreFallecido(data.fallecido?.nombreCompleto ?? "");
     setFechaFallecimiento(data.fallecido?.fechaFallecimiento?.slice(0, 10) ?? "");
     setActaDefuncionNumero(data.fallecido?.actaDefuncionNumero ?? "");
@@ -79,7 +77,6 @@ export function PermisoEditar() {
         body: JSON.stringify({
           nombreSolicitante,
           telefonoSolicitante: telefonoSolicitante || undefined,
-          domicilioSolicitante: domicilioSolicitante || undefined,
           nombreFallecido: nombreFallecido || undefined,
           fechaFallecimiento: fechaFallecimiento || undefined,
           actaDefuncionNumero: actaDefuncionNumero || undefined,
@@ -137,10 +134,6 @@ export function PermisoEditar() {
               <div className="form-campo">
                 <label>Teléfono</label>
                 <input value={telefonoSolicitante} onChange={(e) => setTelefonoSolicitante(e.target.value)} />
-              </div>
-              <div className="form-campo">
-                <label>Domicilio</label>
-                <input value={domicilioSolicitante} onChange={(e) => setDomicilioSolicitante(e.target.value)} />
               </div>
             </div>
           </div>
