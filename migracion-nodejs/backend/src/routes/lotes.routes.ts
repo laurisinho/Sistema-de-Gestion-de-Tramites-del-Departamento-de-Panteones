@@ -95,12 +95,14 @@ lotesRouter.get(
   asyncHandler(async (req, res) => {
     const manzana = str(req.query.manzana);
     const lote = str(req.query.lote);
+    const seccion = str(req.query.seccion);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
 
     const where: Prisma.LoteWhereInput = {
       OR: [{ estado: "OCUPADO" }, { esFosaComun: true }, { titulos: { some: { estado: "VIGENTE" } } }],
     };
     if (panteonId) where.panteonId = panteonId;
+    if (seccion) where.seccion = seccion;
     if (manzana) where.numeroManzana = { contains: manzana, mode: "insensitive" };
     if (lote) where.numeroLote = { contains: lote, mode: "insensitive" };
 

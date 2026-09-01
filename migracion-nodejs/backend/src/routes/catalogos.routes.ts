@@ -22,6 +22,20 @@ catalogosRouter.get(
 );
 
 catalogosRouter.get(
+  "/secciones",
+  asyncHandler(async (req, res) => {
+    const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
+    const lotes = await prisma.lote.findMany({
+      where: { seccion: { not: null }, ...(panteonId ? { panteonId } : {}) },
+      select: { seccion: true },
+      distinct: ["seccion"],
+    });
+    const secciones = lotes.map((l) => l.seccion as string).sort((a, b) => a.localeCompare(b));
+    res.json({ secciones });
+  })
+);
+
+catalogosRouter.get(
   "/tipos-lote",
   asyncHandler(async (_req, res) => {
     const tiposLote = await prisma.tipoLote.findMany({ orderBy: { nombre: "asc" } });

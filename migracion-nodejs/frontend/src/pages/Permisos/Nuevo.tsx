@@ -55,6 +55,7 @@ export function PermisoNuevo() {
   const [actaDefuncionNumero, setActaDefuncionNumero] = useState("");
 
   const [panteonIdLote, setPanteonIdLote] = useState("");
+  const [seccionLote, setSeccionLote] = useState("");
   const [loteManzana, setLoteManzana] = useState("");
   const [loteLote, setLoteLote] = useState("");
   const [loteResultados, setLoteResultados] = useState<LoteResultado[]>([]);
@@ -76,6 +77,14 @@ export function PermisoNuevo() {
   const { data: panteones } = useQuery({
     queryKey: ["catalogos", "panteones"],
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
+  });
+
+  const { data: secciones } = useQuery({
+    queryKey: ["catalogos", "secciones", panteonIdLote],
+    queryFn: () =>
+      api<{ secciones: string[] }>(`/catalogos/secciones${panteonIdLote ? `?panteonId=${panteonIdLote}` : ""}`).then(
+        (r) => r.secciones
+      ),
   });
 
   async function buscarFallecido() {
@@ -100,13 +109,14 @@ export function PermisoNuevo() {
   }
 
   async function buscarLote() {
-    if (!loteManzana.trim() && !loteLote.trim()) {
-      setErrorLote("Ingresa al menos manzana o lote para buscar.");
+    if (!loteManzana.trim() && !loteLote.trim() && !seccionLote) {
+      setErrorLote("Ingresa al menos sección, manzana o lote para buscar.");
       return;
     }
     setErrorLote(null);
     const params = new URLSearchParams();
     if (panteonIdLote) params.set("panteonId", panteonIdLote);
+    if (seccionLote) params.set("seccion", seccionLote);
     if (loteManzana) params.set("manzana", loteManzana);
     if (loteLote) params.set("lote", loteLote);
     const r = await api<LoteResultado[]>(`/lotes/buscar?${params}`);
@@ -328,14 +338,31 @@ export function PermisoNuevo() {
             </span>
           </div>
           <div className="card-body">
-            <div className="form-grid" style={{ gridTemplateColumns: "3fr 2fr 2fr 2fr 3fr", maxWidth: "none", alignItems: "flex-end" }}>
+            <div className="form-grid" style={{ gridTemplateColumns: "3fr 2fr 2fr 2fr 2fr 3fr", maxWidth: "none", alignItems: "flex-end" }}>
               <div className="form-campo">
                 <label>Panteón</label>
-                <select value={panteonIdLote} onChange={(e) => setPanteonIdLote(e.target.value)}>
+                <select
+                  value={panteonIdLote}
+                  onChange={(e) => {
+                    setPanteonIdLote(e.target.value);
+                    setSeccionLote("");
+                  }}
+                >
                   <option value="">Todos</option>
                   {panteones?.map((p) => (
                     <option key={p.panteonId} value={p.panteonId}>
                       {p.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-campo">
+                <label>Sección</label>
+                <select value={seccionLote} onChange={(e) => setSeccionLote(e.target.value)}>
+                  <option value="">Todas</option>
+                  {secciones?.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
                     </option>
                   ))}
                 </select>
