@@ -23,11 +23,32 @@ interface LoteResultado {
   esFosaComun: boolean;
   titular: string;
   tieneTitulo: boolean;
+  colindanciaNorte: string | null;
+  colindanciaSur: string | null;
+  colindanciaEste: string | null;
+  colindanciaOeste: string | null;
 }
 
 interface Panteon {
   panteonId: number;
   nombre: string;
+  usaColindancias: boolean;
+}
+
+// Los panteones de colindancias no tienen manzana/lote reales (todo queda
+// como "S/N" + un consecutivo interno) ni sección: se identifican por quién
+// es el titular y quiénes son los vecinos registrados en cada punto cardinal.
+function ubicacionLote(l: LoteResultado): string {
+  if (l.manzana !== "S/N") {
+    return `${l.seccion ? `Secc. ${l.seccion} · ` : ""}Mz ${l.manzana} L ${l.lote}`;
+  }
+  const vecinos = [
+    l.colindanciaNorte && `N: ${l.colindanciaNorte}`,
+    l.colindanciaSur && `S: ${l.colindanciaSur}`,
+    l.colindanciaEste && `E: ${l.colindanciaEste}`,
+    l.colindanciaOeste && `O: ${l.colindanciaOeste}`,
+  ].filter(Boolean);
+  return vecinos.length > 0 ? vecinos.join(" · ") : `Lote ${l.lote} (sin colindancias registradas)`;
 }
 
 const TIPOS = [
@@ -58,6 +79,7 @@ export function PermisoNuevo() {
   const [seccionLote, setSeccionLote] = useState("");
   const [loteManzana, setLoteManzana] = useState("");
   const [loteLote, setLoteLote] = useState("");
+  const [terminoLote, setTerminoLote] = useState("");
   const [loteResultados, setLoteResultados] = useState<LoteResultado[]>([]);
   const [loteSel, setLoteSel] = useState<LoteResultado | null>(null);
   const [errorLote, setErrorLote] = useState<string | null>(null);
@@ -79,12 +101,16 @@ export function PermisoNuevo() {
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
   });
 
+  const panteonSelLote = panteones?.find((p) => String(p.panteonId) === panteonIdLote);
+  const usaColindanciasLote = panteonSelLote?.usaColindancias ?? false;
+
   const { data: secciones } = useQuery({
     queryKey: ["catalogos", "secciones", panteonIdLote],
     queryFn: () =>
       api<{ secciones: string[] }>(`/catalogos/secciones${panteonIdLote ? `?panteonId=${panteonIdLote}` : ""}`).then(
         (r) => r.secciones
       ),
+    enabled: !usaColindanciasLote,
   });
 
   async function buscarFallecido() {
@@ -109,16 +135,26 @@ export function PermisoNuevo() {
   }
 
   async function buscarLote() {
-    if (!loteManzana.trim() && !loteLote.trim() && !seccionLote) {
-      setErrorLote("Ingresa al menos sección, manzana o lote para buscar.");
-      return;
-    }
-    setErrorLote(null);
     const params = new URLSearchParams();
     if (panteonIdLote) params.set("panteonId", panteonIdLote);
-    if (seccionLote) params.set("seccion", seccionLote);
-    if (loteManzana) params.set("manzana", loteManzana);
-    if (loteLote) params.set("lote", loteLote);
+
+    if (usaColindanciasLote) {
+      if (!terminoLote.trim()) {
+        setErrorLote("Ingresa el nombre del titular o de un vecino (colindancia) para buscar.");
+        return;
+      }
+      params.set("termino", terminoLote.trim());
+    } else {
+      if (!loteManzana.trim() && !loteLote.trim() && !seccionLote) {
+        setErrorLote("Ingresa al menos sección, manzana o lote para buscar.");
+        return;
+      }
+      if (seccionLote) params.set("seccion", seccionLote);
+      if (loteManzana) params.set("manzana", loteManzana);
+      if (loteLote) params.set("lote", loteLote);
+    }
+
+    setErrorLote(null);
     const r = await api<LoteResultado[]>(`/lotes/buscar?${params}`);
     setLoteResultados(r);
   }
@@ -338,14 +374,19 @@ export function PermisoNuevo() {
             </span>
           </div>
           <div className="card-body">
-            <div className="form-grid" style={{ gridTemplateColumns: "3fr 2fr 2fr 2fr 2fr 3fr", maxWidth: "none", alignItems: "flex-end" }}>
-              <div className="form-campo">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>
+              <div className="form-campo" style={{ flex: "1 1 200px" }}>
                 <label>Panteón</label>
                 <select
                   value={panteonIdLote}
                   onChange={(e) => {
                     setPanteonIdLote(e.target.value);
                     setSeccionLote("");
+                    setLoteManzana("");
+                    setLoteLote("");
+                    setTerminoLote("");
+                    setLoteResultados([]);
+                    setErrorLote(null);
                   }}
                 >
                   <option value="">Todos</option>
@@ -356,45 +397,63 @@ export function PermisoNuevo() {
                   ))}
                 </select>
               </div>
-              <div className="form-campo">
-                <label>Sección</label>
-                <select value={seccionLote} onChange={(e) => setSeccionLote(e.target.value)}>
-                  <option value="">Todas</option>
-                  {secciones?.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-campo">
-                <label>Manzana</label>
-                <input
-                  value={loteManzana}
-                  onChange={(e) => setLoteManzana(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
-                  placeholder="Ej: 1A"
-                />
-              </div>
-              <div className="form-campo">
-                <label>Lote</label>
-                <input
-                  value={loteLote}
-                  onChange={(e) => setLoteLote(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
-                  placeholder="Ej: 13"
-                />
-              </div>
-              <button type="button" className="boton" onClick={buscarLote}>
+
+              {usaColindanciasLote ? (
+                // Este panteón no tiene manzana/lote reales ni sección: cada
+                // tumba se identifica por su titular y por quiénes son los
+                // vecinos registrados en cada punto cardinal.
+                <div className="form-campo" style={{ flex: "3 1 280px" }}>
+                  <label>Titular o vecino (colindancia)</label>
+                  <input
+                    value={terminoLote}
+                    onChange={(e) => setTerminoLote(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
+                    placeholder="Nombre del titular o de un vecino registrado"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="form-campo" style={{ flex: "1 1 140px" }}>
+                    <label>Sección</label>
+                    <select value={seccionLote} onChange={(e) => setSeccionLote(e.target.value)}>
+                      <option value="">Todas</option>
+                      {secciones?.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-campo" style={{ flex: "1 1 110px" }}>
+                    <label>Manzana</label>
+                    <input
+                      value={loteManzana}
+                      onChange={(e) => setLoteManzana(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
+                      placeholder="Ej: 1A"
+                    />
+                  </div>
+                  <div className="form-campo" style={{ flex: "1 1 110px" }}>
+                    <label>Lote</label>
+                    <input
+                      value={loteLote}
+                      onChange={(e) => setLoteLote(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
+                      placeholder="Ej: 13"
+                    />
+                  </div>
+                </>
+              )}
+
+              <button type="button" className="boton" onClick={buscarLote} style={{ flex: "0 0 auto" }}>
                 <i className="bi bi-search" /> Buscar
               </button>
-              <div className="form-campo">
+
+              <div className="form-campo" style={{ flex: "2 1 260px" }}>
                 <label>Lote seleccionado</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   <div className={`campo-resultado${loteSel ? " lleno" : ""}`}>
-                    {loteSel
-                      ? `${loteSel.panteon} · ${loteSel.seccion ? `Secc. ${loteSel.seccion} · ` : ""}Mz ${loteSel.manzana} L ${loteSel.lote}`
-                      : "Sin seleccionar"}
+                    {loteSel ? `${loteSel.panteon} · ${ubicacionLote(loteSel)}` : "Sin seleccionar"}
                   </div>
                   {loteSel && (
                     <button type="button" className="boton-secundario" title="Quitar selección" onClick={() => setLoteSel(null)}>
@@ -420,7 +479,7 @@ export function PermisoNuevo() {
                         <td style={{ fontWeight: 600 }}>{l.titular}</td>
                         <td className="text-muted">
                           <small>
-                            {l.panteon} — {l.seccion && `Secc. ${l.seccion} · `}Mz {l.manzana} L {l.lote}
+                            {l.panteon} — {ubicacionLote(l)}
                           </small>
                         </td>
                         <td>{!l.tieneTitulo && !l.esFosaComun && <span className="badge badge-danger">Sin título vigente</span>}</td>

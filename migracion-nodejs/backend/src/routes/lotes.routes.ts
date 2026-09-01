@@ -96,18 +96,36 @@ lotesRouter.get(
     const manzana = str(req.query.manzana);
     const lote = str(req.query.lote);
     const seccion = str(req.query.seccion);
+    // Los panteones que usan colindancias (numeroManzana="S/N") no tienen
+    // sección ni un número de lote que el personal reconozca de memoria: ahí
+    // se busca por el titular o por el nombre de algún vecino registrado como
+    // colindancia, igual que ya hace TitulosRouter /buscar para Cesiones.
+    const termino = str(req.query.termino);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
 
-    const where: Prisma.LoteWhereInput = {
+    const disponibilidad: Prisma.LoteWhereInput = {
       OR: [{ estado: "OCUPADO" }, { esFosaComun: true }, { titulos: { some: { estado: "VIGENTE" } } }],
     };
-    if (panteonId) where.panteonId = panteonId;
-    if (seccion) where.seccion = seccion;
-    if (manzana) where.numeroManzana = { contains: manzana, mode: "insensitive" };
-    if (lote) where.numeroLote = { contains: lote, mode: "insensitive" };
+    const filtros: Prisma.LoteWhereInput[] = [disponibilidad];
+    if (panteonId) filtros.push({ panteonId });
+    if (seccion) filtros.push({ seccion });
+    if (manzana) filtros.push({ numeroManzana: { contains: manzana, mode: "insensitive" } });
+    if (lote) filtros.push({ numeroLote: { contains: lote, mode: "insensitive" } });
+    if (termino) {
+      filtros.push({
+        OR: [
+          { titulos: { some: { estado: "VIGENTE", titular: { nombreCompleto: { contains: termino, mode: "insensitive" } } } } },
+          { colindanciaNorte: { contains: termino, mode: "insensitive" } },
+          { colindanciaSur: { contains: termino, mode: "insensitive" } },
+          { colindanciaEste: { contains: termino, mode: "insensitive" } },
+          { colindanciaOeste: { contains: termino, mode: "insensitive" } },
+          { numeroLote: { contains: termino, mode: "insensitive" } },
+        ],
+      });
+    }
 
     const lotes = await prisma.lote.findMany({
-      where,
+      where: { AND: filtros },
       include: {
         panteon: true,
         titulos: { where: { estado: "VIGENTE" }, include: { titular: true }, take: 1 },
@@ -127,6 +145,10 @@ lotesRouter.get(
         esFosaComun: l.esFosaComun,
         titular: l.titulos[0]?.titular.nombreCompleto ?? (l.esFosaComun ? "Fosa común — sin titular" : "Sin titular"),
         tieneTitulo: l.titulos.length > 0 || l.esFosaComun,
+        colindanciaNorte: l.colindanciaNorte,
+        colindanciaSur: l.colindanciaSur,
+        colindanciaEste: l.colindanciaEste,
+        colindanciaOeste: l.colindanciaOeste,
       }))
     );
   })
