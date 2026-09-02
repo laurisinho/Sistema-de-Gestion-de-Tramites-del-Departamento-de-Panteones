@@ -25,6 +25,12 @@ export function ReportesIndex() {
   const anioActual = new Date().getFullYear();
   const [anio, setAnio] = useState(anioActual);
   const [mes, setMes] = useState<number | "">("");
+  // El corte por ejercicio/mes es el que el departamento entrega cada mes; el
+  // rango libre se agrega para periodos que no caen en un mes cerrado.
+  const [porRango, setPorRango] = useState(false);
+  const [desdeMov, setDesdeMov] = useState("");
+  const [hastaMov, setHastaMov] = useState("");
+  const rangoIncompleto = porRango && (!desdeMov || !hastaMov);
 
   const [panteonIdInc, setPanteonIdInc] = useState("");
   const [estadoInc, setEstadoInc] = useState("");
@@ -71,31 +77,65 @@ export function ReportesIndex() {
           </p>
         </div>
         <div className="rep-body">
-          <div className="barra-filtros" style={{ marginBottom: 0, alignItems: "flex-end" }}>
+          <div className="barra-filtros" style={{ marginBottom: 0, alignItems: "flex-end", flexWrap: "wrap" }}>
             <div className="form-campo">
-              <label>Ejercicio</label>
-              <input type="number" value={anio} onChange={(e) => setAnio(Number(e.target.value))} style={{ width: 100 }} />
-            </div>
-            <div className="form-campo">
-              <label>Mes</label>
-              <select value={mes} onChange={(e) => setMes(e.target.value ? Number(e.target.value) : "")}>
-                <option value="">Todo el año</option>
-                {MESES.slice(1).map((m, i) => (
-                  <option key={m} value={i + 1}>
-                    {m}
-                  </option>
-                ))}
+              <label>Periodo</label>
+              <select value={porRango ? "rango" : "mes"} onChange={(e) => setPorRango(e.target.value === "rango")}>
+                <option value="mes">Por ejercicio y mes</option>
+                <option value="rango">Por rango de fechas</option>
               </select>
             </div>
+
+            {porRango ? (
+              <>
+                <div className="form-campo">
+                  <label>Desde</label>
+                  <input type="date" value={desdeMov} onChange={(e) => setDesdeMov(e.target.value)} />
+                </div>
+                <div className="form-campo">
+                  <label>Hasta</label>
+                  <input type="date" value={hastaMov} onChange={(e) => setHastaMov(e.target.value)} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="form-campo">
+                  <label>Ejercicio</label>
+                  <input type="number" value={anio} onChange={(e) => setAnio(Number(e.target.value))} style={{ width: 100 }} />
+                </div>
+                <div className="form-campo">
+                  <label>Mes</label>
+                  <select value={mes} onChange={(e) => setMes(e.target.value ? Number(e.target.value) : "")}>
+                    <option value="">Todo el año</option>
+                    {MESES.slice(1).map((m, i) => (
+                      <option key={m} value={i + 1}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
             <BotonDescarga
               className="boton"
               icono="bi-file-earmark-excel"
               nombreArchivo="movimientos.xlsx"
-              ruta={`/reportes/movimientos/excel?${new URLSearchParams({ anio: String(anio), ...(mes ? { mes: String(mes) } : {}) })}`}
+              disabled={rangoIncompleto}
+              ruta={`/reportes/movimientos/excel?${new URLSearchParams(
+                porRango
+                  ? { desde: desdeMov, hasta: hastaMov }
+                  : { anio: String(anio), ...(mes ? { mes: String(mes) } : {}) }
+              )}`}
             >
               Generar Excel
             </BotonDescarga>
           </div>
+          {rangoIncompleto && (
+            <p className="text-muted" style={{ fontSize: 13, margin: "10px 0 0" }}>
+              <i className="bi bi-info-circle" /> Indica las dos fechas para generar el reporte.
+            </p>
+          )}
         </div>
       </div>
 

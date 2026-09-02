@@ -9,24 +9,14 @@ interface Panteon {
   usaColindancias: boolean;
 }
 
-interface TipoLote {
-  tipoLoteId: number;
-  nombre: string;
-}
-
 export function TituloNuevo() {
   const navigate = useNavigate();
   const { data: panteones } = useQuery({
     queryKey: ["catalogos", "panteones"],
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
   });
-  const { data: tiposLote } = useQuery({
-    queryKey: ["catalogos", "tipos-lote"],
-    queryFn: () => api<{ tiposLote: TipoLote[] }>("/catalogos/tipos-lote").then((r) => r.tiposLote),
-  });
 
   const [panteonId, setPanteonId] = useState("");
-  const [tipoLoteId, setTipoLoteId] = useState("");
   const [nombreTitular, setNombreTitular] = useState("");
   const [telefonoTitular, setTelefonoTitular] = useState("");
   const [domicilioTitular, setDomicilioTitular] = useState("");
@@ -47,6 +37,16 @@ export function TituloNuevo() {
   const panteonSel = panteones?.find((p) => String(p.panteonId) === panteonId);
   const usaColindancias = panteonSel?.usaColindancias ?? false;
 
+  // Secciones que ya existen en el panteon elegido, para no tener que
+  // recordarlas de memoria ni escribirlas distinto cada vez. Va como datalist y
+  // no como <select> porque una seccion nueva tiene que poder capturarse.
+  const { data: secciones } = useQuery({
+    queryKey: ["catalogos", "secciones", panteonId],
+    queryFn: () =>
+      api<{ secciones: string[] }>(`/catalogos/secciones?panteonId=${panteonId}`).then((r) => r.secciones),
+    enabled: !!panteonId && !usaColindancias,
+  });
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -61,7 +61,6 @@ export function TituloNuevo() {
         panteonId: Number(panteonId),
         fechaEmision: fechaEmision || undefined,
       };
-      if (tipoLoteId) body.tipoLoteId = Number(tipoLoteId);
       if (usaColindancias) {
         body.colindanciaNorte = colindanciaNorte || undefined;
         body.colindanciaSur = colindanciaSur || undefined;
@@ -144,25 +143,21 @@ export function TituloNuevo() {
               </span>
             </div>
             <div className="card-body">
-              <div className="form-grid" style={{ gridTemplateColumns: "7fr 5fr", maxWidth: "none" }}>
+              <div className="form-grid una-col" style={{ maxWidth: "none" }}>
                 <div className="form-campo">
                   <label>Panteón *</label>
-                  <select value={panteonId} onChange={(e) => setPanteonId(e.target.value)} required>
+                  <select
+                    value={panteonId}
+                    onChange={(e) => {
+                      setPanteonId(e.target.value);
+                      setSeccion("");
+                    }}
+                    required
+                  >
                     <option value="">Seleccione...</option>
                     {panteones?.map((p) => (
                       <option key={p.panteonId} value={p.panteonId}>
                         {p.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-campo">
-                  <label>Tipo de lote</label>
-                  <select value={tipoLoteId} onChange={(e) => setTipoLoteId(e.target.value)}>
-                    <option value="">Predeterminado</option>
-                    {tiposLote?.map((t) => (
-                      <option key={t.tipoLoteId} value={t.tipoLoteId}>
-                        {t.nombre}
                       </option>
                     ))}
                   </select>
@@ -208,7 +203,17 @@ export function TituloNuevo() {
                   </div>
                   <div className="form-campo">
                     <label>Sección</label>
-                    <input value={seccion} onChange={(e) => setSeccion(e.target.value)} />
+                    <input
+                      value={seccion}
+                      onChange={(e) => setSeccion(e.target.value)}
+                      list="seccionesPanteon"
+                      placeholder={secciones?.length ? "Elige o escribe una nueva" : ""}
+                    />
+                    <datalist id="seccionesPanteon">
+                      {secciones?.map((s) => (
+                        <option key={s} value={s} />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
               )}

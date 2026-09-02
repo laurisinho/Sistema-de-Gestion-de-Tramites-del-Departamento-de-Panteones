@@ -146,12 +146,31 @@ interface MovimientoDetalleItem {
 // departamento entregaba a mano cada mes (inhumaciones, exhumaciones,
 // cenizas, construcciones, títulos y cesiones). Puerto exacto de la
 // agregación de ReportesController.Movimientos.
-async function calcularMovimientos(anioParam: number, mesParam?: number) {
+// Fecha "YYYY-MM-DD" a UTC; devuelve null si viene vacía o mal formada.
+function fechaParam(v: unknown): Date | null {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(`${v}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function ddmmaaaa(d: Date): string {
+  return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
+}
+
+// Además del corte por ejercicio/mes (el que el departamento entrega cada mes),
+// acepta un rango libre de fechas: cuando vienen ambas, mandan sobre anio/mes.
+async function calcularMovimientos(anioParam: number, mesParam?: number, desdeParam?: unknown, hastaParam?: unknown) {
     const anio = anioParam || new Date().getFullYear();
     const mes = mesParam && mesParam >= 1 && mesParam <= 12 ? mesParam : undefined;
 
-    const ini = mes ? new Date(Date.UTC(anio, mes - 1, 1)) : new Date(Date.UTC(anio, 0, 1));
-    const fin = mes ? new Date(Date.UTC(anio, mes, 0)) : new Date(Date.UTC(anio, 11, 31));
+    let desde = fechaParam(desdeParam);
+    let hasta = fechaParam(hastaParam);
+    // Si las mandan al revés, se acomodan solas en vez de devolver cero resultados.
+    if (desde && hasta && desde > hasta) [desde, hasta] = [hasta, desde];
+    const usaRango = !!(desde && hasta);
+
+    const ini = usaRango ? desde! : mes ? new Date(Date.UTC(anio, mes - 1, 1)) : new Date(Date.UTC(anio, 0, 1));
+    const fin = usaRango ? hasta! : mes ? new Date(Date.UTC(anio, mes, 0)) : new Date(Date.UTC(anio, 11, 31));
 
     const [panteones, permisos, titulos, cesiones] = await Promise.all([
       prisma.panteon.findMany({ orderBy: { nombre: "asc" } }),
@@ -247,15 +266,24 @@ async function calcularMovimientos(anioParam: number, mesParam?: number) {
       return a.fecha.getTime() - b.fecha.getTime();
     });
 
-    const periodo = mes ? `${NOMBRES_MES[mes]} de ${anio}` : `Ejercicio ${anio}`;
+    const periodo = usaRango
+      ? `Del ${ddmmaaaa(ini)} al ${ddmmaaaa(fin)}`
+      : mes
+        ? `${NOMBRES_MES[mes]} de ${anio}`
+        : `Ejercicio ${anio}`;
 
-    return { resumen, detalle, periodo, anio, mes: mes ?? null };
+    return { resumen, detalle, periodo, anio, mes: mes ?? null, usaRango };
 }
 
 reportesRouter.get(
   "/movimientos",
   asyncHandler(async (req, res) => {
-    const r = await calcularMovimientos(Number(req.query.anio), req.query.mes ? Number(req.query.mes) : undefined);
+    const r = await calcularMovimientos(
+      Number(req.query.anio),
+      req.query.mes ? Number(req.query.mes) : undefined,
+      req.query.desde,
+      req.query.hasta
+    );
     res.json(r);
   })
 );
@@ -287,9 +315,11 @@ const ColsDetalle: ColDef[] = [
 reportesRouter.get(
   "/movimientos/excel",
   asyncHandler(async (req, res) => {
-    const { resumen, detalle, periodo } = await calcularMovimientos(
+    const { resumen, detalle, periodo, usaRango } = await calcularMovimientos(
       Number(req.query.anio),
-      req.query.mes ? Number(req.query.mes) : undefined
+      req.query.mes ? Number(req.query.mes) : undefined,
+      req.query.desde,
+      req.query.hasta
     );
 
     const wb = new ExcelJS.Workbook();
@@ -382,7 +412,10 @@ reportesRouter.get(
 
     const buffer = await wb.xlsx.writeBuffer();
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="Movimientos_${req.query.anio ?? new Date().getFullYear()}.xlsx"`);
+    const sufijoArchivo = usaRango
+      ? `${String(req.query.desde)}_a_${String(req.query.hasta)}`
+      : String(req.query.anio ?? new Date().getFullYear());
+    res.setHeader("Content-Disposition", `attachment; filename="Movimientos_${sufijoArchivo}.xlsx"`);
     res.send(Buffer.from(buffer));
   })
 );

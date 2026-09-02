@@ -8,6 +8,9 @@ interface Props {
   icono: string;
   children?: ReactNode;
   style?: CSSProperties;
+  // Para reportes cuyos filtros aún están incompletos (p. ej. falta una de las
+  // dos fechas de un rango): mejor no dejar pedir un archivo que saldría vacío.
+  disabled?: boolean;
 }
 
 // Igual que BotonImprimir pero para reportes/exportes (Excel, PDFs de
@@ -16,7 +19,7 @@ interface Props {
 // nombreArchivo es obligatorio (y debe traer la extensión) porque el
 // diálogo de "Guardar como" lo necesita desde antes de pedir el archivo
 // real al servidor -- sin él, Windows no sabe qué tipo de archivo es.
-export function BotonDescarga({ ruta, nombreArchivo, className, icono, children, style }: Props) {
+export function BotonDescarga({ ruta, nombreArchivo, className, icono, children, style, disabled }: Props) {
   const [generando, setGenerando] = useState(false);
 
   async function onClick() {
@@ -31,7 +34,7 @@ export function BotonDescarga({ ruta, nombreArchivo, className, icono, children,
   }
 
   return (
-    <button type="button" className={className} style={style} onClick={onClick} disabled={generando}>
+    <button type="button" className={className} style={style} onClick={onClick} disabled={generando || disabled}>
       <i className={`bi ${generando ? "bi-hourglass-split" : icono}`} /> {children}
     </button>
   );
