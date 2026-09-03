@@ -45,6 +45,16 @@ app.use("/api/reimpresiones", reimpresionesRouter);
 app.use("/api/bitacora", bitacoraRouter);
 app.use("/api/usuarios", usuariosRouter);
 
+// TEMPORAL: para calibrar cuántos saltos de proxy hay delante de la API.
+// Solo devuelve la dirección de quien llama; se quita en cuanto se ajuste.
+app.get("/api/health/proxy", (req, res) => {
+  res.json({
+    ip: req.ip,
+    xForwardedFor: req.headers["x-forwarded-for"] ?? null,
+    socket: req.socket.remoteAddress ?? null,
+  });
+});
+
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 // Red de seguridad: cualquier error no atrapado en una ruta (p. ej. la base de
