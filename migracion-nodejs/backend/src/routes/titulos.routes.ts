@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
+import { generarFolio } from "../lib/folio";
 import { renderPdf } from "../lib/pdf";
 import { tituloHtml } from "../templates/titulo.template";
 
@@ -177,11 +178,6 @@ function hoy(): Date {
   return new Date(new Date().toDateString());
 }
 
-// Quita espacios y '/' y pone en mayúsculas. "1 - A" -> "1-A"   "S/N" -> "SN"
-function limpiarComponente(valor: string): string {
-  return valor.trim().toUpperCase().replace(/[ /]/g, "");
-}
-
 // Emite un título de propiedad para un lote NUEVO (a diferencia de Permisos,
 // que opera sobre lotes ya existentes). Puerto exacto de TitulosController.Nuevo.
 titulosRouter.post(
@@ -215,12 +211,23 @@ titulosRouter.post(
       manzana = vm.numeroManzana.trim();
       lote = vm.numeroLote.trim();
 
+      // La sección entra en la comprobación porque también entra en la
+      // restricción de unicidad de la base: las secciones existen justamente
+      // para que la misma numeración de manzana y lote se repita entre ellas.
+      // Sin este filtro, las 52 ubicaciones que hoy conviven en dos secciones
+      // quedaban imposibles de dar de alta, aunque la base sí las admite.
       const existe = await prisma.lote.findFirst({
-        where: { panteonId: vm.panteonId, numeroManzana: manzana, numeroLote: lote },
+        where: {
+          panteonId: vm.panteonId,
+          seccion: vm.seccion ?? null,
+          numeroManzana: manzana,
+          numeroLote: lote,
+        },
       });
       if (existe) {
+        const enSeccion = vm.seccion ? ` en la sección ${vm.seccion}` : "";
         return res.status(400).json({
-          error: `Ya existe un lote registrado en ese panteón con Manzana ${manzana} y Lote ${lote}.`,
+          error: `Ya existe un lote registrado en ese panteón${enSeccion} con Manzana ${manzana} y Lote ${lote}.`,
         });
       }
     }
@@ -231,15 +238,12 @@ titulosRouter.post(
     // marcado OCUPADO sin ningún título -- visibles en búsquedas y expedientes.
     try {
       const resultado = await prisma.$transaction(async (tx) => {
-        // Folio por ubicación con la clave legible del panteón: {ClavePanteon}-{manzana}-{lote}
-        // ej. PC-1A-13, PJE-10-16
+        // El folio sigue la forma que ya tienen las claves de esa misma
+        // sección (ver lib/folio): cada sección escribe la suya distinto y no
+        // hay una regla común que valga para todas.
         const clave = panteon.clave?.trim() || `P${vm.panteonId}`;
-        const claveBase = `${clave}-${limpiarComponente(manzana)}-${limpiarComponente(lote)}`;
-        let folio = claveBase;
-        let n = 2;
-        while (await tx.tituloPropiedad.findUnique({ where: { folio } })) {
-          folio = `${claveBase}-${n++}`;
-        }
+        const seccion = panteon.usaColindancias ? null : vm.seccion ?? null;
+        const folio = await generarFolio(tx, vm.panteonId, clave, seccion, manzana, lote);
 
         const titular = await tx.persona.create({
           data: {
