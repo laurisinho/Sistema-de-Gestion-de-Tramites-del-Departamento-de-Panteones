@@ -389,6 +389,9 @@ html.dark .boton-peligro:hover:not(:disabled) { background: #7f1d1d; color: #fff
 .rep-titulo { font-size: 1.02rem; font-weight: 700; color: var(--text-base); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
 .rep-desc { font-size: 0.85rem; color: var(--text-sub); margin: 0.35rem 0 0; line-height: 1.5; }
 .rep-body { padding: 0.5rem 1.25rem 1.25rem; margin-top: auto; }
+/* Fila de botones aparte de los filtros: mantiene alineadas las tarjetas que
+   van lado a lado aunque cada una muestre distinto número de filtros. */
+.rep-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .rep-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .rep-chip {
   display: inline-flex; align-items: center; gap: 0.35rem;
