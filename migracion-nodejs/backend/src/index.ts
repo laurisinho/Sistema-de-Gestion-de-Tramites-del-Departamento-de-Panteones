@@ -19,13 +19,13 @@ import { usuariosRouter } from "./routes/usuarios.routes";
 
 const app = express();
 
-// La API corre detrás del proxy de la plataforma de hospedaje. Sin esto,
-// req.ip devuelve la dirección del proxy para todo el mundo: la bitácora
-// registraría siempre la misma IP y el límite de intentos por dirección
-// dejaría fuera a todo el departamento en cuanto una sola persona fallara
-// varias veces. Se confía únicamente en el primer salto (el proxy), no en
-// toda la cadena de X-Forwarded-For, que el cliente sí puede falsificar.
-app.set("trust proxy", 1);
+// La API corre detrás de varios proxies. Sin esto, req.ip devuelve la
+// dirección del último de ellos para todo el mundo: la bitácora registraría
+// siempre la misma IP y el límite de intentos por dirección dejaría fuera a
+// todo el departamento en cuanto una sola persona fallara varias veces.
+// Se confía en un número fijo de saltos y no en toda la cadena, porque así
+// nadie puede adelantarse una posición mandando su propio X-Forwarded-For.
+app.set("trust proxy", env.trustProxy);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -44,16 +44,6 @@ app.use("/api/reportes", reportesRouter);
 app.use("/api/reimpresiones", reimpresionesRouter);
 app.use("/api/bitacora", bitacoraRouter);
 app.use("/api/usuarios", usuariosRouter);
-
-// TEMPORAL: para calibrar cuántos saltos de proxy hay delante de la API.
-// Solo devuelve la dirección de quien llama; se quita en cuanto se ajuste.
-app.get("/api/health/proxy", (req, res) => {
-  res.json({
-    ip: req.ip,
-    xForwardedFor: req.headers["x-forwarded-for"] ?? null,
-    socket: req.socket.remoteAddress ?? null,
-  });
-});
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

@@ -40,6 +40,24 @@ function claveUsuario(nombreUsuario: unknown): string {
   return typeof nombreUsuario === "string" ? nombreUsuario.trim().toLowerCase() : "";
 }
 
+/**
+ * Solo cuenta por IP cuando la dirección identifica de verdad a quien llama.
+ * Si sale una privada o de loopback es que no se está viendo al cliente sino
+ * a un proxy intermedio, y entonces todo el departamento caería en el mismo
+ * cubo: bastaría con que una persona fallara 30 veces para dejar fuera a los
+ * demás. En ese caso se prefiere quedarse solo con el límite por usuario,
+ * que sigue protegiendo cada cuenta.
+ */
+function ipUtilizable(ip: string | undefined): ip is string {
+  if (!ip) return false;
+  const limpia = ip.replace(/^::ffff:/, "");
+  if (limpia === "::1" || limpia.startsWith("127.")) return false;
+  if (limpia.startsWith("10.") || limpia.startsWith("192.168.")) return false;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(limpia)) return false;
+  if (limpia.startsWith("fc") || limpia.startsWith("fd")) return false;
+  return true;
+}
+
 /** Segundos que faltan para poder reintentar; 0 si no está bloqueado. */
 function segundosBloqueo(mapa: Map<string, Intento>, clave: string, ahora: number): number {
   const intento = mapa.get(clave);
@@ -92,11 +110,11 @@ export function limitarLogin(req: Request, res: Response, next: NextFunction): v
   }
 
   const usuario = claveUsuario((req.body as { nombreUsuario?: unknown } | undefined)?.nombreUsuario);
-  const ip = req.ip ?? "desconocida";
+  const ip = req.ip;
 
   const espera = Math.max(
     usuario ? segundosBloqueo(porUsuario, usuario, ahora) : 0,
-    segundosBloqueo(porIp, ip, ahora)
+    ipUtilizable(ip) ? segundosBloqueo(porIp, ip, ahora) : 0
   );
 
   if (espera > 0) {
@@ -118,7 +136,7 @@ export async function registrarFalloLogin(nombreUsuario: unknown, ip: string | u
   const clip = ip ?? "desconocida";
 
   const bloqueoUsuario = usuario ? sumarFallo(porUsuario, usuario, MAX_POR_USUARIO, ahora) : false;
-  const bloqueoIp = sumarFallo(porIp, clip, MAX_POR_IP, ahora);
+  const bloqueoIp = ipUtilizable(ip) ? sumarFallo(porIp, ip, MAX_POR_IP, ahora) : false;
 
   // Solo se asienta el bloqueo, no cada intento: durante un ataque, registrar
   // uno por uno inundaría la bitácora con miles de renglones inútiles.

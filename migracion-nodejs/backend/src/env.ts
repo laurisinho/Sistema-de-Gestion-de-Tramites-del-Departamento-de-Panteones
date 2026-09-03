@@ -12,6 +12,13 @@ export const env = {
   jwtSecret: requerida("JWT_SECRET"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "8h",
   frontendOrigin: process.env.FRONTEND_ORIGIN ?? "http://localhost:5173",
+  // Saltos de proxy que hay delante de la API, para que req.ip sea la
+  // dirección de quien llama y no la del último proxy. Medido en el
+  // hospedaje actual: X-Forwarded-For llega como
+  // "<cliente>, <Cloudflare>, <proxy interno>" y el socket es ::1, o sea
+  // tres saltos. En local no hay ninguno. Si cambia la infraestructura se
+  // ajusta con TRUST_PROXY, sin tocar el código.
+  trustProxy: Number(process.env.TRUST_PROXY ?? (process.env.NODE_ENV === "production" ? 3 : 0)),
 };
 
 // Misma protección que Program.cs tenía en el proyecto .NET: nunca arrancar en
