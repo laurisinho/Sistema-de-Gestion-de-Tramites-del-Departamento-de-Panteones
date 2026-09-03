@@ -19,6 +19,14 @@ import { usuariosRouter } from "./routes/usuarios.routes";
 
 const app = express();
 
+// La API corre detrás del proxy de la plataforma de hospedaje. Sin esto,
+// req.ip devuelve la dirección del proxy para todo el mundo: la bitácora
+// registraría siempre la misma IP y el límite de intentos por dirección
+// dejaría fuera a todo el departamento en cuanto una sola persona fallara
+// varias veces. Se confía únicamente en el primer salto (el proxy), no en
+// toda la cadena de X-Forwarded-For, que el cliente sí puede falsificar.
+app.set("trust proxy", 1);
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: env.frontendOrigin, credentials: true }));

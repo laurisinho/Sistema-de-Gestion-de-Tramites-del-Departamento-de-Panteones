@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { COOKIE_NAME, cookieOpciones, firmarToken, requiereAuth } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { limitarLogin, limpiarFallosLogin, registrarFalloLogin } from "../middleware/limiteLogin";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 
 export const authRouter = Router();
@@ -13,7 +14,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-authRouter.post("/login", asyncHandler(async (req, res) => {
+authRouter.post("/login", limitarLogin, asyncHandler(async (req, res) => {
   const parseo = loginSchema.safeParse(req.body);
   if (!parseo.success) return res.status(400).json({ error: "Usuario y contraseña son requeridos" });
   const { nombreUsuario, password } = parseo.data;
@@ -24,8 +25,13 @@ authRouter.post("/login", asyncHandler(async (req, res) => {
   });
 
   if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
+    // El mensaje es el mismo para usuario inexistente y contraseña mala, para
+    // no confirmarle a nadie qué cuentas existen.
+    await registrarFalloLogin(nombreUsuario, req.ip);
     return res.status(401).json({ error: "Usuario o contraseña incorrectos" });
   }
+
+  limpiarFallosLogin(nombreUsuario);
 
   await prisma.usuario.update({
     where: { usuarioId: usuario.usuarioId },

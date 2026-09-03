@@ -14,6 +14,8 @@ export const Acciones = {
   Entrega: "ENTREGA",
   Reconocer: "RECONOCER",
   Liberar: "LIBERAR",
+  // Sin equivalente en el original: ahí no había freno de fuerza bruta.
+  Bloqueo: "BLOQUEO",
 } as const;
 
 // La auditoría nunca debe tumbar la operación del usuario -- igual que
