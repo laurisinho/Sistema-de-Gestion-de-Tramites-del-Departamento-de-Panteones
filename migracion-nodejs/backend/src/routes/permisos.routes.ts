@@ -25,8 +25,9 @@ permisosRouter.get(
   asyncHandler(async (req, res) => {
     const q = str(req.query.q);
     const tipo = str(req.query.tipo);
+    const seccion = str(req.query.seccion);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
-    const hayFiltros = !!(q || tipo || panteonId);
+    const hayFiltros = !!(q || tipo || panteonId || seccion);
 
     const permisos = await prisma.permiso.findMany({
       where: {
@@ -40,7 +41,11 @@ permisosRouter.get(
             }
           : {}),
         ...(tipo ? { tipoTramite: { clave: tipo } } : {}),
-        ...(panteonId ? { lote: { panteonId } } : {}),
+        // Panteón y sección van dentro del mismo filtro de lote: puestos por
+        // separado, el segundo pisaría al primero y se perdería uno de los dos.
+        ...(panteonId || seccion
+          ? { lote: { ...(panteonId ? { panteonId } : {}), ...(seccion ? { seccion } : {}) } }
+          : {}),
       },
       include: {
         tipoTramite: true,

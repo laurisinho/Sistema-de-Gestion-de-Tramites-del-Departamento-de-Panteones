@@ -39,13 +39,23 @@ export function PermisosLista() {
   const [q, setQ] = useState("");
   const [tipo, setTipo] = useState("");
   const [panteonId, setPanteonId] = useState("");
-  const [filtros, setFiltros] = useState({ q: "", tipo: "", panteonId: "" });
+  const [seccion, setSeccion] = useState("");
+  const [filtros, setFiltros] = useState({ q: "", tipo: "", panteonId: "", seccion: "" });
   const [aCancelar, setACancelar] = useState<PermisoFila | null>(null);
   const [errorCancelar, setErrorCancelar] = useState<string | null>(null);
 
   const { data: panteones } = useQuery({
     queryKey: ["catalogos", "panteones"],
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
+  });
+
+  // Secciones del panteón elegido; sin panteón, las de todos.
+  const { data: secciones } = useQuery({
+    queryKey: ["catalogos", "secciones", panteonId],
+    queryFn: () =>
+      api<{ secciones: string[] }>(`/catalogos/secciones${panteonId ? `?panteonId=${panteonId}` : ""}`).then(
+        (r) => r.secciones
+      ),
   });
 
   const { data, isLoading } = useQuery({
@@ -55,6 +65,7 @@ export function PermisosLista() {
       if (filtros.q) params.set("q", filtros.q);
       if (filtros.tipo) params.set("tipo", filtros.tipo);
       if (filtros.panteonId) params.set("panteonId", filtros.panteonId);
+      if (filtros.seccion) params.set("seccion", filtros.seccion);
       return api<{ permisos: PermisoFila[] }>(`/permisos?${params}`).then((r) => r.permisos);
     },
   });
@@ -94,7 +105,7 @@ export function PermisosLista() {
             style={{ marginBottom: 0 }}
             onSubmit={(e) => {
               e.preventDefault();
-              setFiltros({ q, tipo, panteonId });
+              setFiltros({ q, tipo, panteonId, seccion });
             }}
           >
             <input
@@ -111,11 +122,25 @@ export function PermisosLista() {
                 </option>
               ))}
             </select>
-            <select value={panteonId} onChange={(e) => setPanteonId(e.target.value)}>
+            <select
+              value={panteonId}
+              onChange={(e) => {
+                setPanteonId(e.target.value);
+                setSeccion("");
+              }}
+            >
               <option value="">Todos los panteones</option>
               {panteones?.map((p) => (
                 <option key={p.panteonId} value={p.panteonId}>
                   {p.nombre}
+                </option>
+              ))}
+            </select>
+            <select value={seccion} onChange={(e) => setSeccion(e.target.value)}>
+              <option value="">Todas las secciones</option>
+              {secciones?.map((s) => (
+                <option key={s} value={s}>
+                  {s}
                 </option>
               ))}
             </select>

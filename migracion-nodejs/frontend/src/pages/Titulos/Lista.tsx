@@ -37,8 +37,9 @@ export function TitulosLista() {
   const exito = (location.state as { exito?: string } | null)?.exito;
   const [q, setQ] = useState("");
   const [panteonId, setPanteonId] = useState("");
+  const [seccion, setSeccion] = useState("");
   const [tipoBusqueda, setTipoBusqueda] = useState<"titular" | "fallecido">("titular");
-  const [filtros, setFiltros] = useState({ q: "", panteonId: "", tipoBusqueda: "titular" });
+  const [filtros, setFiltros] = useState({ q: "", panteonId: "", seccion: "", tipoBusqueda: "titular" });
   const [aCancelar, setACancelar] = useState<TituloFila | null>(null);
   const [errorCancelar, setErrorCancelar] = useState<string | null>(null);
 
@@ -47,12 +48,22 @@ export function TitulosLista() {
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
   });
 
+  // Secciones del panteón elegido; sin panteón, las de todos.
+  const { data: secciones } = useQuery({
+    queryKey: ["catalogos", "secciones", panteonId],
+    queryFn: () =>
+      api<{ secciones: string[] }>(`/catalogos/secciones${panteonId ? `?panteonId=${panteonId}` : ""}`).then(
+        (r) => r.secciones
+      ),
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: ["titulos", filtros],
     queryFn: () => {
       const params = new URLSearchParams();
       if (filtros.q) params.set("q", filtros.q);
       if (filtros.panteonId) params.set("panteonId", filtros.panteonId);
+      if (filtros.seccion) params.set("seccion", filtros.seccion);
       if (filtros.tipoBusqueda === "fallecido") params.set("tipoBusqueda", "fallecido");
       return api<{ titulos: TituloFila[] }>(`/titulos?${params}`).then((r) => r.titulos);
     },
@@ -98,7 +109,7 @@ export function TitulosLista() {
             style={{ marginBottom: 0 }}
             onSubmit={(e) => {
               e.preventDefault();
-              setFiltros({ q, panteonId, tipoBusqueda });
+              setFiltros({ q, panteonId, seccion, tipoBusqueda });
             }}
           >
             <select value={tipoBusqueda} onChange={(e) => setTipoBusqueda(e.target.value as "titular" | "fallecido")}>
@@ -111,11 +122,25 @@ export function TitulosLista() {
               onChange={(e) => setQ(e.target.value)}
               style={{ minWidth: 280 }}
             />
-            <select value={panteonId} onChange={(e) => setPanteonId(e.target.value)}>
+            <select
+              value={panteonId}
+              onChange={(e) => {
+                setPanteonId(e.target.value);
+                setSeccion("");
+              }}
+            >
               <option value="">Todos los panteones</option>
               {panteones?.map((p) => (
                 <option key={p.panteonId} value={p.panteonId}>
                   {p.nombre}
+                </option>
+              ))}
+            </select>
+            <select value={seccion} onChange={(e) => setSeccion(e.target.value)}>
+              <option value="">Todas las secciones</option>
+              {secciones?.map((s) => (
+                <option key={s} value={s}>
+                  {s}
                 </option>
               ))}
             </select>
@@ -129,7 +154,8 @@ export function TitulosLista() {
       <div className="card">
         <div className="card-header-guinda">
           <span>
-            <i className="bi bi-list-ul" /> {filtros.q || filtros.panteonId ? "Resultados de la búsqueda" : "Últimos títulos"}
+            <i className="bi bi-list-ul" />{" "}
+            {filtros.q || filtros.panteonId || filtros.seccion ? "Resultados de la búsqueda" : "Últimos títulos"}
           </span>
         </div>
         <div className="card-body p-0">

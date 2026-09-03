@@ -23,9 +23,10 @@ titulosRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const q = str(req.query.q);
+    const seccion = str(req.query.seccion);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
     const porFallecido = req.query.tipoBusqueda === "fallecido";
-    const hayFiltros = !!(q || panteonId);
+    const hayFiltros = !!(q || panteonId || seccion);
 
     // Modo "buscar por fallecido" (BusquedaController.Buscar, tipo="fallecido"):
     // el nombre del difunto no vive en el título, así que primero se resuelven
@@ -55,7 +56,11 @@ titulosRouter.get(
                 ],
               }
             : {}),
-        ...(panteonId ? { lote: { panteonId } } : {}),
+        // Panteón y sección van dentro del mismo filtro de lote: puestos por
+        // separado, el segundo pisaría al primero y se perdería uno de los dos.
+        ...(panteonId || seccion
+          ? { lote: { ...(panteonId ? { panteonId } : {}), ...(seccion ? { seccion } : {}) } }
+          : {}),
       },
       include: { titular: true, lote: { include: { panteon: true } } },
       orderBy: { fechaCreacion: "desc" },
