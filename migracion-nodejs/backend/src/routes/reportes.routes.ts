@@ -5,6 +5,8 @@ import { requiereAuth } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { prepararHoja, cerrarHoja, escribirFecha, GUINDA, GUINDA_LT, type ColDef } from "../lib/excel";
+import { renderPdf } from "../lib/pdf";
+import { etiquetasHtml, type EtiquetaLote } from "../templates/etiquetas.template";
 
 export const reportesRouter = Router();
 reportesRouter.use(requiereAuth);
@@ -417,5 +419,64 @@ reportesRouter.get(
       : String(req.query.anio ?? new Date().getFullYear());
     res.setHeader("Content-Disposition", `attachment; filename="Movimientos_${sufijoArchivo}.xlsx"`);
     res.send(Buffer.from(buffer));
+  })
+);
+
+// Etiquetas para la pestaña del folder de archivo: una franja angosta con la
+// clave del lote y el titular, para recortarse a mano y pegarse en la
+// carpeta física del expediente. Se identifica por LOTE (claveLegado) y no
+// por el folio del título vigente: una cesión cambia el folio, pero la
+// carpeta física del lote sigue siendo la misma. El alcance es por fecha de
+// emisión, para ir etiquetando lo nuevo en tandas conforme se emite.
+reportesRouter.get(
+  "/etiquetas",
+  asyncHandler(async (req, res) => {
+    let desde = fechaParam(req.query.desde);
+    let hasta = fechaParam(req.query.hasta);
+    if (!desde || !hasta) {
+      return res.status(400).json({ error: "Indica el rango de fechas (desde y hasta)." });
+    }
+    if (desde > hasta) [desde, hasta] = [hasta, desde];
+    // fechaParam trunca a medianoche; se incluye el día "hasta" completo.
+    const finDia = new Date(hasta.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    const titulos = await prisma.tituloPropiedad.findMany({
+      where: { estado: "VIGENTE", fechaEmision: { gte: desde, lte: finDia } },
+      include: { titular: true, lote: true },
+      // Orden aproximado al que están archivadas las carpetas físicamente,
+      // para que se puedan ir pegando en secuencia sin buscar cada una.
+      orderBy: [
+        { lote: { panteonId: "asc" } },
+        { lote: { seccion: "asc" } },
+        { lote: { numeroManzana: "asc" } },
+        { lote: { numeroLote: "asc" } },
+      ],
+    });
+
+    if (titulos.length === 0) {
+      return res.status(400).json({ error: "No hay títulos vigentes emitidos en ese rango de fechas." });
+    }
+
+    const etiquetas: EtiquetaLote[] = titulos.map((t) => ({
+      clave: t.lote.claveLegado?.trim() || t.folio,
+      titular: t.titular.nombreCompleto,
+    }));
+
+    await registrarBitacora(
+      req.usuario!.usuarioId,
+      Acciones.Imprimir,
+      "titulos_propiedad",
+      undefined,
+      `Etiquetas de archivo generadas: ${etiquetas.length} lote(s), del ${ddmmaaaa(desde)} al ${ddmmaaaa(hasta)}`,
+      req.ip
+    );
+
+    const pdf = await renderPdf(etiquetasHtml(etiquetas));
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="Etiquetas_${String(req.query.desde)}_a_${String(req.query.hasta)}.pdf"`
+    );
+    res.send(pdf);
   })
 );

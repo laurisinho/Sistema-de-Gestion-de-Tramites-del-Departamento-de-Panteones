@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { BotonDescarga } from "../../components/BotonDescarga";
+import { BotonImprimir } from "../../components/BotonImprimir";
 
 interface Resumen {
   totalNoReclamados: number;
@@ -38,6 +39,10 @@ export function ReportesIndex() {
   const [hastaInc, setHastaInc] = useState("");
   const [anioNR, setAnioNR] = useState(String(anioActual));
   const [trimNR, setTrimNR] = useState("");
+
+  const [desdeEtq, setDesdeEtq] = useState("");
+  const [hastaEtq, setHastaEtq] = useState("");
+  const rangoEtqIncompleto = !desdeEtq || !hastaEtq;
 
   const { data: resumen } = useQuery({
     queryKey: ["reportes"],
@@ -283,6 +288,52 @@ export function ReportesIndex() {
                 Generar Excel
               </BotonDescarga>
             </div>
+          </div>
+        </div>
+
+        <div className="rep-card">
+          <div className="rep-head">
+            <p className="rep-titulo">
+              <i className="bi bi-tags" /> Etiquetas para archivo
+            </p>
+            <p className="rep-desc">
+              Una tira angosta por lote (clave y titular) para recortar a mano y pegar en la pestaña del folder del expediente
+              físico. Trae varias por hoja, con línea punteada para el corte. Identifica el <em>lote</em>, no el título: si se
+              cede, la carpeta sigue siendo la misma aunque cambie el folio.
+            </p>
+          </div>
+          <div className="rep-body">
+            <div className="barra-filtros" style={{ marginBottom: 0, alignItems: "flex-end" }}>
+              <div className="form-campo">
+                <label>Desde</label>
+                <input type="date" value={desdeEtq} onChange={(e) => setDesdeEtq(e.target.value)} />
+              </div>
+              <div className="form-campo">
+                <label>Hasta</label>
+                <input type="date" value={hastaEtq} onChange={(e) => setHastaEtq(e.target.value)} />
+              </div>
+              <BotonImprimir
+                ruta={`/reportes/etiquetas?${new URLSearchParams({ desde: desdeEtq, hasta: hastaEtq })}`}
+                nombreArchivo="etiquetas.pdf"
+                className="boton"
+                disabled={rangoEtqIncompleto}
+                title={rangoEtqIncompleto ? "Indica las dos fechas" : "Ver etiquetas"}
+              >
+                {" "}
+                Generar PDF
+              </BotonImprimir>
+            </div>
+            {rangoEtqIncompleto ? (
+              <p className="text-muted" style={{ fontSize: 13, margin: "10px 0 0" }}>
+                <i className="bi bi-info-circle" /> Son los títulos con esa fecha de emisión. Indica las dos fechas para generar
+                el PDF.
+              </p>
+            ) : (
+              <p className="text-muted" style={{ fontSize: 13, margin: "10px 0 0" }}>
+                <i className="bi bi-info-circle" /> Al imprimir, en el diálogo del navegador desactiva &quot;Ajustar a la
+                página&quot; y usa escala 100&nbsp;% — si no, las etiquetas no salen del tamaño exacto de la pestaña.
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -7,12 +7,16 @@ interface Props {
   className: string;
   title?: string;
   children?: ReactNode;
+  // Para reportes cuyos filtros aún están incompletos (p. ej. falta una de las
+  // dos fechas de un rango): mejor no dejar pedir un documento a medio llenar
+  // y que el usuario vea el error genérico de "no se pudo generar".
+  disabled?: boolean;
 }
 
 // Reemplaza los <a href> directos a la API: esos no pueden llevar el header
 // Authorization (solo lo hace una petición de JS), así que dependían de la
 // cookie entre sitios distintos que varios navegadores bloquean.
-export function BotonImprimir({ ruta, nombreArchivo, className, title, children }: Props) {
+export function BotonImprimir({ ruta, nombreArchivo, className, title, children, disabled }: Props) {
   const [generando, setGenerando] = useState(false);
 
   async function onClick() {
@@ -27,7 +31,7 @@ export function BotonImprimir({ ruta, nombreArchivo, className, title, children 
   }
 
   return (
-    <button type="button" className={className} title={title} onClick={onClick} disabled={generando}>
+    <button type="button" className={className} title={title} onClick={onClick} disabled={generando || disabled}>
       <i className={`bi ${generando ? "bi-hourglass-split" : "bi-printer"}`} />
       {children}
     </button>
