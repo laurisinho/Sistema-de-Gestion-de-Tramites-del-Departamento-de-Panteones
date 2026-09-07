@@ -5,6 +5,7 @@ import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { generarFolio } from "../lib/folio";
+import { whereUbicacionLote } from "../lib/ubicacion";
 import { renderPdf } from "../lib/pdf";
 import { tituloHtml } from "../templates/titulo.template";
 
@@ -212,17 +213,11 @@ titulosRouter.post(
       lote = vm.numeroLote.trim();
 
       // La sección entra en la comprobación porque también entra en la
-      // restricción de unicidad de la base: las secciones existen justamente
-      // para que la misma numeración de manzana y lote se repita entre ellas.
-      // Sin este filtro, las 52 ubicaciones que hoy conviven en dos secciones
-      // quedaban imposibles de dar de alta, aunque la base sí las admite.
+      // restricción de unicidad de la base (ver lib/ubicacion). Sin este
+      // filtro, 52 ubicaciones que hoy conviven en dos secciones quedaban
+      // imposibles de dar de alta, aunque la base sí las admite.
       const existe = await prisma.lote.findFirst({
-        where: {
-          panteonId: vm.panteonId,
-          seccion: vm.seccion ?? null,
-          numeroManzana: manzana,
-          numeroLote: lote,
-        },
+        where: whereUbicacionLote(vm.panteonId, vm.seccion ?? null, manzana, lote),
       });
       if (existe) {
         const enSeccion = vm.seccion ? ` en la sección ${vm.seccion}` : "";

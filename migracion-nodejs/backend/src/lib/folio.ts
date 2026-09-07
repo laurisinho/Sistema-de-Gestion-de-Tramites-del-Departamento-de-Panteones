@@ -20,13 +20,20 @@ import type { Prisma, PrismaClient } from "@prisma/client";
  * Se usa la moda y no el prefijo común a todas porque basta una clave mal
  * capturada -- en Jardines del Edén hay una escrita "PJE -ADEII17", con un
  * espacio de más -- para arruinar el prefijo de las 773 de su sección.
+ *
+ * ADEII es la excepción: ahí conviven de verdad dos convenciones distintas
+ * (un mismo lote de "Angelitos" no lleva manzana en la clave, el resto de
+ * ADEII sí), y la deducción automática solo alcanzaba el 28 % de acierto.
+ * En vez de adivinar, el propio departamento fijó la regla a mano -- ver
+ * folioADEII más abajo.
  */
 
 const MUESTRA_MAX = 300;
 // Debajo de esto se entiende que la sección no tiene un formato que seguir.
 // Al 0.7 entra la sección 9, cuya forma canónica reproduce 44 de 58 claves y
-// el resto son capturas sueltas; quedan fuera ADEII (28 %) y Árbol del Edén II
-// (33 %), donde de verdad conviven varias convenciones en la misma sección.
+// el resto son capturas sueltas; queda fuera Árbol del Edén II (33 %), donde
+// de verdad conviven varias convenciones en la misma sección. ADEII no pasa
+// por aquí: tiene su propia regla fija (folioADEII).
 const CONFIANZA_MINIMA = 0.7;
 
 const norm = (v: string) => v.trim().toUpperCase().replace(/\s+/g, "");
@@ -105,6 +112,32 @@ function deducirPlantilla(lotes: LoteMuestra[]): Plantilla | null {
 }
 
 /**
+ * Regla fija para la sección ADEII (Jardines del Edén), pedida directamente
+ * por el departamento en vez de dejarla a la deducción automática:
+ *
+ *   - Si la manzana es "Angelitos" (con sus variantes de captura --
+ *     ANGELITOS, ANGELITIOS, etc.), el folio se captura tal como ya está en
+ *     el acervo: PJE-ANG-{lote}, sin manzana. Ahí nunca se ha usado.
+ *   - En cualquier otro caso de ADEII, el folio lleva manzana y lote:
+ *     PJE-ADEII-{manzana}-{lote}, ambos como número de dos dígitos. Esto
+ *     descarta el patrón antiguo que solo llevaba la manzana (486 lotes ya
+ *     migrados); esos registros no se tocan, la regla es solo para los
+ *     títulos que se emitan de aquí en adelante.
+ */
+function esAngelitos(manzana: string): boolean {
+  return norm(manzana).includes("ANGEL");
+}
+
+function folioADEII(manzana: string, lote: string): string {
+  const limpia = (v: string) => v.trim().toUpperCase().replace(/[ /]/g, "");
+  if (esAngelitos(manzana)) {
+    return `PJE-ANG-${limpia(lote)}`;
+  }
+  const numPad2 = (v: string) => soloDigitos(v).padStart(2, "0") || limpia(v);
+  return `PJE-ADEII-${numPad2(manzana)}-${numPad2(lote)}`;
+}
+
+/**
  * Respaldo cuando la sección no tiene una forma reconocible: {clave}-{mz}-{lote},
  * que es el mismo formato que traía la aplicación antes y el que más se repite
  * en el acervo (todo el Jardín de los Cipreses y varias secciones del Edén).
@@ -132,19 +165,23 @@ export async function generarFolio(
 ): Promise<string> {
   let base: string;
 
-  const muestra = seccion
-    ? await tx.lote.findMany({
-        where: { panteonId, seccion, claveLegado: { not: null } },
-        select: { numeroManzana: true, numeroLote: true, claveLegado: true },
-        take: MUESTRA_MAX,
-      })
-    : [];
-
-  const plantilla = deducirPlantilla(muestra);
-  if (plantilla) {
-    base = plantilla.prefijo + plantilla.fmtM.fn(manzana) + plantilla.sep + plantilla.fmtL.fn(lote);
+  if (seccion && norm(seccion) === "ADEII") {
+    base = folioADEII(manzana, lote);
   } else {
-    base = folioGenerico(clavePanteon, manzana, lote);
+    const muestra = seccion
+      ? await tx.lote.findMany({
+          where: { panteonId, seccion, claveLegado: { not: null } },
+          select: { numeroManzana: true, numeroLote: true, claveLegado: true },
+          take: MUESTRA_MAX,
+        })
+      : [];
+
+    const plantilla = deducirPlantilla(muestra);
+    if (plantilla) {
+      base = plantilla.prefijo + plantilla.fmtM.fn(manzana) + plantilla.sep + plantilla.fmtL.fn(lote);
+    } else {
+      base = folioGenerico(clavePanteon, manzana, lote);
+    }
   }
 
   // El folio es único en la base: si la ubicación ya tuvo título (uno
@@ -155,4 +192,28 @@ export async function generarFolio(
     folio = `${base}-${n++}`;
   }
   return folio;
+}
+
+/**
+ * Folio correlativo CES-####, para la cesión de derechos. Puerto exacto de
+ * GenerarFolioCesion. Se movió aquí (antes vivía en cesiones.routes.ts) para
+ * poder probarlo sin levantar la base ni el servidor.
+ */
+export async function generarFolioCesion(tx: Prisma.TransactionClient | PrismaClient): Promise<string> {
+  const folios = await tx.cesionDerechos.findMany({ select: { folio: true } });
+  let max = 0;
+  for (const { folio } of folios) {
+    const ultimo = folio.split("-").pop() ?? "";
+    if (/^\d+$/.test(ultimo)) {
+      const num = Number(ultimo);
+      if (num > max) max = num;
+    }
+  }
+  let siguiente = max + 1;
+  for (;;) {
+    const folio = `CES-${String(siguiente).padStart(4, "0")}`;
+    const existe = await tx.cesionDerechos.findUnique({ where: { folio } });
+    if (!existe) return folio;
+    siguiente++;
+  }
 }

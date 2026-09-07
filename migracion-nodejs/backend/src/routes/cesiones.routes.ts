@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
+import { generarFolioCesion } from "../lib/folio";
 import { renderPdf } from "../lib/pdf";
 import { cesionHtml, type TituloCedidoParaPdf } from "../templates/cesion.template";
 
@@ -39,26 +40,6 @@ const nuevaCesionSchema = z.object({
 
 function hoy(): Date {
   return new Date(new Date().toDateString());
-}
-
-// Folio correlativo CES-####. Puerto exacto de GenerarFolioCesion.
-async function generarFolioCesion(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]): Promise<string> {
-  const folios = await tx.cesionDerechos.findMany({ select: { folio: true } });
-  let max = 0;
-  for (const { folio } of folios) {
-    const ultimo = folio.split("-").pop() ?? "";
-    if (/^\d+$/.test(ultimo)) {
-      const num = Number(ultimo);
-      if (num > max) max = num;
-    }
-  }
-  let siguiente = max + 1;
-  for (;;) {
-    const folio = `CES-${String(siguiente).padStart(4, "0")}`;
-    const existe = await tx.cesionDerechos.findUnique({ where: { folio } });
-    if (!existe) return folio;
-    siguiente++;
-  }
 }
 
 // Una cesión toca tres tablas (nuevo título, título viejo, registro de

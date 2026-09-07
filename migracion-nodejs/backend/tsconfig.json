@@ -14,5 +14,10 @@
     "declaration": false,
     "sourceMap": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  // Las pruebas no se compilan al build de producción: si Render instalara
+  // solo dependencias de producción, tsc fallaría al no encontrar el paquete
+  // "vitest" que sus imports referencian. Vitest encuentra estos archivos por
+  // su propio nombre, sin depender de este include/exclude.
+  "exclude": ["src/**/*.test.ts"]
 }
