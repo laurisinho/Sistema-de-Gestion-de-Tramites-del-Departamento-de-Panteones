@@ -66,6 +66,20 @@ function filaDato(etiqueta: string, valor: string): string {
   return `<div class="fila-dato"><span class="fd-et">${esc(etiqueta)}: </span><span class="fd-val">${esc(valor)}</span></div>`;
 }
 
+// Las filas sueltas van de dos en dos, en las mismas columnas que el resto del
+// recuadro: sueltas quedaban en una lista pegada a la izquierda con la mitad
+// derecha vacía. La celda que sobra en un número impar de filas va vacía para
+// que las columnas no se recorran.
+function filasEnDosColumnas(filas: string[]): string {
+  const renglones: string[] = [];
+  for (let i = 0; i < filas.length; i += 2) {
+    renglones.push(
+      `<div class="dg-row" style="padding-top:3pt"><div>${filas[i]}</div><div>${filas[i + 1] ?? ""}</div></div>`
+    );
+  }
+  return renglones.join("\n");
+}
+
 export function permisoHtml(
   permiso: PermisoParaPdf,
   opts: { esReimpresion?: boolean; fechaReimpresion?: Date; numeroReimpresion?: number } = {}
@@ -74,16 +88,20 @@ export function permisoHtml(
   const usaColindancias = permiso.lote?.numeroManzana === "S/N";
   const { esReimpresion, fechaReimpresion, numeroReimpresion = 0 } = opts;
 
+  // En el recuadro gris solo va lo que el cuerpo del permiso no repite ya: el
+  // recibo lo menciona en los cuatro tipos, la donación solo la escribe
+  // inhumación y el tipo de obra solo construcción (ver textosCuerpo).
   const datosGeneralesFilas: string[] = [];
-  if (permiso.fallecido) {
-    if (permiso.fallecido.numeroCaso?.trim()) {
-      datosGeneralesFilas.push(filaDato("Núm. único de caso", permiso.fallecido.numeroCaso));
-    }
+  if (permiso.fallecido?.numeroCaso?.trim()) {
+    datosGeneralesFilas.push(filaDato("Núm. único de caso", permiso.fallecido.numeroCaso));
   }
   if (permiso.funeraria?.trim()) datosGeneralesFilas.push(filaDato("Funeraria", permiso.funeraria.toUpperCase()));
-  if (permiso.tipoObra?.trim()) datosGeneralesFilas.push(filaDato("Tipo de construcción", permiso.tipoObra.toUpperCase()));
-  if (permiso.numeroRecibo?.trim() && !permiso.esDonacion) datosGeneralesFilas.push(filaDato("Recibo No.", permiso.numeroRecibo));
-  if (permiso.esDonacion) datosGeneralesFilas.push(filaDato("Concepto", "LOTE DONADO POR EL H. AYUNTAMIENTO"));
+  if (permiso.tipoObra?.trim() && tipo !== "CON") {
+    datosGeneralesFilas.push(filaDato("Tipo de construcción", permiso.tipoObra.toUpperCase()));
+  }
+  if (permiso.esDonacion && tipo !== "SEP") {
+    datosGeneralesFilas.push(filaDato("Concepto", "LOTE DONADO POR EL H. AYUNTAMIENTO"));
+  }
 
   const ubicacionInterior = usaColindancias
     ? `<div class="ubic-row">
@@ -232,7 +250,7 @@ export function permisoHtml(
              </div>`
           : ""
       }
-      ${datosGeneralesFilas.join("\n")}
+      ${filasEnDosColumnas(datosGeneralesFilas)}
     </div>
 
     <div class="ubicacion">
