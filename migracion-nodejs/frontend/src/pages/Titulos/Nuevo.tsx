@@ -34,6 +34,11 @@ export function TituloNuevo() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
+  // La venta del lote y el permiso de inhumación casi siempre se hacen en la
+  // misma visita, pero no siempre: también se venden lotes por anticipado. Por
+  // eso al emitir se ofrece continuar, en vez de mandar directo al permiso.
+  const [emitido, setEmitido] = useState<{ folio: string; loteId: number } | null>(null);
+
   const panteonSel = panteones?.find((p) => String(p.panteonId) === panteonId);
   const usaColindancias = panteonSel?.usaColindancias ?? false;
 
@@ -72,16 +77,68 @@ export function TituloNuevo() {
         body.seccion = seccion || undefined;
       }
 
-      const r = await api<{ tituloId: number; folio: string }>("/titulos", {
+      const r = await api<{ tituloId: number; folio: string; loteId: number }>("/titulos", {
         method: "POST",
         body: JSON.stringify(body),
       });
-      navigate("/titulos", { state: { exito: `Título ${r.folio} emitido correctamente.` } });
+      setEmitido({ folio: r.folio, loteId: r.loteId });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo conectar con el servidor");
     } finally {
       setEnviando(false);
     }
+  }
+
+  if (emitido) {
+    return (
+      <div>
+        <div className="page-header">
+          <h2>
+            <i className="bi bi-award" />
+            Título Emitido
+          </h2>
+        </div>
+
+        <div className="card" style={{ maxWidth: 720 }}>
+          <div className="card-header-guinda">
+            <span>
+              <i className="bi bi-check-circle" /> Título {emitido.folio}
+            </span>
+          </div>
+          <div className="card-body">
+            <p style={{ marginTop: 0 }}>
+              El título <strong>{emitido.folio}</strong> quedó registrado a nombre de{" "}
+              <strong>{nombreTitular}</strong>.
+            </p>
+            <p className="text-muted" style={{ fontSize: 13 }}>
+              <i className="bi bi-info-circle" /> Si la venta es para una inhumación en este momento, puedes generar
+              aquí mismo el permiso de sepultura: el lote y el solicitante ya van llenos. Si el lote se vendió por
+              anticipado, termina aquí.
+            </p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+              <button
+                type="button"
+                className="boton"
+                onClick={() =>
+                  navigate(`/permisos/nuevo?tipo=SEP&loteId=${emitido.loteId}`, {
+                    state: { solicitante: nombreTitular },
+                  })
+                }
+              >
+                <i className="bi bi-file-earmark-plus" /> Generar permiso de sepultura
+              </button>
+              <button
+                type="button"
+                className="boton-secundario"
+                onClick={() => navigate("/titulos", { state: { exito: `Título ${emitido.folio} emitido correctamente.` } })}
+              >
+                <i className="bi bi-check2" /> Terminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

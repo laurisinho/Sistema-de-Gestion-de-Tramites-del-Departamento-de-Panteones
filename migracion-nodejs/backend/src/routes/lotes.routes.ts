@@ -124,6 +124,10 @@ lotesRouter.get(
       OR: [{ estado: "OCUPADO" }, { esFosaComun: true }, { titulos: { some: { estado: "VIGENTE" } } }],
     };
     const filtros: Prisma.LoteWhereInput[] = [disponibilidad];
+    // Un lote concreto por id: lo usa la pantalla de permiso cuando llega con
+    // el lote ya elegido (p. ej. justo después de emitir su título).
+    const loteId = req.query.loteId ? Number(req.query.loteId) : undefined;
+    if (loteId) filtros.push({ loteId });
     if (panteonId) filtros.push({ panteonId });
     if (seccion) filtros.push({ seccion });
     if (manzana) {

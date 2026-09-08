@@ -292,7 +292,13 @@ titulosRouter.post(
         req.ip
       );
 
-      res.status(201).json({ tituloId: resultado.titulo.tituloId, folio: resultado.folio });
+      // El loteId va de vuelta para poder encadenar el permiso de sepultura
+      // sin volver a buscar el lote que se acaba de dar de alta.
+      res.status(201).json({
+        tituloId: resultado.titulo.tituloId,
+        folio: resultado.folio,
+        loteId: resultado.titulo.loteId,
+      });
     } catch (err) {
       console.error("Error al emitir título (rollback aplicado):", err);
       res.status(500).json({ error: "No se pudo emitir el título. No se guardó ningún cambio; inténtalo de nuevo." });

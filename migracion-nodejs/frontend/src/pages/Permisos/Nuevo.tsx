@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "../../lib/api";
 
@@ -60,12 +60,19 @@ const TIPOS = [
 
 export function PermisoNuevo() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const tipoInicial = TIPOS.some((t) => t.clave === searchParams.get("tipo")) ? searchParams.get("tipo")! : "SEP";
   const [tipoClave, setTipoClave] = useState(tipoInicial);
   const tipoNombre = TIPOS.find((t) => t.clave === tipoClave)?.nombre ?? tipoClave;
 
-  const [nombreSolicitante, setNombreSolicitante] = useState("");
+  // Al llegar desde un título recién emitido: el lote viene en la URL y el
+  // titular (que suele ser el mismo solicitante) en el state de la navegación,
+  // para no dejar el nombre de una persona en la barra de direcciones.
+  const loteIdInicial = searchParams.get("loteId");
+  const [nombreSolicitante, setNombreSolicitante] = useState(
+    (location.state as { solicitante?: string } | null)?.solicitante ?? ""
+  );
   const [telefonoSolicitante, setTelefonoSolicitante] = useState("");
 
   const [fallecidoTermino, setFallecidoTermino] = useState("");
@@ -148,6 +155,22 @@ export function PermisoNuevo() {
     setFechaFallecimiento("");
     setActaDefuncionNumero("");
   }
+
+  // Lote ya elegido de antemano (se llega aquí desde el título recién
+  // emitido): se trae una sola vez para dejarlo seleccionado sin buscarlo.
+  useEffect(() => {
+    if (!loteIdInicial) return;
+
+    let cancelado = false;
+    api<LoteResultado[]>(`/lotes/buscar?loteId=${encodeURIComponent(loteIdInicial)}`)
+      .then((r) => {
+        if (!cancelado && r[0]) setLoteSel(r[0]);
+      })
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [loteIdInicial]);
 
   // Al exhumar, el difunto casi siempre ya está en el sistema: es quien se
   // sepultó ahí antes. En vez de obligar al capturista a buscarlo por nombre,
