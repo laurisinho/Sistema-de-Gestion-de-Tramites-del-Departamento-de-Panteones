@@ -21,6 +21,7 @@ interface PermisoFila {
   solicitante: { nombreCompleto: string };
   fallecido: { nombreCompleto: string } | null;
   lote: { numeroManzana: string; numeroLote: string; panteon: { nombre: string } } | null;
+  sinTituloRegistrado: boolean;
 }
 
 const TIPOS = [
@@ -190,7 +191,10 @@ export function PermisosLista() {
                       </td>
                       <td className="tabla-col-ancha">{p.solicitante.nombreCompleto}</td>
                       <td className="tabla-col-ancha">{p.fallecido?.nombreCompleto ?? "—"}</td>
-                      <td className="tabla-col-ancha">{p.lote ? `${p.lote.panteon.nombre} · Mz ${p.lote.numeroManzana} L ${p.lote.numeroLote}` : "—"}</td>
+                      <td className="tabla-col-ancha">
+                        {p.lote ? `${p.lote.panteon.nombre} · Mz ${p.lote.numeroManzana} L ${p.lote.numeroLote}` : "—"}{" "}
+                        {p.sinTituloRegistrado && <span className="badge badge-warning">Sin registro</span>}
+                      </td>
                       <td>
                         <span className={claseEstado(p.estado)}>{p.estado}</span>
                       </td>

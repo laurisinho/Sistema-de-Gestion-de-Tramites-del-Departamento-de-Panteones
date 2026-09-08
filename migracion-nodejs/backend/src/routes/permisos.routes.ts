@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
+import { whereUbicacionLote } from "../lib/ubicacion";
 import { renderPdf } from "../lib/pdf";
 import { permisoHtml } from "../templates/permiso.template";
 
@@ -95,6 +96,19 @@ const nuevoPermisoSchema = z.object({
   actaDefuncionNumero: z.string().optional(),
 
   loteId: z.coerce.number().int().optional(),
+
+  // Panteones antiguos sin título de propiedad registrado: en vez de elegir
+  // un lote ya existente, se captura su ubicación (según use manzana/lote o
+  // colindancias) y se crea u obtiene el lote sin exigirle título vigente.
+  sinTituloRegistrado: z.boolean().default(false),
+  panteonId: z.coerce.number().int().optional(),
+  seccion: z.string().optional(),
+  numeroManzana: z.string().optional(),
+  numeroLote: z.string().optional(),
+  colindanciaNorte: z.string().optional(),
+  colindanciaSur: z.string().optional(),
+  colindanciaEste: z.string().optional(),
+  colindanciaOeste: z.string().optional(),
 
   motivoExhumacion: z.string().optional(),
   destinoRestos: z.string().optional(),
@@ -212,6 +226,61 @@ async function registrarOcupacionDeLote(permiso: Permiso, usuarioId: number, tx:
   );
 }
 
+type UbicacionSinTitulo = {
+  panteonId?: number;
+  seccion?: string;
+  numeroManzana?: string;
+  numeroLote?: string;
+  colindanciaNorte?: string;
+  colindanciaSur?: string;
+  colindanciaEste?: string;
+  colindanciaOeste?: string;
+};
+
+// Panteones antiguos que nunca tuvieron título de propiedad registrado: en
+// vez de buscar un lote existente (que exige título vigente o fosa común),
+// se captura su ubicación tal como la use ese panteón y se obtiene u origina
+// el lote al vuelo. Los de colindancias siempre se crean nuevos -- no tienen
+// un número de lote que el capturista conozca de antemano para buscarlo, es
+// un consecutivo interno (mismo criterio que TitulosController.Nuevo).
+async function resolverLoteSinTitulo(vm: UbicacionSinTitulo, tx: Tx): Promise<{ loteId: number } | { error: string }> {
+  if (!vm.panteonId) return { error: "Selecciona el panteón." };
+  const panteon = await tx.panteon.findUnique({ where: { panteonId: vm.panteonId } });
+  if (!panteon) return { error: "Panteón no válido." };
+
+  if (panteon.usaColindancias) {
+    const existentes = await tx.lote.count({ where: { panteonId: vm.panteonId, numeroManzana: "S/N" } });
+    const nuevoLote = await tx.lote.create({
+      data: {
+        panteonId: vm.panteonId,
+        tipoLoteId: 1,
+        numeroManzana: "S/N",
+        numeroLote: String(existentes + 1),
+        colindanciaNorte: vm.colindanciaNorte,
+        colindanciaSur: vm.colindanciaSur,
+        colindanciaEste: vm.colindanciaEste,
+        colindanciaOeste: vm.colindanciaOeste,
+      },
+    });
+    return { loteId: nuevoLote.loteId };
+  }
+
+  if (!vm.numeroManzana?.trim() || !vm.numeroLote?.trim()) {
+    return { error: "Captura manzana y lote." };
+  }
+  const numeroManzana = vm.numeroManzana.trim();
+  const numeroLote = vm.numeroLote.trim();
+  const seccion = vm.seccion?.trim() || null;
+
+  const existente = await tx.lote.findFirst({ where: whereUbicacionLote(vm.panteonId, seccion, numeroManzana, numeroLote) });
+  if (existente) return { loteId: existente.loteId };
+
+  const nuevoLote = await tx.lote.create({
+    data: { panteonId: vm.panteonId, tipoLoteId: 1, numeroManzana, numeroLote, seccion },
+  });
+  return { loteId: nuevoLote.loteId };
+}
+
 permisosRouter.post(
   "/",
   asyncHandler(async (req, res) => {
@@ -221,26 +290,43 @@ permisosRouter.post(
     }
     const vm = parseo.data;
 
-    if (!vm.loteId) {
+    if (!vm.loteId && !vm.sinTituloRegistrado) {
       return res.status(400).json({ error: "Debe seleccionar un lote." });
     }
 
-    const loteSel = await prisma.lote.findUnique({ where: { loteId: vm.loteId } });
-
-    const tieneTitulo = await prisma.tituloPropiedad.findFirst({
-      where: { loteId: vm.loteId, estado: "VIGENTE" },
-    });
-
-    if (!tieneTitulo && !loteSel?.esFosaComun) {
-      return res.status(400).json({
-        error: "El lote seleccionado no tiene un título de propiedad vigente. No se puede emitir el permiso.",
+    if (vm.loteId) {
+      const loteSel = await prisma.lote.findUnique({ where: { loteId: vm.loteId } });
+      const tieneTitulo = await prisma.tituloPropiedad.findFirst({
+        where: { loteId: vm.loteId, estado: "VIGENTE" },
       });
+
+      if (!tieneTitulo && !loteSel?.esFosaComun && !vm.sinTituloRegistrado) {
+        return res.status(400).json({
+          error: "El lote seleccionado no tiene un título de propiedad vigente. No se puede emitir el permiso.",
+        });
+      }
+    } else {
+      if (!vm.panteonId) {
+        return res.status(400).json({ error: "Selecciona el panteón." });
+      }
+      const panteon = await prisma.panteon.findUnique({ where: { panteonId: vm.panteonId } });
+      if (!panteon) return res.status(400).json({ error: "Panteón no válido." });
+      if (!panteon.usaColindancias && (!vm.numeroManzana?.trim() || !vm.numeroLote?.trim())) {
+        return res.status(400).json({ error: "Captura manzana y lote." });
+      }
     }
 
     const usuarioId = req.usuario!.usuarioId;
 
     try {
       const resultado = await prisma.$transaction(async (tx) => {
+        let loteId = vm.loteId ?? null;
+        if (!loteId) {
+          const resuelto = await resolverLoteSinTitulo(vm, tx);
+          if ("error" in resuelto) throw new Error(resuelto.error);
+          loteId = resuelto.loteId;
+        }
+
         const solicitante = await tx.persona.create({
           data: {
             nombreCompleto: vm.nombreSolicitante,
@@ -283,7 +369,7 @@ permisosRouter.post(
         const permiso = await tx.permiso.create({
           data: {
             tipoTramiteId: tipoTramite.tipoTramiteId,
-            loteId: vm.loteId,
+            loteId,
             solicitanteId: solicitante.personaId,
             fallecidoId: fallecido?.fallecidoId,
             folio,
@@ -298,6 +384,7 @@ permisosRouter.post(
             numeroRecibo: vm.numeroRecibo,
             funeraria: vm.funeraria,
             esDonacion: vm.esDonacion,
+            sinTituloRegistrado: vm.sinTituloRegistrado,
           },
         });
 
@@ -321,7 +408,8 @@ permisosRouter.post(
         Acciones.Crear,
         "permisos",
         resultado.permiso.permisoId,
-        `Permiso ${resultado.tipoTramite.nombre} ${resultado.folio} a nombre de ${resultado.solicitante.nombreCompleto}`,
+        `Permiso ${resultado.tipoTramite.nombre} ${resultado.folio} a nombre de ${resultado.solicitante.nombreCompleto}` +
+          (vm.sinTituloRegistrado ? " (sin título de propiedad registrado)" : ""),
         req.ip
       );
 

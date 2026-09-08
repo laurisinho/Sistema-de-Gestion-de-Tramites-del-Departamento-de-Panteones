@@ -21,6 +21,7 @@ interface PermisoDetalle {
   tipoObra: string | null;
   descripcionObra: string | null;
   esDonacion: boolean;
+  sinTituloRegistrado: boolean;
   tipoTramite: { clave: string; nombre: string };
   solicitante: { nombreCompleto: string; telefono: string | null; domicilio: string | null };
   fallecido: { nombreCompleto: string; fechaFallecimiento: string | null; actaDefuncionNumero: string | null } | null;
@@ -247,6 +248,7 @@ export function PermisoDetalle() {
               <span>
                 <i className="bi bi-clock-history" /> Lote
               </span>
+              {data.sinTituloRegistrado && <span className="badge badge-warning">Sin registro</span>}
             </div>
             <div className="card-body">
               <table style={{ fontSize: 14, width: "100%" }}>

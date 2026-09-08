@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { requiereAuth } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { variantesManzana } from "../lib/romanos";
 
 export const lotesRouter = Router();
 lotesRouter.use(requiereAuth);
@@ -26,19 +27,29 @@ lotesRouter.get(
       return res.json({ resultados: [] });
     }
 
-    const where: Prisma.LoteWhereInput = {};
-    if (panteonId) where.panteonId = panteonId;
-    if (manzana) where.numeroManzana = { contains: manzana, mode: "insensitive" };
-    if (lote) where.numeroLote = { contains: lote, mode: "insensitive" };
+    // Filtros combinados con AND, cada uno en su propia entrada: si "manzana"
+    // y "clave" pisaran el mismo where.OR, uno de los dos se perdería.
+    const filtros: Prisma.LoteWhereInput[] = [];
+    if (panteonId) filtros.push({ panteonId });
+    if (manzana) {
+      // Algunas secciones antiguas capturaron la manzana en romano (p. ej.
+      // "XVI") y otras en arábigo ("16") para el mismo número real.
+      filtros.push({
+        OR: variantesManzana(manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
+      });
+    }
+    if (lote) filtros.push({ numeroLote: { contains: lote, mode: "insensitive" } });
     if (clave) {
-      where.OR = [
-        { claveLegado: { contains: clave, mode: "insensitive" } },
-        { seccion: { contains: clave, mode: "insensitive" } },
-      ];
+      filtros.push({
+        OR: [
+          { claveLegado: { contains: clave, mode: "insensitive" } },
+          { seccion: { contains: clave, mode: "insensitive" } },
+        ],
+      });
     }
 
     const lotes = await prisma.lote.findMany({
-      where,
+      where: { AND: filtros },
       include: {
         panteon: true,
         titulos: { where: { estado: "VIGENTE" }, include: { titular: true }, take: 1 },
@@ -46,7 +57,9 @@ lotesRouter.get(
       },
     });
 
-    const igual = (a: string, b?: string) => !!b && a.toLowerCase() === b.toLowerCase();
+    // Coincide como "exacta" también cuando son la misma manzana en romano y
+    // en arábigo (p. ej. la búsqueda "16" contra un lote guardado como "XVI").
+    const igual = (a: string, b?: string) => !!b && variantesManzana(a).some((v) => v.toLowerCase() === b.toLowerCase());
 
     // "3" también coincide con 13, 33, 34...: la coincidencia exacta va primero.
     // Se ordena en memoria (no en la DB) porque el total de coincidencias es
@@ -96,6 +109,10 @@ lotesRouter.get(
     const manzana = str(req.query.manzana);
     const lote = str(req.query.lote);
     const seccion = str(req.query.seccion);
+    // Titular del lote: alternativa a manzana/lote para paneones que sí los
+    // usan (a diferencia de "termino", que es la búsqueda de los panteones de
+    // colindancias -- ahí también entra el titular, pero junto con vecinos).
+    const titular = str(req.query.titular);
     // Los panteones que usan colindancias (numeroManzana="S/N") no tienen
     // sección ni un número de lote que el personal reconozca de memoria: ahí
     // se busca por el titular o por el nombre de algún vecino registrado como
@@ -109,8 +126,17 @@ lotesRouter.get(
     const filtros: Prisma.LoteWhereInput[] = [disponibilidad];
     if (panteonId) filtros.push({ panteonId });
     if (seccion) filtros.push({ seccion });
-    if (manzana) filtros.push({ numeroManzana: { contains: manzana, mode: "insensitive" } });
+    if (manzana) {
+      // Algunas secciones antiguas capturaron la manzana en romano (p. ej.
+      // "XVI") y otras en arábigo ("16") para el mismo número real.
+      filtros.push({
+        OR: variantesManzana(manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
+      });
+    }
     if (lote) filtros.push({ numeroLote: { contains: lote, mode: "insensitive" } });
+    if (titular) {
+      filtros.push({ titulos: { some: { estado: "VIGENTE", titular: { nombreCompleto: { contains: titular, mode: "insensitive" } } } } });
+    }
     if (termino) {
       filtros.push({
         OR: [
@@ -151,6 +177,49 @@ lotesRouter.get(
         colindanciaOeste: l.colindanciaOeste,
       }))
     );
+  })
+);
+
+// Quién está sepultado hoy en el lote (inhumados menos ya exhumados), en el
+// mismo formato que /fallecidos/buscar, para que al elegir el lote de una
+// EXHUMACIÓN el capturista no tenga que volver a teclear el nombre del
+// difunto que ya está enlazado a ese lote por su permiso de inhumación.
+lotesRouter.get(
+  "/:id/ocupantes",
+  asyncHandler(async (req, res) => {
+    const loteId = Number(req.params.id);
+
+    const [sepultados, exhumaciones] = await Promise.all([
+      prisma.permiso.findMany({
+        where: { loteId, tipoTramite: { clave: "SEP" }, fallecidoId: { not: null } },
+        include: { fallecido: true },
+        orderBy: { permisoId: "asc" },
+      }),
+      prisma.permiso.findMany({
+        where: { loteId, tipoTramite: { clave: "EXH" }, fallecidoId: { not: null } },
+        select: { fallecidoId: true },
+      }),
+    ]);
+    const yaExhumados = new Set(exhumaciones.map((p) => p.fallecidoId));
+
+    const vistos = new Set<number>();
+    const ocupantes = [];
+    for (const p of sepultados) {
+      const f = p.fallecido;
+      if (!f || yaExhumados.has(f.fallecidoId) || vistos.has(f.fallecidoId)) continue;
+      vistos.add(f.fallecidoId);
+      ocupantes.push({
+        fallecidoId: f.fallecidoId,
+        nombre: f.nombreCompleto,
+        fecha: f.fechaFallecimiento,
+        acta: f.actaDefuncionNumero,
+        numeroCaso: f.numeroCaso,
+        esNoReclamado: f.esNoReclamado,
+        yaTienePermiso: true,
+      });
+    }
+
+    res.json(ocupantes);
   })
 );
 

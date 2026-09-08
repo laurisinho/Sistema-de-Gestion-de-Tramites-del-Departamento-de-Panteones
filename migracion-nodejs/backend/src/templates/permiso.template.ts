@@ -161,6 +161,10 @@ export function permisoHtml(
   .us-val { font-size: 10pt; font-weight: bold; }
   .ubic-label { font-size: 8pt; color: #777777; }
   .ubic-valor { font-size: 11pt; font-weight: bold; }
+  .sin-titulo {
+    margin-top: 4pt; background: #FFF8E1; border: 0.5pt solid ${DORADO}; padding: 5pt;
+    font-weight: bold; font-size: 9pt; color: ${GUINDA_DARK};
+  }
 
   .cuerpo { padding-top: 8pt; }
   .cuerpo-linea { padding-bottom: 3pt; font-size: 10.5pt; line-height: 1.25; }
@@ -237,6 +241,7 @@ export function permisoHtml(
         <div class="ubic-panteon">Panteón: ${esc((permiso.lote?.panteon.nombre || "").toUpperCase())}</div>
         ${ubicacionInterior}
       </div>
+      ${permiso.sinTituloRegistrado ? `<div class="sin-titulo">Este lote no cuenta con título de propiedad registrado en el sistema.</div>` : ""}
     </div>
 
     <div class="cuerpo">
