@@ -56,7 +56,9 @@ npm install
 npm run dev              # http://localhost:5173
 ```
 
-Usuario sembrado por `prisma/seed.ts`: `admin` / `Admin2026` (rol Administrador).
+Usuario sembrado por `prisma/seed.ts`: `admin` (rol Administrador). Su contraseña
+inicial no se documenta aquí a propósito — una contraseña escrita en el repositorio
+deja de ser secreta. Cámbiala en cuanto levantes el entorno.
 
 ---
 

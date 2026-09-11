@@ -63,7 +63,9 @@ async function main() {
       nombreUsuario: "admin",
       nombreCompleto: "Administrador del Sistema",
       email: "panteones@nogales.gob.mx",
-      // Mismo hash bcrypt del seed .NET (contraseña: Admin2026) — portable sin cambios.
+      // Hash bcrypt heredado del seed .NET, portable sin cambios. Es solo para
+      // poder entrar la primera vez: la contraseña que le corresponde estuvo
+      // publicada en este repositorio, así que hay que cambiarla al instalar.
       passwordHash: "$2b$12$i6Ulmy7m9B5FdA7eVTQbX.vDhUDNOIxYWD1NLZ9RmbPt34EH.xr32",
     },
   });

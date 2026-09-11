@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────
+#  Compilados de .NET  (aqui vive el 98% del peso: ~968 MB)
+# ─────────────────────────────────────────────────────────────
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+*.user
+*.suo
+.vs/
+
+# ─────────────────────────────────────────────────────────────
+#  SECRETOS  —  no subir nunca
+# ─────────────────────────────────────────────────────────────
+# Trae la llave JWT que firma las sesiones y la cadena de conexion.
+appsettings.Production.json
+appsettings.*.local.json
+*.pfx
+*.key
+
+# ─────────────────────────────────────────────────────────────
+#  Respaldos de base de datos  (datos personales de ciudadanos)
+# ─────────────────────────────────────────────────────────────
+*.bak
+*.bacpac
+*.mdf
+*.ldf
+USB/
+
+# ─────────────────────────────────────────────────────────────
+#  Adjuntos de los correos de Fiscalia
+#  Actas, oficios e INE escaneadas: datos personales sensibles.
+# ─────────────────────────────────────────────────────────────
+*.eml
+*.tif
+*.tiff
+adjuntos/
+
+# ─────────────────────────────────────────────────────────────
+#  Material de trabajo de la raiz  —  no es parte del sistema
+#  Padrones reales en Excel, plantillas con nombres de personas,
+#  volcados SQL, el proyecto .NET original y los de prueba.
+#  El repositorio es PUBLICO: nada de esto debe subirse. Las
+#  rutas con "/" delante solo aplican a la raiz, para no tocar
+#  los archivos del propio sistema (p. ej. schema_postgres.sql).
+# ─────────────────────────────────────────────────────────────
+EXCEL/
+PanteonesMunicipales/
+Prueba2/
+PruebaPanteones/
+/*.sql
+/*.doc
+/*.docx
+/*.pdf
+/*.xls
+/*.xlsx
+/*.xlsb
+
+# ─────────────────────────────────────────────────────────────
+#  Basura
+# ─────────────────────────────────────────────────────────────
+*.rpt
+~$*
+Thumbs.db
+desktop.ini
+node_modules/
