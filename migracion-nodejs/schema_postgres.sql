@@ -307,7 +307,9 @@ INSERT INTO tipos_lote (nombre, descripcion) VALUES
 ('Nicho',  'Nicho en muro o estructura de mampostería'),
 ('Cripta', 'Cripta familiar de uso múltiple');
 
--- Los 7 panteones
+-- Los 8 panteones. El Jardín de los Cipreses son dos registros distintos
+-- porque el departamento los lleva por separado: Jardines y Monumentos tienen
+-- cada uno su propia numeración de manzanas (la manzana 26 existe en ambos).
 INSERT INTO panteones (nombre, clave, usa_colindancias, direccion) VALUES
 ('Jardines del Edén',                                     'PJE', FALSE, 'Carretera Internacional'),
 ('Agua Zarca',                                             'PAZ', FALSE, 'Fraccionamiento La Mesa'),
@@ -315,7 +317,8 @@ INSERT INTO panteones (nombre, clave, usa_colindancias, direccion) VALUES
 ('Del Rosario',                                            'PR',  TRUE,  'Reforma e Independencia'),
 ('Nacional',                                               'PN',  TRUE,  'Calle Reforma Final'),
 ('Nacional Anexo',                                         'PNA', TRUE,  'Calle Reforma Final'),
-('Jardín de los Cipreses - Jardines y Monumentos',         'PC',  FALSE, 'Calle Reforma Final');
+('Jardín de los Cipreses - Jardines',                      'PC',  FALSE, 'Calle Reforma Final'),
+('Jardín de los Cipreses - Monumentos',                    'PCM', FALSE, 'Calle Reforma Final');
 
 INSERT INTO usuarios (rol_id, nombre_usuario, nombre_completo, email, password_hash)
 VALUES (
@@ -323,5 +326,8 @@ VALUES (
     'admin',
     'Administrador del Sistema',
     'panteones@nogales.gob.mx',
-    '$2b$12$i6Ulmy7m9B5FdA7eVTQbX.vDhUDNOIxYWD1NLZ9RmbPt34EH.xr32'  -- Admin2026 (hash bcrypt, portable a Node sin cambios)
+    -- Hash bcrypt heredado del esquema .NET, solo para el primer acceso. La
+    -- contraseña que le corresponde estuvo publicada en este repositorio:
+    -- cámbiala al instalar.
+    '$2b$12$i6Ulmy7m9B5FdA7eVTQbX.vDhUDNOIxYWD1NLZ9RmbPt34EH.xr32'
 );
