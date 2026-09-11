@@ -27,6 +27,11 @@ const app = express();
 // nadie puede adelantarse una posición mandando su propio X-Forwarded-For.
 app.set("trust proxy", env.trustProxy);
 
+// Express anuncia "X-Powered-By: Express" en cada respuesta. No sirve de nada
+// al cliente y le regala a quien sondee el servidor con qué está hecho, que es
+// el primer paso para buscarle vulnerabilidades conocidas.
+app.disable("x-powered-by");
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: env.frontendOrigin, credentials: true }));
