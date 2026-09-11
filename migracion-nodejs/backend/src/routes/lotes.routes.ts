@@ -21,9 +21,13 @@ lotesRouter.get(
     const manzana = str(req.query.manzana);
     const lote = str(req.query.lote);
     const clave = str(req.query.clave);
+    // La sección se elige de una lista, así que se compara exacta. Antes iba
+    // mezclada con la clave en un solo campo de texto y había que escribirla
+    // de memoria, sin ver cuáles existen en el panteón.
+    const seccion = str(req.query.seccion);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
 
-    if (!manzana && !lote && !clave) {
+    if (!manzana && !lote && !clave && !seccion) {
       return res.json({ resultados: [] });
     }
 
@@ -39,14 +43,8 @@ lotesRouter.get(
       });
     }
     if (lote) filtros.push({ numeroLote: { contains: lote, mode: "insensitive" } });
-    if (clave) {
-      filtros.push({
-        OR: [
-          { claveLegado: { contains: clave, mode: "insensitive" } },
-          { seccion: { contains: clave, mode: "insensitive" } },
-        ],
-      });
-    }
+    if (seccion) filtros.push({ seccion });
+    if (clave) filtros.push({ claveLegado: { contains: clave, mode: "insensitive" } });
 
     const lotes = await prisma.lote.findMany({
       where: { AND: filtros },

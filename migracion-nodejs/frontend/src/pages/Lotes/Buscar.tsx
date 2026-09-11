@@ -22,16 +22,35 @@ interface LoteResultado {
   permisosCount: number;
 }
 
+interface Filtros {
+  manzana: string;
+  lote: string;
+  clave: string;
+  seccion: string;
+  panteonId: string;
+}
+
 export function LotesBuscar() {
   const [manzana, setManzana] = useState("");
   const [lote, setLote] = useState("");
   const [clave, setClave] = useState("");
+  const [seccion, setSeccion] = useState("");
   const [panteonId, setPanteonId] = useState("");
-  const [filtros, setFiltros] = useState<{ manzana: string; lote: string; clave: string; panteonId: string } | null>(null);
+  const [filtros, setFiltros] = useState<Filtros | null>(null);
 
   const { data: panteones } = useQuery({
     queryKey: ["catalogos", "panteones"],
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
+  });
+
+  // Secciones del panteón elegido; sin panteón, las de todos. Se muestran en
+  // una lista porque cada panteón tiene las suyas y nadie las recuerda todas.
+  const { data: secciones } = useQuery({
+    queryKey: ["catalogos", "secciones", panteonId],
+    queryFn: () =>
+      api<{ secciones: string[] }>(`/catalogos/secciones${panteonId ? `?panteonId=${panteonId}` : ""}`).then(
+        (r) => r.secciones
+      ),
   });
 
   const { data: resultados, isFetching } = useQuery({
@@ -41,6 +60,7 @@ export function LotesBuscar() {
       if (filtros?.manzana) params.set("manzana", filtros.manzana);
       if (filtros?.lote) params.set("lote", filtros.lote);
       if (filtros?.clave) params.set("clave", filtros.clave);
+      if (filtros?.seccion) params.set("seccion", filtros.seccion);
       if (filtros?.panteonId) params.set("panteonId", filtros.panteonId);
       return api<{ resultados: LoteResultado[] }>(`/lotes?${params}`).then((r) => r.resultados);
     },
@@ -59,17 +79,25 @@ export function LotesBuscar() {
       <div className="card">
         <div className="card-body">
           <p className="text-muted" style={{ marginTop: 0 }}>
-            Son casi 7,000 lotes — captura al menos manzana, lote o clave para buscar.
+            Son casi 7,000 lotes — elige una sección o captura manzana, lote o clave para buscar.
           </p>
           <form
             className="barra-filtros"
             style={{ marginBottom: 0 }}
             onSubmit={(e) => {
               e.preventDefault();
-              setFiltros({ manzana, lote, clave, panteonId });
+              setFiltros({ manzana, lote, clave, seccion, panteonId });
             }}
           >
-            <select value={panteonId} onChange={(e) => setPanteonId(e.target.value)}>
+            <select
+              value={panteonId}
+              onChange={(e) => {
+                setPanteonId(e.target.value);
+                // Las secciones cambian con el panteón: la que estaba elegida
+                // puede no existir en el nuevo.
+                setSeccion("");
+              }}
+            >
               <option value="">Todos los panteones</option>
               {panteones?.map((p) => (
                 <option key={p.panteonId} value={p.panteonId}>
@@ -77,9 +105,17 @@ export function LotesBuscar() {
                 </option>
               ))}
             </select>
+            <select value={seccion} onChange={(e) => setSeccion(e.target.value)}>
+              <option value="">Todas las secciones</option>
+              {secciones?.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
             <input placeholder="Manzana" value={manzana} onChange={(e) => setManzana(e.target.value)} />
             <input placeholder="Lote" value={lote} onChange={(e) => setLote(e.target.value)} />
-            <input placeholder="Clave / sección" value={clave} onChange={(e) => setClave(e.target.value)} />
+            <input placeholder="Clave" value={clave} onChange={(e) => setClave(e.target.value)} />
             <button className="boton" type="submit">
               <i className="bi bi-search" /> Buscar
             </button>
