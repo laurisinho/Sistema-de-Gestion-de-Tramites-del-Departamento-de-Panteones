@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
-import { whereUbicacionLote } from "../lib/ubicacion";
+import { whereSeccion, whereUbicacionLote } from "../lib/ubicacion";
 import { renderPdf } from "../lib/pdf";
 import { permisoHtml } from "../templates/permiso.template";
 
@@ -45,7 +45,7 @@ permisosRouter.get(
         // Panteón y sección van dentro del mismo filtro de lote: puestos por
         // separado, el segundo pisaría al primero y se perdería uno de los dos.
         ...(panteonId || seccion
-          ? { lote: { ...(panteonId ? { panteonId } : {}), ...(seccion ? { seccion } : {}) } }
+          ? { lote: { ...(panteonId ? { panteonId } : {}), ...(seccion ? whereSeccion(seccion) : {}) } }
           : {}),
       },
       include: {

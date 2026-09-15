@@ -154,7 +154,7 @@ export function tituloHtml(
     <div class="identificacion">
       El titular se identifica con ${identTexto} al momento de la expedición del presente título.
     </div>
-    <div class="recibo">No. de Recibo:   ____________________</div>
+    <div class="recibo">No. de Recibo: ${titulo.numeroRecibo?.trim() ? esc(titulo.numeroRecibo) : "____________________"}</div>
 
     <div class="firmas">
       <div class="firma-col">

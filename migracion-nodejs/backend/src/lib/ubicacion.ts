@@ -26,3 +26,18 @@ export function whereUbicacionLote(
     numeroLote,
   };
 }
+
+// "ANG" (Angelitos) no es un valor real de lotes.seccion: esos lotes viven
+// dentro de ADEII con manzana "ANGELITOS" -- así es como folio.ts los
+// reconoce para darles su propio folio PJE-ANG-#. Esta función deja elegir
+// "ANG" en cualquier buscador como si fuera una sección más, sin tocar cómo
+// se guardan los datos. Nunca debe usarse al CREAR un lote: si "ANG" se
+// guardara como sección literal, folio.ts dejaría de reconocerlo como ADEII.
+export const SECCION_VIRTUAL_ANGELITOS = "ANG";
+
+export function whereSeccion(seccion: string): Prisma.LoteWhereInput {
+  if (seccion.toUpperCase() === SECCION_VIRTUAL_ANGELITOS) {
+    return { seccion: "ADEII", numeroManzana: { contains: "ANGEL", mode: "insensitive" } };
+  }
+  return { seccion };
+}

@@ -11,6 +11,7 @@ interface TituloDetalle {
   tituloId: number;
   folio: string;
   fechaEmision: string | null;
+  numeroRecibo: string | null;
   estado: string;
   estadoEntrega: string;
   fechaEntrega: string | null;
@@ -231,6 +232,10 @@ export function TituloDetalle() {
                 <tr>
                   <td className="text-muted" style={{ width: "42%", paddingBottom: 8 }}>Fecha de emisión</td>
                   <td style={{ paddingBottom: 8 }}>{fecha(data.fechaEmision)}</td>
+                </tr>
+                <tr>
+                  <td className="text-muted" style={{ paddingBottom: 8 }}>Número de recibo</td>
+                  <td style={{ paddingBottom: 8 }}>{data.numeroRecibo ?? "—"}</td>
                 </tr>
                 <tr>
                   <td className="text-muted" style={{ paddingBottom: 8 }}>Estado</td>

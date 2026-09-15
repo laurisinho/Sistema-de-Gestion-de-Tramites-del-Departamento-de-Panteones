@@ -7,6 +7,7 @@ interface TituloDetalle {
   tituloId: number;
   folio: string;
   fechaEmision: string | null;
+  numeroRecibo: string | null;
   estado: string;
   estadoEntrega: string;
   fechaEntrega: string | null;
@@ -50,6 +51,7 @@ export function TituloEditar() {
   const [colindanciaEste, setColindanciaEste] = useState("");
   const [colindanciaOeste, setColindanciaOeste] = useState("");
   const [fechaEmision, setFechaEmision] = useState("");
+  const [numeroRecibo, setNumeroRecibo] = useState("");
   const [estado, setEstado] = useState("VIGENTE");
   const [estadoEntrega, setEstadoEntrega] = useState("PENDIENTE_ENTREGA");
   const [fechaEntrega, setFechaEntrega] = useState("");
@@ -73,6 +75,7 @@ export function TituloEditar() {
     setColindanciaEste(data.lote.colindanciaEste ?? "");
     setColindanciaOeste(data.lote.colindanciaOeste ?? "");
     setFechaEmision(data.fechaEmision?.slice(0, 10) ?? "");
+    setNumeroRecibo(data.numeroRecibo ?? "");
     setEstado(data.estado);
     setEstadoEntrega(data.estadoEntrega);
     setFechaEntrega(data.fechaEntrega?.slice(0, 10) ?? "");
@@ -99,6 +102,7 @@ export function TituloEditar() {
           colindanciaEste: colindanciaEste || undefined,
           colindanciaOeste: colindanciaOeste || undefined,
           fechaEmision: fechaEmision || undefined,
+          numeroRecibo: numeroRecibo || undefined,
           estado,
           estadoEntrega,
           fechaEntrega: fechaEntrega || undefined,
@@ -221,6 +225,10 @@ export function TituloEditar() {
               <div className="form-campo">
                 <label>Fecha de emisión</label>
                 <input type="date" value={fechaEmision} onChange={(e) => setFechaEmision(e.target.value)} />
+              </div>
+              <div className="form-campo">
+                <label>Número de recibo</label>
+                <input value={numeroRecibo} onChange={(e) => setNumeroRecibo(e.target.value)} placeholder="Ej: 880590" />
               </div>
               <div className="form-campo">
                 <label>Estado del título</label>

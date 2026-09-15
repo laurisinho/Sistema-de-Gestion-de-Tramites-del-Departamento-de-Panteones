@@ -45,12 +45,15 @@ export function LotesBuscar() {
 
   // Secciones del panteón elegido; sin panteón, las de todos. Se muestran en
   // una lista porque cada panteón tiene las suyas y nadie las recuerda todas.
+  // incluirVirtuales trae también "ANG" (Angelitos), que solo existe para
+  // buscar -- no es una sección real, así que un lote nuevo nunca la ofrece.
   const { data: secciones } = useQuery({
     queryKey: ["catalogos", "secciones", panteonId],
-    queryFn: () =>
-      api<{ secciones: string[] }>(`/catalogos/secciones${panteonId ? `?panteonId=${panteonId}` : ""}`).then(
-        (r) => r.secciones
-      ),
+    queryFn: () => {
+      const params = new URLSearchParams({ incluirVirtuales: "1" });
+      if (panteonId) params.set("panteonId", panteonId);
+      return api<{ secciones: string[] }>(`/catalogos/secciones?${params}`).then((r) => r.secciones);
+    },
   });
 
   const { data: resultados, isFetching } = useQuery({

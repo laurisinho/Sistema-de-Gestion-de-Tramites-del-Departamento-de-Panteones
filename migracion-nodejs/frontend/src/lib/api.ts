@@ -67,6 +67,10 @@ function tiposParaExtension(nombre: string): { description: string; accept: Reco
   return undefined;
 }
 
+function hayDialogoGuardado(): boolean {
+  return typeof (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker === "function";
+}
+
 async function elegirDestinoGuardado(nombreSugerido: string): Promise<DestinoGuardado | null> {
   const showSaveFilePicker = (window as unknown as {
     showSaveFilePicker?: (opciones: {
@@ -88,12 +92,17 @@ export async function descargarArchivo(
   nombreRespaldo = "documento",
   opciones: { verEnNavegador?: boolean } = {}
 ): Promise<void> {
-  // La pestaña se abre YA, mientras el clic sigue "fresco": si se espera a
-  // tener el archivo listo para abrirla, el navegador ya no lo cuenta como
-  // reacción directa al usuario y la trata como pop-up no solicitado.
-  const pestanaVista = opciones.verEnNavegador ? window.open("", "_blank") : null;
+  // window.open() y showSaveFilePicker() son APIs que "consumen" la
+  // activación del usuario: solo una de las dos tiene éxito por cada clic. Si
+  // el navegador ofrece el diálogo de guardado, se prioriza (para que
+  // imprimir se comporte igual que los reportes de Excel) y no se abre
+  // pestaña de vista previa -- pedirla antes se comía la activación y el
+  // diálogo fallaba en silencio, cayendo al <a download> de abajo sin
+  // preguntar nada. En Firefox/Safari, que no tienen ese diálogo, sí se abre
+  // la pestaña: es la única forma de verlo ahí.
+  const conVistaPrevia = !!opciones.verEnNavegador && !hayDialogoGuardado();
+  const pestanaVista = conVistaPrevia ? window.open("", "_blank") : null;
 
-  // Este diálogo también debe pedirse ANTES del fetch, por la misma razón.
   let destino: DestinoGuardado | null;
   try {
     destino = await elegirDestinoGuardado(nombreRespaldo);

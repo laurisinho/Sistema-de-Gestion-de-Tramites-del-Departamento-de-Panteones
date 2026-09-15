@@ -180,6 +180,7 @@ model TituloPropiedad {
   estadoEntrega   String    @default("PENDIENTE_ENTREGA") @map("estado_entrega") @db.VarChar(30)
   fechaEntrega    DateTime? @map("fecha_entrega") @db.Date
   rutaDocumento   String?   @map("ruta_documento") @db.VarChar(500)
+  numeroRecibo    String?   @map("numero_recibo") @db.VarChar(50)
   fechaCreacion   DateTime  @default(now()) @map("fecha_creacion")
 
   lote          Lote             @relation(fields: [loteId], references: [loteId])

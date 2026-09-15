@@ -30,7 +30,19 @@ catalogosRouter.get(
       select: { seccion: true },
       distinct: ["seccion"],
     });
-    const secciones = lotes.map((l) => l.seccion as string).sort((a, b) => a.localeCompare(b));
+    const secciones = lotes.map((l) => l.seccion as string);
+
+    // "ANG" (Angelitos) se ofrece solo para buscar/filtrar, nunca para dar de
+    // alta un lote nuevo (ver lib/ubicacion): por eso es un parámetro aparte
+    // que cada pantalla pide a propósito, en vez de venir siempre incluido.
+    if (req.query.incluirVirtuales === "1") {
+      const hayAngelitos = await prisma.lote.count({
+        where: { seccion: "ADEII", numeroManzana: { contains: "ANGEL", mode: "insensitive" }, ...(panteonId ? { panteonId } : {}) },
+      });
+      if (hayAngelitos > 0) secciones.push("ANG");
+    }
+
+    secciones.sort((a, b) => a.localeCompare(b));
     res.json({ secciones });
   })
 );

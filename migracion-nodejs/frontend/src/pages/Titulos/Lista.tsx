@@ -48,13 +48,15 @@ export function TitulosLista() {
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
   });
 
-  // Secciones del panteón elegido; sin panteón, las de todos.
+  // Secciones del panteón elegido; sin panteón, las de todos. incluirVirtuales
+  // trae también "ANG" (Angelitos), que solo existe para buscar/filtrar.
   const { data: secciones } = useQuery({
     queryKey: ["catalogos", "secciones", panteonId],
-    queryFn: () =>
-      api<{ secciones: string[] }>(`/catalogos/secciones${panteonId ? `?panteonId=${panteonId}` : ""}`).then(
-        (r) => r.secciones
-      ),
+    queryFn: () => {
+      const params = new URLSearchParams({ incluirVirtuales: "1" });
+      if (panteonId) params.set("panteonId", panteonId);
+      return api<{ secciones: string[] }>(`/catalogos/secciones?${params}`).then((r) => r.secciones);
+    },
   });
 
   const { data, isLoading } = useQuery({

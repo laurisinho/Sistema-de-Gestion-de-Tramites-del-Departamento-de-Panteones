@@ -30,6 +30,7 @@ export function TituloNuevo() {
   const [colindanciaEste, setColindanciaEste] = useState("");
   const [colindanciaOeste, setColindanciaOeste] = useState("");
   const [fechaEmision, setFechaEmision] = useState("");
+  const [numeroRecibo, setNumeroRecibo] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -65,6 +66,7 @@ export function TituloNuevo() {
         numeroINE: numeroINE || undefined,
         panteonId: Number(panteonId),
         fechaEmision: fechaEmision || undefined,
+        numeroRecibo: numeroRecibo || undefined,
       };
       if (usaColindancias) {
         body.colindanciaNorte = colindanciaNorte || undefined;
@@ -121,7 +123,7 @@ export function TituloNuevo() {
                 className="boton"
                 onClick={() =>
                   navigate(`/permisos/nuevo?tipo=SEP&loteId=${emitido.loteId}`, {
-                    state: { solicitante: nombreTitular },
+                    state: { solicitante: nombreTitular, telefono: telefonoTitular },
                   })
                 }
               >
@@ -289,6 +291,10 @@ export function TituloNuevo() {
               <div className="form-campo">
                 <label>Fecha de emisión</label>
                 <input type="date" value={fechaEmision} onChange={(e) => setFechaEmision(e.target.value)} />
+              </div>
+              <div className="form-campo">
+                <label>Número de recibo</label>
+                <input value={numeroRecibo} onChange={(e) => setNumeroRecibo(e.target.value)} placeholder="Ej: 880590" />
               </div>
               <div className="form-campo" style={{ justifyContent: "flex-end" }}>
                 <button className="boton" type="submit" disabled={enviando || !panteonId}>

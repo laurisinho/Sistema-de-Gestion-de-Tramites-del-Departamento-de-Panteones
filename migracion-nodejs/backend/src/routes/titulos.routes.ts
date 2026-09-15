@@ -5,7 +5,7 @@ import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { generarFolio } from "../lib/folio";
-import { whereUbicacionLote } from "../lib/ubicacion";
+import { whereSeccion, whereUbicacionLote } from "../lib/ubicacion";
 import { renderPdf } from "../lib/pdf";
 import { tituloHtml } from "../templates/titulo.template";
 
@@ -61,7 +61,7 @@ titulosRouter.get(
         // Panteón y sección van dentro del mismo filtro de lote: puestos por
         // separado, el segundo pisaría al primero y se perdería uno de los dos.
         ...(panteonId || seccion
-          ? { lote: { ...(panteonId ? { panteonId } : {}), ...(seccion ? { seccion } : {}) } }
+          ? { lote: { ...(panteonId ? { panteonId } : {}), ...(seccion ? whereSeccion(seccion) : {}) } }
           : {}),
       },
       include: { titular: true, lote: { include: { panteon: true } } },
@@ -173,6 +173,7 @@ const nuevoTituloSchema = z.object({
   colindanciaOeste: z.string().optional(),
 
   fechaEmision: fechaISO.optional(),
+  numeroRecibo: z.string().optional(),
 });
 
 function hoy(): Date {
@@ -277,6 +278,7 @@ titulosRouter.post(
             usuarioEmitioId: usuarioId,
             estado: "VIGENTE",
             estadoEntrega: "PENDIENTE_ENTREGA",
+            numeroRecibo: vm.numeroRecibo,
           },
         });
 
@@ -358,6 +360,7 @@ const editarTituloSchema = z.object({
   colindanciaEste: z.string().optional(),
   colindanciaOeste: z.string().optional(),
   fechaEmision: fechaISO.optional(),
+  numeroRecibo: z.string().optional(),
   estado: z.enum(["VIGENTE", "CEDIDO", "CANCELADO"]),
   estadoEntrega: z.enum(ESTADOS_ENTREGA_VALIDOS as [string, ...string[]]),
   fechaEntrega: fechaISO.optional(),
@@ -414,6 +417,7 @@ titulosRouter.put(
           estado: vm.estado,
           estadoEntrega: vm.estadoEntrega,
           fechaEntrega: vm.fechaEntrega,
+          numeroRecibo: vm.numeroRecibo,
         },
       });
     });

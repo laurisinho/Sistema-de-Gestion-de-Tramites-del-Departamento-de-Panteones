@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { requiereAuth } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { variantesManzana } from "../lib/romanos";
+import { whereSeccion } from "../lib/ubicacion";
 
 export const lotesRouter = Router();
 lotesRouter.use(requiereAuth);
@@ -43,7 +44,7 @@ lotesRouter.get(
       });
     }
     if (lote) filtros.push({ numeroLote: { contains: lote, mode: "insensitive" } });
-    if (seccion) filtros.push({ seccion });
+    if (seccion) filtros.push(whereSeccion(seccion));
     if (clave) filtros.push({ claveLegado: { contains: clave, mode: "insensitive" } });
 
     const lotes = await prisma.lote.findMany({
@@ -127,7 +128,7 @@ lotesRouter.get(
     const loteId = req.query.loteId ? Number(req.query.loteId) : undefined;
     if (loteId) filtros.push({ loteId });
     if (panteonId) filtros.push({ panteonId });
-    if (seccion) filtros.push({ seccion });
+    if (seccion) filtros.push(whereSeccion(seccion));
     if (manzana) {
       // Algunas secciones antiguas capturaron la manzana en romano (p. ej.
       // "XVI") y otras en arábigo ("16") para el mismo número real.

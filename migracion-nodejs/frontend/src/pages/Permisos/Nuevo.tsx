@@ -66,14 +66,14 @@ export function PermisoNuevo() {
   const [tipoClave, setTipoClave] = useState(tipoInicial);
   const tipoNombre = TIPOS.find((t) => t.clave === tipoClave)?.nombre ?? tipoClave;
 
-  // Al llegar desde un título recién emitido: el lote viene en la URL y el
-  // titular (que suele ser el mismo solicitante) en el state de la navegación,
-  // para no dejar el nombre de una persona en la barra de direcciones.
+  // Al llegar desde un título recién emitido: el lote viene en la URL y los
+  // datos del titular (que suele ser el mismo solicitante) en el state de la
+  // navegación, para no dejar el nombre ni el teléfono de una persona en la
+  // barra de direcciones.
   const loteIdInicial = searchParams.get("loteId");
-  const [nombreSolicitante, setNombreSolicitante] = useState(
-    (location.state as { solicitante?: string } | null)?.solicitante ?? ""
-  );
-  const [telefonoSolicitante, setTelefonoSolicitante] = useState("");
+  const estadoInicial = location.state as { solicitante?: string; telefono?: string } | null;
+  const [nombreSolicitante, setNombreSolicitante] = useState(estadoInicial?.solicitante ?? "");
+  const [telefonoSolicitante, setTelefonoSolicitante] = useState(estadoInicial?.telefono ?? "");
 
   const [fallecidoTermino, setFallecidoTermino] = useState("");
   const [fallecidoResultados, setFallecidoResultados] = useState<FallecidoResultado[]>([]);
@@ -126,12 +126,28 @@ export function PermisoNuevo() {
     ? !!panteonIdLote && (usaColindanciasLote || (loteManzana.trim() !== "" && loteLote.trim() !== ""))
     : !!loteSel;
 
+  // Para buscar un lote ya existente: incluirVirtuales trae también "ANG"
+  // (Angelitos), que no es una sección real (ver lib/ubicacion en el
+  // backend) -- solo sirve para filtrar, nunca para capturar un lote nuevo.
   const { data: secciones } = useQuery({
+    queryKey: ["catalogos", "secciones", panteonIdLote, "busqueda"],
+    queryFn: () => {
+      const params = new URLSearchParams({ incluirVirtuales: "1" });
+      if (panteonIdLote) params.set("panteonId", panteonIdLote);
+      return api<{ secciones: string[] }>(`/catalogos/secciones?${params}`).then((r) => r.secciones);
+    },
+    enabled: !usaColindanciasLote,
+  });
+
+  // Para el lote "sin registro": aquí sí se va a crear un lote, así que la
+  // lista se queda con las secciones reales tal cual, sin "ANG".
+  const { data: seccionesCreacion } = useQuery({
     queryKey: ["catalogos", "secciones", panteonIdLote],
-    queryFn: () =>
-      api<{ secciones: string[] }>(`/catalogos/secciones${panteonIdLote ? `?panteonId=${panteonIdLote}` : ""}`).then(
-        (r) => r.secciones
-      ),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (panteonIdLote) params.set("panteonId", panteonIdLote);
+      return api<{ secciones: string[] }>(`/catalogos/secciones?${params}`).then((r) => r.secciones);
+    },
     enabled: !usaColindanciasLote,
   });
 
@@ -529,7 +545,7 @@ export function PermisoNuevo() {
                       <label>Sección</label>
                       <select value={seccionLote} onChange={(e) => setSeccionLote(e.target.value)}>
                         <option value="">(sin sección)</option>
-                        {secciones?.map((s) => (
+                        {seccionesCreacion?.map((s) => (
                           <option key={s} value={s}>
                             {s}
                           </option>
