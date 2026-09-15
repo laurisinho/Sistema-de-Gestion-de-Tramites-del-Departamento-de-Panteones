@@ -67,10 +67,6 @@ function tiposParaExtension(nombre: string): { description: string; accept: Reco
   return undefined;
 }
 
-function hayDialogoGuardado(): boolean {
-  return typeof (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker === "function";
-}
-
 async function elegirDestinoGuardado(nombreSugerido: string): Promise<DestinoGuardado | null> {
   const showSaveFilePicker = (window as unknown as {
     showSaveFilePicker?: (opciones: {
@@ -80,6 +76,49 @@ async function elegirDestinoGuardado(nombreSugerido: string): Promise<DestinoGua
   }).showSaveFilePicker;
   if (!showSaveFilePicker) return null;
   return showSaveFilePicker({ suggestedName: nombreSugerido, types: tiposParaExtension(nombreSugerido) });
+}
+
+// Vista previa incrustada en la misma página en vez de una pestaña nueva:
+// window.open() y showSaveFilePicker() son APIs que "consumen" la activación
+// del clic (solo una de las dos tiene éxito por cada clic, sin importar el
+// orden en que se llamen -- se probó y la segunda siempre falla en silencio),
+// así que no se pueden ofrecer las dos a la vez con window.open(). Un
+// <iframe> no depende de esa activación ni puede bloquearse como popup, así
+// que convive sin problema con el diálogo de "Guardar como".
+function mostrarVistaPrevia(blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+
+  const fondo = document.createElement("div");
+  fondo.style.cssText =
+    "position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);display:flex;flex-direction:column;padding:16px;box-sizing:border-box;";
+
+  const cerrar = () => {
+    fondo.remove();
+    document.removeEventListener("keydown", alPresionarTecla);
+    URL.revokeObjectURL(url);
+  };
+  const alPresionarTecla = (e: KeyboardEvent) => {
+    if (e.key === "Escape") cerrar();
+  };
+  document.addEventListener("keydown", alPresionarTecla);
+
+  const barra = document.createElement("div");
+  barra.style.cssText = "display:flex;justify-content:flex-end;margin-bottom:8px;";
+  const boton = document.createElement("button");
+  boton.type = "button";
+  boton.textContent = "Cerrar ✕";
+  boton.style.cssText = "cursor:pointer;padding:8px 16px;border:0;border-radius:4px;background:#fff;font-weight:600;";
+  boton.onclick = cerrar;
+  barra.appendChild(boton);
+
+  const marco = document.createElement("iframe");
+  marco.src = url;
+  marco.title = "Vista previa del documento";
+  marco.style.cssText = "flex:1;width:100%;border:0;border-radius:4px;background:#fff;";
+
+  fondo.appendChild(barra);
+  fondo.appendChild(marco);
+  document.body.appendChild(fondo);
 }
 
 // Los botones de imprimir eran <a href> directos a la API: una navegación de
@@ -92,27 +131,22 @@ export async function descargarArchivo(
   nombreRespaldo = "documento",
   opciones: { verEnNavegador?: boolean } = {}
 ): Promise<void> {
-  // window.open() y showSaveFilePicker() son APIs que "consumen" la
-  // activación del usuario: solo una de las dos tiene éxito por cada clic. Si
-  // el navegador ofrece el diálogo de guardado, se prioriza (para que
-  // imprimir se comporte igual que los reportes de Excel) y no se abre
-  // pestaña de vista previa -- pedirla antes se comía la activación y el
-  // diálogo fallaba en silencio, cayendo al <a download> de abajo sin
-  // preguntar nada. En Firefox/Safari, que no tienen ese diálogo, sí se abre
-  // la pestaña: es la única forma de verlo ahí.
-  const conVistaPrevia = !!opciones.verEnNavegador && !hayDialogoGuardado();
-  const pestanaVista = conVistaPrevia ? window.open("", "_blank") : null;
-
-  let destino: DestinoGuardado | null;
+  let destino: DestinoGuardado | null = null;
+  let cancelado = false;
   try {
     destino = await elegirDestinoGuardado(nombreRespaldo);
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      pestanaVista?.close();
-      return; // el usuario cerró el diálogo sin elegir nada
+      cancelado = true; // el usuario cerró el diálogo sin elegir nada
     }
-    destino = null; // cualquier otro problema (permiso denegado, etc.) -> descarga normal
+    // cualquier otro problema (permiso denegado, etc.) -> sigue como descarga normal
   }
+
+  // Cancelar "Guardar como" solo cancela todo el proceso cuando esa era la
+  // única forma de obtener el archivo (p. ej. un Excel). Si además se pidió
+  // vista previa (imprimir), lo más probable es que solo quería verlo/
+  // imprimirlo, no guardar una copia -- así que se sigue con la vista previa.
+  if (cancelado && !opciones.verEnNavegador) return;
 
   const token = getToken();
   const res = await fetch(`${API_URL}${ruta}`, {
@@ -121,16 +155,14 @@ export async function descargarArchivo(
   });
 
   if (!res.ok) {
-    pestanaVista?.close();
     const cuerpo = await res.json().catch(() => null);
     throw new ApiError(res.status, cuerpo?.error ?? "No se pudo generar el documento");
   }
 
   const blob = await res.blob();
 
-  if (pestanaVista) {
-    pestanaVista.location.href = URL.createObjectURL(blob);
-  }
+  if (opciones.verEnNavegador) mostrarVistaPrevia(blob);
+  if (cancelado) return;
 
   if (destino) {
     const escritura = await destino.createWritable();

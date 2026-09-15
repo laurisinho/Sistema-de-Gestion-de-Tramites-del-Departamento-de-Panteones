@@ -1,4 +1,5 @@
 import puppeteerCore, { type Browser } from "puppeteer-core";
+import puppeteerCompleto from "puppeteer";
 import { env } from "../env";
 
 // Un solo navegador reutilizado entre requests -- abrir Chromium en cada PDF
@@ -19,8 +20,11 @@ async function launchBrowser(): Promise<Browser> {
       headless: true,
     });
   }
-  const puppeteer = await import("puppeteer");
-  return puppeteer.default.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] }) as unknown as Promise<Browser>;
+  // "puppeteer" se importa arriba (estático), no con await import() como
+  // @sparticuz/chromium: bajo "tsx watch" (el dev server) un import()
+  // dinámico de este paquete se queda colgado para siempre sin error --
+  // nunca llega a lanzar Chrome. Con import estático no pasa.
+  return puppeteerCompleto.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] }) as unknown as Promise<Browser>;
 }
 
 function getBrowser(): Promise<Browser> {
