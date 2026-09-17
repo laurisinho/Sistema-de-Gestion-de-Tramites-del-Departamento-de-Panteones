@@ -554,11 +554,11 @@ export function PermisoNuevo() {
                     </div>
                     <div className="form-campo">
                       <label>Manzana *</label>
-                      <input value={loteManzana} onChange={(e) => setLoteManzana(e.target.value)} placeholder="Ej: 1A" />
+                      <input value={loteManzana} onChange={(e) => setLoteManzana(e.target.value)} />
                     </div>
                     <div className="form-campo">
                       <label>Lote *</label>
-                      <input value={loteLote} onChange={(e) => setLoteLote(e.target.value)} placeholder="Ej: 13" />
+                      <input value={loteLote} onChange={(e) => setLoteLote(e.target.value)} />
                     </div>
                   </div>
                 )}
@@ -597,7 +597,6 @@ export function PermisoNuevo() {
                         value={loteManzana}
                         onChange={(e) => setLoteManzana(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
-                        placeholder="Ej: 1A"
                       />
                     </div>
                     <div className="form-campo" style={{ flex: "1 1 110px" }}>
@@ -606,7 +605,6 @@ export function PermisoNuevo() {
                         value={loteLote}
                         onChange={(e) => setLoteLote(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
-                        placeholder="Ej: 13"
                       />
                     </div>
                     <div className="form-campo" style={{ flex: "1 1 160px" }}>

@@ -132,11 +132,11 @@ export function IncidenciaFormulario({ valores, onCambio }: Props) {
           <div className="form-grid" style={{ maxWidth: "none", marginTop: 16 }}>
             <div className="form-campo">
               <label>Manzana</label>
-              <input value={valores.numeroManzana} onChange={(e) => onCambio("numeroManzana", e.target.value)} placeholder="Ej: 3" />
+              <input value={valores.numeroManzana} onChange={(e) => onCambio("numeroManzana", e.target.value)} />
             </div>
             <div className="form-campo">
               <label>Lote</label>
-              <input value={valores.numeroLote} onChange={(e) => onCambio("numeroLote", e.target.value)} placeholder="Ej: 30" />
+              <input value={valores.numeroLote} onChange={(e) => onCambio("numeroLote", e.target.value)} />
             </div>
           </div>
 
