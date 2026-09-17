@@ -268,6 +268,20 @@ html.dark .page-header h2 { color: #d9d4dc; }
   justify-content: space-between;
   gap: 10px;
 }
+/* Sin esto, un título largo (p. ej. "Permisos de Septiembre") se
+   partía en dos líneas cuando la tarjeta le tocaba angosta, dejando ese
+   encabezado más alto que el de al lado y todo el contenido de abajo
+   desnivelado entre tarjetas vecinas. min-width:0 es necesario para que
+   el ellipsis funcione dentro de un hijo flex. */
+.card-header-guinda > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.card-header-guinda > *:not(:first-child) {
+  flex-shrink: 0;
+}
 .card-body { padding: 1.1rem 1.2rem; }
 .card-body.p-0 { padding: 0; }
 
