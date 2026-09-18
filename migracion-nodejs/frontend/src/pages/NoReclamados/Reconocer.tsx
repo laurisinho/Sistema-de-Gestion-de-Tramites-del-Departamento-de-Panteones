@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
+import { SelectorConOtro } from "../../components/SelectorConOtro";
 
 interface ReconocerPrefill {
   nombreAnterior: string;
@@ -24,6 +25,11 @@ export function NoReclamadoReconocer() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["no-reclamados", id, "reconocer"],
     queryFn: () => api<ReconocerPrefill>(`/no-reclamados/${id}/reconocer`),
+  });
+
+  const { data: ministerios } = useQuery({
+    queryKey: ["no-reclamados", "ministerios-publicos"],
+    queryFn: () => api<string[]>("/no-reclamados/ministerios-publicos"),
   });
 
   const [nombreIdentificado, setNombreIdentificado] = useState("");
@@ -189,10 +195,11 @@ export function NoReclamadoReconocer() {
               </div>
               <div className="form-campo" style={{ marginTop: 16 }}>
                 <label>Ministerio Público que turnó el caso</label>
-                <input
+                <SelectorConOtro
                   value={ministerioPublico}
-                  onChange={(e) => setMinisterioPublico(e.target.value)}
-                  placeholder="LIC. NOMBRE APELLIDO"
+                  onChange={setMinisterioPublico}
+                  opciones={ministerios}
+                  placeholderOtro="LIC. NOMBRE APELLIDO"
                 />
               </div>
               <div className="form-campo" style={{ marginTop: 16 }}>

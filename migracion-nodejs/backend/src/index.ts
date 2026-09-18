@@ -16,6 +16,7 @@ import { reportesRouter } from "./routes/reportes.routes";
 import { reimpresionesRouter } from "./routes/reimpresiones.routes";
 import { bitacoraRouter } from "./routes/bitacora.routes";
 import { usuariosRouter } from "./routes/usuarios.routes";
+import { administracionRouter } from "./routes/administracion.routes";
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/api/reportes", reportesRouter);
 app.use("/api/reimpresiones", reimpresionesRouter);
 app.use("/api/bitacora", bitacoraRouter);
 app.use("/api/usuarios", usuariosRouter);
+app.use("/api/administracion", administracionRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

@@ -43,13 +43,13 @@ export function TituloNuevo() {
   const panteonSel = panteones?.find((p) => String(p.panteonId) === panteonId);
   const usaColindancias = panteonSel?.usaColindancias ?? false;
 
-  // Secciones que ya existen en el panteon elegido, para no tener que
-  // recordarlas de memoria ni escribirlas distinto cada vez. Va como datalist y
-  // no como <select> porque una seccion nueva tiene que poder capturarse.
+  // Solo las secciones que Administración ya dio de alta para este panteón
+  // (soloCatalogo=1): a diferencia de buscar/filtrar, aquí se está creando un
+  // lote nuevo, así que no se ofrece texto libre ni lo histórico suelto.
   const { data: secciones } = useQuery({
-    queryKey: ["catalogos", "secciones", panteonId],
+    queryKey: ["catalogos", "secciones", panteonId, "catalogo"],
     queryFn: () =>
-      api<{ secciones: string[] }>(`/catalogos/secciones?panteonId=${panteonId}`).then((r) => r.secciones),
+      api<{ secciones: string[] }>(`/catalogos/secciones?panteonId=${panteonId}&soloCatalogo=1`).then((r) => r.secciones),
     enabled: !!panteonId && !usaColindancias,
   });
 
@@ -262,17 +262,14 @@ export function TituloNuevo() {
                   </div>
                   <div className="form-campo">
                     <label>Sección</label>
-                    <input
-                      value={seccion}
-                      onChange={(e) => setSeccion(e.target.value)}
-                      list="seccionesPanteon"
-                      placeholder={secciones?.length ? "Elige o escribe una nueva" : ""}
-                    />
-                    <datalist id="seccionesPanteon">
+                    <select value={seccion} onChange={(e) => setSeccion(e.target.value)}>
+                      <option value="">(sin sección)</option>
                       {secciones?.map((s) => (
-                        <option key={s} value={s} />
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
                       ))}
-                    </datalist>
+                    </select>
                   </div>
                 </div>
               )}

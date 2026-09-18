@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { SelectorConOtro } from "../../components/SelectorConOtro";
 
 export interface CamposNoReclamado {
   nombreCompleto: string;
@@ -142,17 +143,12 @@ export function NoReclamadoFormulario({ valores, onCambiar }: Props) {
             </div>
             <div className="form-campo">
               <label>Ministerio Público</label>
-              <input
+              <SelectorConOtro
                 value={valores.ministerioPublico}
-                onChange={(e) => onCambiar("ministerioPublico", e.target.value)}
-                placeholder="LIC. NOMBRE DEL AGENTE"
-                list="lista-mp"
+                onChange={(v) => onCambiar("ministerioPublico", v)}
+                opciones={ministerios}
+                placeholderOtro="LIC. NOMBRE DEL AGENTE"
               />
-              <datalist id="lista-mp">
-                {ministerios?.map((m) => (
-                  <option key={m} value={m} />
-                ))}
-              </datalist>
             </div>
           </div>
         </div>

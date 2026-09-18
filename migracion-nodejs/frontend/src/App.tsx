@@ -34,6 +34,7 @@ import { ReimpresionesLista } from "./pages/Reimpresiones/Lista";
 import { UsuariosLista } from "./pages/Usuarios/Lista";
 import { UsuarioNuevo } from "./pages/Usuarios/Nuevo";
 import { UsuarioEditar } from "./pages/Usuarios/Editar";
+import { AdministracionCatalogos } from "./pages/Administracion/Catalogos";
 
 export default function App() {
   return (
@@ -96,6 +97,14 @@ export default function App() {
               element={
                 <AdminRoute>
                   <UsuarioEditar />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/administracion/catalogos"
+              element={
+                <AdminRoute>
+                  <AdministracionCatalogos />
                 </AdminRoute>
               }
             />

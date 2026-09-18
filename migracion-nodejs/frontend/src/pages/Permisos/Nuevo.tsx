@@ -139,12 +139,13 @@ export function PermisoNuevo() {
     enabled: !usaColindanciasLote,
   });
 
-  // Para el lote "sin registro": aquí sí se va a crear un lote, así que la
-  // lista se queda con las secciones reales tal cual, sin "ANG".
+  // Para el lote "sin registro": aquí sí se va a crear un lote, así que solo
+  // se ofrece lo que Administración ya dio de alta para este panteón
+  // (soloCatalogo=1) -- ni "ANG" ni texto suelto histórico.
   const { data: seccionesCreacion } = useQuery({
-    queryKey: ["catalogos", "secciones", panteonIdLote],
+    queryKey: ["catalogos", "secciones", panteonIdLote, "catalogo"],
     queryFn: () => {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ soloCatalogo: "1" });
       if (panteonIdLote) params.set("panteonId", panteonIdLote);
       return api<{ secciones: string[] }>(`/catalogos/secciones?${params}`).then((r) => r.secciones);
     },

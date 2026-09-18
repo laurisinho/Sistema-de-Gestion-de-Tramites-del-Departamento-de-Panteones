@@ -80,17 +80,25 @@ noReclamadosRouter.get(
   })
 );
 
-// Agentes del M.P. ya capturados, para sugerirlos en el formulario.
+// Agentes del M.P. para el selector del formulario: el catálogo que se da de
+// alta en Administración, más los que ya se hayan capturado como texto libre
+// en Fallecido/Reconocimiento (de antes de que existiera el catálogo, o
+// mientras alguien no encuentra al suyo en la lista y usa "Otro").
 noReclamadosRouter.get(
   "/ministerios-publicos",
   asyncHandler(async (_req, res) => {
-    const filas = await prisma.fallecido.findMany({
-      where: { ministerioPublico: { not: null } },
-      select: { ministerioPublico: true },
-      distinct: ["ministerioPublico"],
-    });
-    const lista = filas
-      .map((f) => f.ministerioPublico!)
+    const [delCatalogo, deFallecidos, deReconocimientos] = await Promise.all([
+      prisma.agenteMinisterioPublico.findMany({ where: { activo: true }, select: { nombre: true } }),
+      prisma.fallecido.findMany({ where: { ministerioPublico: { not: null } }, select: { ministerioPublico: true }, distinct: ["ministerioPublico"] }),
+      prisma.reconocimiento.findMany({ where: { ministerioPublico: { not: null } }, select: { ministerioPublico: true }, distinct: ["ministerioPublico"] }),
+    ]);
+    const lista = [
+      ...new Set([
+        ...delCatalogo.map((a) => a.nombre),
+        ...deFallecidos.map((f) => f.ministerioPublico!),
+        ...deReconocimientos.map((r) => r.ministerioPublico!),
+      ]),
+    ]
       .filter((m) => m.trim() !== "")
       .sort((a, b) => a.localeCompare(b));
     res.json(lista);

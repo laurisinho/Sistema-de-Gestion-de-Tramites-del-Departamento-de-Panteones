@@ -60,8 +60,44 @@ model Panteon {
 
   lotes       Lote[]
   incidencias Incidencia[]
+  secciones   Seccion[]
 
   @@map("panteones")
+}
+
+// Catálogo liviano de nombres de sección sugeridos por panteón. A propósito
+// NO es de donde Lote.seccion toma su valor (ese sigue siendo texto libre,
+// ver ubicacion.ts y folio.ts, que dependen de comparar ese string tal cual
+// está capturado históricamente) -- esto solo sirve para poder "dar de
+// alta" una sección desde Administración antes de que exista ningún lote
+// ahí, y que igual aparezca sugerida. Un lote ya existente con una sección
+// que nunca se formalizó aquí sigue funcionando igual: /catalogos/secciones
+// combina esta tabla con lo que ya haya en lotes.
+model Seccion {
+  seccionId Int      @id @default(autoincrement()) @map("seccion_id")
+  panteonId Int      @map("panteon_id")
+  nombre    String   @db.VarChar(50)
+  activo    Boolean  @default(true)
+  fechaAlta DateTime @default(now()) @map("fecha_alta")
+
+  panteon Panteon @relation(fields: [panteonId], references: [panteonId])
+
+  @@unique([panteonId, nombre], name: "uq_secciones_panteon_nombre")
+  @@map("secciones")
+}
+
+// Catálogo de agentes del Ministerio Público para sugerir en los formularios
+// de No Reclamados. Igual que Seccion, es aditivo: Fallecido.ministerioPublico
+// y Reconocimiento.ministerioPublico siguen siendo texto libre (el
+// formulario ofrece "Otro" para capturar uno que no esté aquí), así que dar
+// de alta o desactivar un agente no toca ningún registro ya existente.
+model AgenteMinisterioPublico {
+  agenteId  Int      @id @default(autoincrement()) @map("agente_id")
+  nombre    String   @unique @db.VarChar(200)
+  activo    Boolean  @default(true)
+  fechaAlta DateTime @default(now()) @map("fecha_alta")
+
+  @@map("agentes_ministerio_publico")
 }
 
 model Usuario {
