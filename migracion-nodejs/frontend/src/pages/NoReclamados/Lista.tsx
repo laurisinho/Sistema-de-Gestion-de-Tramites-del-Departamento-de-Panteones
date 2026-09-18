@@ -137,7 +137,7 @@ export function NoReclamadosLista() {
                   )}
                   {data.lista.map((f) => (
                     <tr key={f.fallecidoId}>
-                      <td style={{ fontWeight: 600 }}>
+                      <td className="tabla-col-ancha" style={{ fontWeight: 600 }}>
                         {f.nombreCompleto}{" "}
                         {f.reconocido && (
                           <span className="badge badge-success" title="Persona ya identificada">
