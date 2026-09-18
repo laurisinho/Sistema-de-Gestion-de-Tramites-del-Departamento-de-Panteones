@@ -8,6 +8,7 @@ import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { whereSeccion, whereUbicacionLote } from "../lib/ubicacion";
 import { renderPdf } from "../lib/pdf";
 import { permisoHtml } from "../templates/permiso.template";
+import { obtenerAparienciaDocumento } from "../lib/apariencia";
 
 export const permisosRouter = Router();
 permisosRouter.use(requiereAuth, requiereEscritura);
@@ -529,7 +530,8 @@ permisosRouter.get(
     });
     if (!permiso) return res.status(404).json({ error: "Permiso no encontrado" });
 
-    const pdf = await renderPdf(permisoHtml(permiso));
+    const apariencia = await obtenerAparienciaDocumento();
+    const pdf = await renderPdf(permisoHtml(permiso, apariencia));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="Permiso_${permiso.folio}.pdf"`);
     res.send(pdf);

@@ -4,14 +4,13 @@
   --guinda: #6b1229;
   --guinda-dark: #4a0c1c;
   --guinda-light: #8b2040;
+  --guinda-sombra: #26050f;
   --dorado: #f5b400;
   --dorado-suave: #f7c94b;
   --sidebar-w: 255px;
 
   --bg-body: #f2f0f1;
   --bg-card: #ffffff;
-  --bg-sidebar: #26050f;
-  --bg-topbar: #5d0f24;
   --text-base: #211c1e;
   --text-sub: #5c5257;
   --text-muted: #9b9298;
@@ -36,8 +35,6 @@ html.dark {
   --guinda-light: #d47287;
   --bg-body: #131015;
   --bg-card: #1c171d;
-  --bg-sidebar: #180408;
-  --bg-topbar: #1f080e;
   --text-base: #ece7ea;
   --text-sub: #b3a8ae;
   --text-muted: #9c929a;

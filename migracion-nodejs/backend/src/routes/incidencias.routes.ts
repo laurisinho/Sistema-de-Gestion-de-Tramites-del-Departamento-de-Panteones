@@ -207,7 +207,7 @@ incidenciasRouter.get(
 
     const subtitulo = subtituloIncidencias(estado, tipo, desde, hasta);
     const wb = new ExcelJS.Workbook();
-    const ws = prepararHoja(wb, "Incidencias", ColsIncidencias, "REPORTE DE INCIDENCIAS EN PANTEONES", "Registro de hechos reportados y su atención", subtitulo, lista.length);
+    const ws = await prepararHoja(wb, "Incidencias", ColsIncidencias, "REPORTE DE INCIDENCIAS EN PANTEONES", "Registro de hechos reportados y su atención", subtitulo, lista.length);
 
     let r = 7;
     let i = 1;

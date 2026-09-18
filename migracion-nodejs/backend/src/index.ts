@@ -17,6 +17,7 @@ import { reimpresionesRouter } from "./routes/reimpresiones.routes";
 import { bitacoraRouter } from "./routes/bitacora.routes";
 import { usuariosRouter } from "./routes/usuarios.routes";
 import { administracionRouter } from "./routes/administracion.routes";
+import { aparienciaRouter } from "./routes/apariencia.routes";
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use("/api/reimpresiones", reimpresionesRouter);
 app.use("/api/bitacora", bitacoraRouter);
 app.use("/api/usuarios", usuariosRouter);
 app.use("/api/administracion", administracionRouter);
+app.use("/api/apariencia", aparienciaRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

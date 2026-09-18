@@ -8,6 +8,7 @@ import { renderPdf } from "../lib/pdf";
 import { permisoHtml } from "../templates/permiso.template";
 import { tituloHtml } from "../templates/titulo.template";
 import { cesionHtml, type TituloCedidoParaPdf } from "../templates/cesion.template";
+import { obtenerAparienciaDocumento } from "../lib/apariencia";
 
 export const reimpresionesRouter = Router();
 reimpresionesRouter.use(requiereAuth, requiereEscritura);
@@ -159,6 +160,7 @@ reimpresionesRouter.post(
     let nombreArchivo: string;
     let descBitacora: string;
     let datosReimpresion: { permisoId?: number; tituloId?: number; cesionId?: number };
+    const apariencia = await obtenerAparienciaDocumento();
 
     if (tipo === "PERMISO") {
       const permiso = await prisma.permiso.findUnique({
@@ -170,7 +172,7 @@ reimpresionesRouter.post(
         return res.status(409).json({ error: `El permiso está en estado ${permiso.estado}, por lo que no puede reexpedirse.` });
       }
       const n = (await prisma.reimpresion.count({ where: { permisoId: id } })) + 1;
-      pdf = await renderPdf(permisoHtml(permiso, { esReimpresion: true, fechaReimpresion: ahora, numeroReimpresion: n }));
+      pdf = await renderPdf(permisoHtml(permiso, apariencia, { esReimpresion: true, fechaReimpresion: ahora, numeroReimpresion: n }));
       nombreArchivo = `Permiso_${permiso.folio}_REIMP.pdf`;
       descBitacora = `Reimpresión Nº ${n} de permiso ${permiso.folio} — Motivo: ${motivo}`;
       datosReimpresion = { permisoId: id };
@@ -184,7 +186,7 @@ reimpresionesRouter.post(
         return res.status(409).json({ error: `El título está en estado ${titulo.estado}, por lo que no puede reexpedirse.` });
       }
       const n = (await prisma.reimpresion.count({ where: { tituloId: id } })) + 1;
-      pdf = await renderPdf(tituloHtml(titulo, { esReimpresion: true, fechaReimpresion: ahora, numeroReimpresion: n }));
+      pdf = await renderPdf(tituloHtml(titulo, apariencia, { esReimpresion: true, fechaReimpresion: ahora, numeroReimpresion: n }));
       nombreArchivo = `Titulo_${titulo.folio}_REIMP.pdf`;
       descBitacora = `Reimpresión Nº ${n} de título ${titulo.folio} — Motivo: ${motivo}`;
       datosReimpresion = { tituloId: id };
@@ -205,7 +207,7 @@ reimpresionesRouter.post(
         ? { folio: tituloDb.folio, fechaEmision: tituloDb.fechaEmision }
         : { folio: "—", fechaEmision: null };
       const n = (await prisma.reimpresion.count({ where: { cesionId: id } })) + 1;
-      pdf = await renderPdf(cesionHtml(cesion, tituloCedido, { esReimpresion: true, fechaReimpresion: ahora, numeroReimpresion: n }));
+      pdf = await renderPdf(cesionHtml(cesion, tituloCedido, apariencia, { esReimpresion: true, fechaReimpresion: ahora, numeroReimpresion: n }));
       nombreArchivo = `Cesion_${cesion.folio}_REIMP.pdf`;
       descBitacora = `Reimpresión Nº ${n} de cesión ${cesion.folio} — Motivo: ${motivo}`;
       datosReimpresion = { cesionId: id };

@@ -1,10 +1,11 @@
-import { Router } from "express";
+import { Router, json } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { requiereAuth, requiereRol } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
+import { invalidarCacheApariencia } from "../lib/apariencia";
 
 // Alta y mantenimiento de los catálogos que antes solo se tocaban con
 // scripts (seed.ts, separar-cipreses.ts): Panteones, Secciones y Agentes del
@@ -322,6 +323,145 @@ administracionRouter.post(
 
     await prisma.agenteMinisterioPublico.update({ where: { agenteId: id }, data: { activo: true } });
     await registrarBitacora(req.usuario!.usuarioId, Acciones.Editar, "agentes_ministerio_publico", id, `Agente "${existente.nombre}" reactivado`, req.ip);
+    res.json({ ok: true });
+  })
+);
+
+// ═══════════ APARIENCIA ═══════════
+// La lectura (GET /api/apariencia) es pública -- ver apariencia.routes.ts --
+// solo cambiarla requiere ser Administrador.
+
+const colorHexSchema = z
+  .string()
+  .trim()
+  .regex(/^#[0-9a-fA-F]{6}$/, "El color debe ser un código hexadecimal, p. ej. #6b1229.");
+
+const aparienciaSchema = z.object({
+  colorGuinda: colorHexSchema,
+  colorDorado: colorHexSchema,
+});
+
+administracionRouter.put(
+  "/apariencia",
+  asyncHandler(async (req, res) => {
+    const parseo = aparienciaSchema.safeParse(req.body);
+    if (!parseo.success) return res.status(400).json({ error: parseo.error.issues[0]?.message ?? "Datos inválidos" });
+    const vm = parseo.data;
+
+    const config = await prisma.configuracionApariencia.upsert({
+      where: { id: 1 },
+      create: { id: 1, colorGuinda: vm.colorGuinda, colorDorado: vm.colorDorado },
+      update: { colorGuinda: vm.colorGuinda, colorDorado: vm.colorDorado },
+    });
+
+    await registrarBitacora(
+      req.usuario!.usuarioId,
+      Acciones.Editar,
+      "configuracion_apariencia",
+      1,
+      `Colores del sistema actualizados (guinda ${vm.colorGuinda}, dorado ${vm.colorDorado})`,
+      req.ip
+    );
+
+    res.json(config);
+  })
+);
+
+// ═══════════ SÍNDICO MUNICIPAL ═══════════
+// Nombre de quien firma títulos, permisos y cesiones. Antes vivía copiado a
+// mano en 3 plantillas; ahora es un solo valor que las 3 comparten.
+
+const sindicoSchema = z.object({
+  nombreSindico: z.string().trim().min(1, "El nombre es obligatorio.").max(200),
+});
+
+administracionRouter.put(
+  "/apariencia/sindico",
+  asyncHandler(async (req, res) => {
+    const parseo = sindicoSchema.safeParse(req.body);
+    if (!parseo.success) return res.status(400).json({ error: parseo.error.issues[0]?.message ?? "Datos inválidos" });
+    const vm = parseo.data;
+
+    const config = await prisma.configuracionApariencia.upsert({
+      where: { id: 1 },
+      create: { id: 1, nombreSindico: vm.nombreSindico },
+      update: { nombreSindico: vm.nombreSindico },
+    });
+    invalidarCacheApariencia();
+
+    await registrarBitacora(
+      req.usuario!.usuarioId,
+      Acciones.Editar,
+      "configuracion_apariencia",
+      1,
+      `Síndico Municipal actualizado a "${vm.nombreSindico}"`,
+      req.ip
+    );
+
+    res.json({ nombreSindico: config.nombreSindico });
+  })
+);
+
+// ═══════════ LOGOS ═══════════
+// Se reciben como data URI base64 (no multipart/form-data) para no meter
+// multer solo por esto -- son dos archivos chicos. limit propio en vez de
+// subir el límite global de JSON, que el resto de la API no necesita.
+const cargaLogoSchema = z.object({
+  dataUri: z
+    .string()
+    .regex(/^data:image\/png;base64,/, "El archivo debe ser una imagen PNG."),
+});
+
+const LIMITE_LOGO_BYTES = 2 * 1024 * 1024;
+const FIRMA_PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+
+administracionRouter.put(
+  "/apariencia/logo/:cual",
+  json({ limit: "3mb" }),
+  asyncHandler(async (req, res) => {
+    const cual = req.params.cual;
+    if (cual !== "nogales" && cual !== "frontera") return res.status(404).json({ error: "Logo no reconocido" });
+
+    const parseo = cargaLogoSchema.safeParse(req.body);
+    if (!parseo.success) return res.status(400).json({ error: parseo.error.issues[0]?.message ?? "Datos inválidos" });
+
+    const base64 = parseo.data.dataUri.split(",")[1] ?? "";
+    const bytes = Buffer.from(base64, "base64");
+    if (bytes.length === 0 || bytes.length > LIMITE_LOGO_BYTES) {
+      return res.status(400).json({ error: "El logo debe pesar menos de 2 MB." });
+    }
+    if (!bytes.subarray(0, 4).equals(FIRMA_PNG)) {
+      return res.status(400).json({ error: "El archivo no es un PNG válido." });
+    }
+
+    const campo = cual === "nogales" ? "logoNogales" : "logoFrontera";
+    await prisma.configuracionApariencia.upsert({
+      where: { id: 1 },
+      create: { id: 1, [campo]: bytes },
+      update: { [campo]: bytes },
+    });
+    invalidarCacheApariencia();
+
+    await registrarBitacora(req.usuario!.usuarioId, Acciones.Editar, "configuracion_apariencia", 1, `Logo "${cual}" actualizado`, req.ip);
+    res.json({ ok: true });
+  })
+);
+
+administracionRouter.post(
+  "/apariencia/logo/:cual/restablecer",
+  asyncHandler(async (req, res) => {
+    const cual = req.params.cual;
+    if (cual !== "nogales" && cual !== "frontera") return res.status(404).json({ error: "Logo no reconocido" });
+
+    const campo = cual === "nogales" ? "logoNogales" : "logoFrontera";
+    await prisma.configuracionApariencia.upsert({
+      where: { id: 1 },
+      create: { id: 1 },
+      update: { [campo]: null },
+    });
+    invalidarCacheApariencia();
+
+    await registrarBitacora(req.usuario!.usuarioId, Acciones.Editar, "configuracion_apariencia", 1, `Logo "${cual}" restablecido al original`, req.ip);
     res.json({ ok: true });
   })
 );

@@ -7,6 +7,7 @@ import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { generarFolioCesion } from "../lib/folio";
 import { renderPdf } from "../lib/pdf";
 import { cesionHtml, type TituloCedidoParaPdf } from "../templates/cesion.template";
+import { obtenerAparienciaDocumento } from "../lib/apariencia";
 
 export const cesionesRouter = Router();
 cesionesRouter.use(requiereAuth, requiereEscritura);
@@ -161,7 +162,8 @@ cesionesRouter.get(
       ? { folio: tituloDb.folio, fechaEmision: tituloDb.fechaEmision }
       : { folio: "—", fechaEmision: null };
 
-    const pdf = await renderPdf(cesionHtml(cesion, tituloCedido));
+    const apariencia = await obtenerAparienciaDocumento();
+    const pdf = await renderPdf(cesionHtml(cesion, tituloCedido, apariencia));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="Cesion_${cesion.folio}.pdf"`);
     res.send(pdf);

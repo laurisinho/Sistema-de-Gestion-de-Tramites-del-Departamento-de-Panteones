@@ -1,8 +1,7 @@
 import type { Prisma } from "@prisma/client";
-import { LOGO_NOGALES, LOGO_FRONTERA } from "../lib/logos";
+import type { AparienciaDocumento } from "../lib/apariencia";
 import { esc, fechaLarga, fechaHoraCorta } from "../lib/html";
 
-const SINDICO = "MAESTRA EDNA ELINORA SOTO GRACIA";
 const GUINDA = "#6B1229";
 const GUINDA_DARK = "#4A0C1C";
 
@@ -24,6 +23,7 @@ function v(s: string | null | undefined): string {
 export function cesionHtml(
   cesion: CesionParaPdf,
   tituloCedido: TituloCedidoParaPdf,
+  apariencia: AparienciaDocumento,
   opts: { esReimpresion?: boolean; fechaReimpresion?: Date; numeroReimpresion?: number } = {}
 ): string {
   const lote = cesion.lote;
@@ -103,14 +103,14 @@ export function cesionHtml(
 <div class="page">
   ${watermark}
   <div class="header-row">
-    <div class="hdr-logo-left"><img src="${LOGO_NOGALES}" /></div>
+    <div class="hdr-logo-left"><img src="${apariencia.logoNogales}" /></div>
     <div class="hdr-center">
       <div class="hdr-t1">H. AYUNTAMIENTO DE NOGALES</div>
       <div class="hdr-t2">SINDICATURA MUNICIPAL</div>
       <div class="hdr-t3">CESIÓN DE DERECHOS DE LOTE</div>
       ${reimpresionLinea}
     </div>
-    <div class="hdr-logo-right"><img src="${LOGO_FRONTERA}" /></div>
+    <div class="hdr-logo-right"><img src="${apariencia.logoFrontera}" /></div>
   </div>
   <div class="hdr-rule"></div>
   <div class="hdr-folio-fecha">
@@ -120,7 +120,7 @@ export function cesionHtml(
 
   <div class="contenido">
     <div class="destinatario">
-      <div class="destinatario-nombre">${esc(SINDICO)}</div>
+      <div class="destinatario-nombre">${esc(apariencia.sindico)}</div>
       <div class="destinatario-cargo">SÍNDICO MUNICIPAL — H. NOGALES, SONORA.</div>
       <div class="destinatario-presente">P R E S E N T E.</div>
     </div>

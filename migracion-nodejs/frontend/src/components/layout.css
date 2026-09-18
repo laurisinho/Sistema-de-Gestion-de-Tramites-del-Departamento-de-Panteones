@@ -6,7 +6,7 @@
   top: 0; left: 0;
   width: var(--sidebar-w);
   height: 100vh;
-  background: linear-gradient(180deg, var(--bg-sidebar) 0%, #1c040c 100%);
+  background: var(--guinda-sombra);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -23,7 +23,7 @@
   gap: 0.7rem;
   padding: 1.05rem 1rem 0.95rem;
   background: radial-gradient(140% 160% at 100% 0%, rgba(245, 180, 0, 0.13) 0%, transparent 45%),
-    linear-gradient(135deg, #3a0915 0%, var(--guinda) 100%);
+    linear-gradient(135deg, var(--guinda-dark) 0%, var(--guinda) 100%);
   border-bottom: 1px solid rgba(245, 180, 0, 0.28);
 }
 .shell-brand img {
@@ -169,7 +169,7 @@
 /* ═══════════ MAIN / TOPBAR ═══════════ */
 .shell-main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .shell-topbar {
-  background: linear-gradient(90deg, var(--bg-topbar) 0%, var(--guinda) 60%, #75162f 100%);
+  background: linear-gradient(90deg, var(--guinda) 0%, var(--guinda-dark) 100%);
   height: 52px;
   padding: 0 1.5rem;
   display: flex;
@@ -180,7 +180,7 @@
   z-index: 990;
   box-shadow: 0 1px 0 var(--dorado), 0 4px 14px rgba(43, 6, 19, 0.18);
 }
-html.dark .shell-topbar { background: linear-gradient(90deg, #200910 0%, #2b0d17 100%); box-shadow: 0 1px 0 rgba(245, 180, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.45); }
+html.dark .shell-topbar { background: linear-gradient(90deg, var(--guinda-sombra) 0%, var(--guinda-dark) 100%); box-shadow: 0 1px 0 rgba(245, 180, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.45); }
 
 .shell-usuario { display: flex; align-items: center; gap: 0.5rem; }
 .shell-topbar-btn {

@@ -1,8 +1,7 @@
 import type { Prisma } from "@prisma/client";
-import { LOGO_NOGALES, LOGO_FRONTERA } from "../lib/logos";
+import type { AparienciaDocumento } from "../lib/apariencia";
 import { esc, fechaLargaMayus, esFechaReal, fechaHoraCorta, fechaCorta } from "../lib/html";
 
-const SINDICO = "MAESTRA EDNA ELINORA SOTO GRACIA";
 const GUINDA = "#6B1229";
 const GUINDA_DARK = "#4A0C1C";
 const DORADO = "#F5B400";
@@ -82,6 +81,7 @@ function filasEnDosColumnas(filas: string[]): string {
 
 export function permisoHtml(
   permiso: PermisoParaPdf,
+  apariencia: AparienciaDocumento,
   opts: { esReimpresion?: boolean; fechaReimpresion?: Date; numeroReimpresion?: number } = {}
 ): string {
   const tipo = permiso.tipoTramite.clave;
@@ -217,14 +217,14 @@ export function permisoHtml(
 <div class="page">
   ${watermark}
   <div class="header-row">
-    <div class="hdr-logo-left"><img src="${LOGO_NOGALES}" /></div>
+    <div class="hdr-logo-left"><img src="${apariencia.logoNogales}" /></div>
     <div class="hdr-center">
       <div class="hdr-t1">H. AYUNTAMIENTO DE NOGALES</div>
       <div class="hdr-t2">SINDICATURA MUNICIPAL</div>
       <div class="hdr-t3">DEPARTAMENTO DE CONTROL DE PANTEONES</div>
       ${reimpresionLinea}
     </div>
-    <div class="hdr-logo-right"><img src="${LOGO_FRONTERA}" /></div>
+    <div class="hdr-logo-right"><img src="${apariencia.logoFrontera}" /></div>
   </div>
   <div class="hdr-rule"></div>
 
@@ -271,7 +271,7 @@ export function permisoHtml(
 
     <div class="autorizacion">
       <div class="aut-linea">____________________________________</div>
-      <div class="aut-nombre">${esc(SINDICO)}</div>
+      <div class="aut-nombre">${esc(apariencia.sindico)}</div>
       <div class="aut-cargo">SÍNDICO MUNICIPAL</div>
       <div class="aut-lugar">H. Ayuntamiento de Nogales, Sonora</div>
     </div>

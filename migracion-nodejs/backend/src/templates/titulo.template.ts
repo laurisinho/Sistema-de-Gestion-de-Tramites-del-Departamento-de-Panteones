@@ -1,8 +1,7 @@
 import type { Prisma } from "@prisma/client";
-import { LOGO_NOGALES, LOGO_FRONTERA } from "../lib/logos";
+import type { AparienciaDocumento } from "../lib/apariencia";
 import { esc, fechaLarga, fechaHoraCorta } from "../lib/html";
 
-const SINDICO = "MAESTRA EDNA ELINORA SOTO GRACIA";
 const GUINDA = "#6B1229";
 const GUINDA_DARK = "#4A0C1C";
 const GRIS_CLARO = "#F5F5F5";
@@ -21,6 +20,7 @@ const CLAUSULAS = [
 
 export function tituloHtml(
   titulo: TituloParaPdf,
+  apariencia: AparienciaDocumento,
   opts: { esReimpresion?: boolean; fechaReimpresion?: Date; numeroReimpresion?: number } = {}
 ): string {
   const usaColindancias = titulo.lote?.numeroManzana === "S/N";
@@ -115,14 +115,14 @@ export function tituloHtml(
 <div class="page">
   ${watermark}
   <div class="header-row">
-    <div class="hdr-logo-left"><img src="${LOGO_NOGALES}" /></div>
+    <div class="hdr-logo-left"><img src="${apariencia.logoNogales}" /></div>
     <div class="hdr-center">
       <div class="hdr-t1">H. AYUNTAMIENTO DE NOGALES</div>
       <div class="hdr-t2">SINDICATURA MUNICIPAL</div>
       <div class="hdr-t3">DEPARTAMENTO DE CONTROL DE PANTEONES</div>
       ${reimpresionLinea}
     </div>
-    <div class="hdr-logo-right"><img src="${LOGO_FRONTERA}" /></div>
+    <div class="hdr-logo-right"><img src="${apariencia.logoFrontera}" /></div>
   </div>
   <div class="hdr-rule"></div>
 
@@ -159,7 +159,7 @@ export function tituloHtml(
     <div class="firmas">
       <div class="firma-col">
         <div class="firma-linea">____________________________________</div>
-        <div class="firma-nombre">${esc(SINDICO)}</div>
+        <div class="firma-nombre">${esc(apariencia.sindico)}</div>
         <div class="firma-cargo">EL SÍNDICO MUNICIPAL</div>
       </div>
       <div class="firma-sep"></div>

@@ -8,6 +8,7 @@ import { generarFolio } from "../lib/folio";
 import { whereSeccion, whereUbicacionLote } from "../lib/ubicacion";
 import { renderPdf } from "../lib/pdf";
 import { tituloHtml } from "../templates/titulo.template";
+import { obtenerAparienciaDocumento } from "../lib/apariencia";
 
 export const titulosRouter = Router();
 titulosRouter.use(requiereAuth, requiereEscritura);
@@ -454,7 +455,8 @@ titulosRouter.get(
     });
     if (!titulo) return res.status(404).json({ error: "Título no encontrado" });
 
-    const pdf = await renderPdf(tituloHtml(titulo));
+    const apariencia = await obtenerAparienciaDocumento();
+    const pdf = await renderPdf(tituloHtml(titulo, apariencia));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="Titulo_${titulo.folio}.pdf"`);
     res.send(pdf);

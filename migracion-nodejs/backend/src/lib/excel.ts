@@ -1,6 +1,5 @@
 import ExcelJS from "exceljs";
-import fs from "node:fs";
-import path from "node:path";
+import { obtenerLogosBuffer } from "./apariencia";
 
 const GUINDA = "6B1229";
 const GUINDA_LT = "8B2040";
@@ -19,15 +18,11 @@ export interface ColDef {
 
 export const FILA_ENCABEZADO = 6;
 
-function logoBuffer(nombre: string): Buffer {
-  return fs.readFileSync(path.join(__dirname, "..", "assets", nombre));
-}
-
 // Puerto de PrepararHoja: encabezado con logos, título, subtítulo, periodo y
 // la fila de columnas. Las fórmulas de ancho son las mismas unidades de
 // caracteres que usa ClosedXML/Excel, por eso los números de ColDef se
 // copian tal cual del original sin necesidad de conversión.
-export function prepararHoja(
+export async function prepararHoja(
   wb: ExcelJS.Workbook,
   nombreHoja: string,
   cols: ColDef[],
@@ -35,7 +30,7 @@ export function prepararHoja(
   subtituloFijo: string,
   periodo: string,
   totalItems: number
-): ExcelJS.Worksheet {
+): Promise<ExcelJS.Worksheet> {
   const ws = wb.addWorksheet(nombreHoja, {
     properties: { tabColor: { argb: argb(GUINDA) } },
     views: [{ showGridLines: false }],
@@ -43,9 +38,10 @@ export function prepararHoja(
   const ncol = cols.length;
 
   try {
-    const idLeft = wb.addImage({ buffer: logoBuffer("logo_nogales.png") as never, extension: "png" });
+    const logos = await obtenerLogosBuffer();
+    const idLeft = wb.addImage({ buffer: logos.nogales as never, extension: "png" });
     ws.addImage(idLeft, { tl: { col: 0.15, row: 0.1 }, ext: { width: 150, height: 52 } });
-    const idRight = wb.addImage({ buffer: logoBuffer("logo_frontera.png") as never, extension: "png" });
+    const idRight = wb.addImage({ buffer: logos.frontera as never, extension: "png" });
     ws.addImage(idRight, { tl: { col: Math.max(ncol - 1.7, 0.5), row: 0.1 }, ext: { width: 95, height: 52 } });
   } catch {
     // si fallan los logos, el reporte sigue sin ellos

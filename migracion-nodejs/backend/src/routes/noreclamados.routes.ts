@@ -493,7 +493,7 @@ noReclamadosRouter.get(
     }
 
     const wb = new ExcelJS.Workbook();
-    const ws = prepararHoja(wb, "No Reclamados", ColsSepultados, "RELACIÓN DE PERSONAS NO RECLAMADAS", "Sepultadas en fosas comunes", subtitulo, fallecidos.length);
+    const ws = await prepararHoja(wb, "No Reclamados", ColsSepultados, "RELACIÓN DE PERSONAS NO RECLAMADAS", "Sepultadas en fosas comunes", subtitulo, fallecidos.length);
 
     let r = 7;
     let i = 1;
@@ -568,7 +568,7 @@ noReclamadosRouter.get(
     });
 
     const wb = new ExcelJS.Workbook();
-    const ws = prepararHoja(wb, "Identificadas", ColsIdentificados, "RELACIÓN DE PERSONAS NO RECLAMADAS", "Que fueron identificadas y exhumadas", subtitulo, recs.length);
+    const ws = await prepararHoja(wb, "Identificadas", ColsIdentificados, "RELACIÓN DE PERSONAS NO RECLAMADAS", "Que fueron identificadas y exhumadas", subtitulo, recs.length);
 
     let r = 7;
     let i = 1;

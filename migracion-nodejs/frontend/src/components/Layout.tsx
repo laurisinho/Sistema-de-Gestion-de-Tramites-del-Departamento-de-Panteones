@@ -42,6 +42,7 @@ const GRUPOS: { titulo: string; enlaces: Enlace[] }[] = [
     enlaces: [
       { to: "/usuarios", label: "Usuarios", icono: "bi-people", soloAdmin: true },
       { to: "/administracion/catalogos", label: "Catálogos", icono: "bi-collection", soloAdmin: true },
+      { to: "/administracion/apariencia", label: "Apariencia", icono: "bi-palette", soloAdmin: true },
       { to: "/bitacora", label: "Bitácora", icono: "bi-journal-text" },
     ],
   },
@@ -93,6 +94,7 @@ function tituloDePagina(pathname: string): string {
   if (pathname.startsWith("/usuarios/") && pathname.endsWith("/editar")) return "Editar usuario";
   if (pathname === "/usuarios") return "Usuarios";
   if (pathname === "/administracion/catalogos") return "Catálogos";
+  if (pathname === "/administracion/apariencia") return "Apariencia";
   if (pathname === "/reimpresiones") return "Reimpresiones";
   return "Panteones Municipales";
 }

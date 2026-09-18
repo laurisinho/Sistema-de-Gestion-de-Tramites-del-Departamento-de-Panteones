@@ -35,10 +35,13 @@ import { UsuariosLista } from "./pages/Usuarios/Lista";
 import { UsuarioNuevo } from "./pages/Usuarios/Nuevo";
 import { UsuarioEditar } from "./pages/Usuarios/Editar";
 import { AdministracionCatalogos } from "./pages/Administracion/Catalogos";
+import { AdministracionApariencia } from "./pages/Administracion/Apariencia";
+import { AparienciaGlobal } from "./components/AparienciaGlobal";
 
 export default function App() {
   return (
     <HashRouter>
+      <AparienciaGlobal />
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -105,6 +108,14 @@ export default function App() {
               element={
                 <AdminRoute>
                   <AdministracionCatalogos />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/administracion/apariencia"
+              element={
+                <AdminRoute>
+                  <AdministracionApariencia />
                 </AdminRoute>
               }
             />

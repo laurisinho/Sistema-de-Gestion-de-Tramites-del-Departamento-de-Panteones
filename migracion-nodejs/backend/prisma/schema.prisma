@@ -100,6 +100,28 @@ model AgenteMinisterioPublico {
   @@map("agentes_ministerio_publico")
 }
 
+// Renglón único (id fijo en 1) con los dos colores de marca configurables
+// desde Administración. Se lee sin autenticación (GET /api/apariencia)
+// porque hasta la pantalla de login necesita pintarse con el color vigente.
+model ConfiguracionApariencia {
+  id            Int      @id @default(1)
+  colorGuinda   String   @default("#6b1229") @db.VarChar(7)
+  colorDorado   String   @default("#f5b400") @db.VarChar(7)
+  // Null = usar el logo empaquetado de siempre (backend/src/assets); solo se
+  // llenan cuando Administración sube uno propio. Van en la base y no en
+  // disco porque el disco de Render es efímero -- un archivo subido ahí se
+  // perdería en el siguiente despliegue.
+  logoNogales   Bytes?
+  logoFrontera  Bytes?
+  // Nombre de quien firma como Síndico Municipal en títulos, permisos y
+  // cesiones -- cambia con cada administración (period. de 4 años). Antes
+  // vivía copiado tal cual en 3 plantillas distintas.
+  nombreSindico String   @default("MAESTRA EDNA ELINORA SOTO GRACIA") @db.VarChar(200)
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@map("configuracion_apariencia")
+}
+
 model Usuario {
   usuarioId      Int       @id @default(autoincrement()) @map("usuario_id")
   rolId          Int       @map("rol_id")

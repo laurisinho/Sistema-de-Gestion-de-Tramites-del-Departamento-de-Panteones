@@ -328,7 +328,7 @@ reportesRouter.get(
 
     // ── Hoja 1: el concentrado que se entrega ──
     const totalMovs = resumen.reduce((s, x) => s + x.total, 0);
-    const ws = prepararHoja(wb, "Resumen", ColsResumen, "RELACIÓN MENSUAL DE MOVIMIENTOS", "Trámites realizados por panteón", periodo, totalMovs);
+    const ws = await prepararHoja(wb, "Resumen", ColsResumen, "RELACIÓN MENSUAL DE MOVIMIENTOS", "Trámites realizados por panteón", periodo, totalMovs);
 
     let r = 7;
     let i = 1;
@@ -383,7 +383,7 @@ reportesRouter.get(
     cerrarHoja(ws, ColsResumen, totalMovs, r);
 
     // ── Hoja 2: el respaldo movimiento por movimiento ──
-    const wd = prepararHoja(wb, "Detalle", ColsDetalle, "DETALLE DE MOVIMIENTOS", "Cada trámite del periodo", periodo, detalle.length);
+    const wd = await prepararHoja(wb, "Detalle", ColsDetalle, "DETALLE DE MOVIMIENTOS", "Cada trámite del periodo", periodo, detalle.length);
 
     let rd = 7;
     let j = 1;
