@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { whereUbicacionLote } from "./ubicacion";
+import { filtrosLoteBusqueda, whereUbicacionLote } from "./ubicacion";
 
 /**
  * Guarda de regresión del bug corregido el 3 de septiembre: la comprobación
@@ -23,5 +23,36 @@ describe("whereUbicacionLote", () => {
     // Un lote de la sección AMP no debe considerarse ocupado por uno que no
     // tiene sección, y viceversa: por eso el propio filtro las distingue.
     expect(conSeccion).not.toEqual(sinSeccion);
+  });
+});
+
+describe("filtrosLoteBusqueda", () => {
+  it("sin filtros no genera ninguna condición", () => {
+    expect(filtrosLoteBusqueda({})).toEqual([]);
+  });
+
+  it("cada filtro va en su propia condición, para combinarlos con AND", () => {
+    const f = filtrosLoteBusqueda({ panteonId: 1, manzana: "3", lote: "7" });
+    expect(f).toHaveLength(3);
+    expect(f[0]).toEqual({ panteonId: 1 });
+    expect(f[2]).toEqual({ numeroLote: { contains: "7", mode: "insensitive" } });
+  });
+
+  it("'ANG' y una manzana tecleada no se pisan: son condiciones distintas", () => {
+    const f = filtrosLoteBusqueda({ seccion: "ANG", manzana: "ANGELITOS" });
+    expect(f).toHaveLength(2);
+    expect(f[0]).toEqual({ seccion: "ADEII", numeroManzana: { contains: "ANGEL", mode: "insensitive" } });
+    expect(f[1]).toHaveProperty("OR");
+  });
+
+  it("la manzana busca también su equivalente romano/arábigo", () => {
+    const f = filtrosLoteBusqueda({ manzana: "16" });
+    const variantes = (f[0] as { OR: { numeroManzana: { contains: string } }[] }).OR.map((c) => c.numeroManzana.contains);
+    expect(variantes).toEqual(expect.arrayContaining(["16", "XVI"]));
+  });
+
+  it("la colindancia se busca en las cuatro orientaciones", () => {
+    const f = filtrosLoteBusqueda({ colindancia: "PEREZ" });
+    expect((f[0] as { OR: unknown[] }).OR).toHaveLength(4);
   });
 });

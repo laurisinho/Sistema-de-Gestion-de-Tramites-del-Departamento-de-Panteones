@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
-import { whereSeccion, whereUbicacionLote } from "../lib/ubicacion";
+import { filtrosLoteBusqueda, whereUbicacionLote } from "../lib/ubicacion";
 import { renderPdf } from "../lib/pdf";
 import { permisoHtml } from "../templates/permiso.template";
 import { obtenerAparienciaDocumento } from "../lib/apariencia";
@@ -28,8 +28,19 @@ permisosRouter.get(
     const q = str(req.query.q);
     const tipo = str(req.query.tipo);
     const seccion = str(req.query.seccion);
+    const manzana = str(req.query.manzana);
+    const lote = str(req.query.lote);
+    const titular = str(req.query.titular);
+    const colindancia = str(req.query.colindancia);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
-    const hayFiltros = !!(q || tipo || panteonId || seccion);
+    const hayFiltros = !!(q || tipo || panteonId || seccion || manzana || lote || titular || colindancia);
+
+    // Aquí "titular" es el del lote donde se hizo el trámite (título vigente),
+    // no el solicitante -- ese ya lo cubre el buscador general de arriba.
+    const filtrosLote = filtrosLoteBusqueda({ panteonId, seccion, manzana, lote, colindancia });
+    if (titular) {
+      filtrosLote.push({ titulos: { some: { estado: "VIGENTE", titular: { nombreCompleto: { contains: titular, mode: "insensitive" } } } } });
+    }
 
     const permisos = await prisma.permiso.findMany({
       where: {
@@ -43,11 +54,9 @@ permisosRouter.get(
             }
           : {}),
         ...(tipo ? { tipoTramite: { clave: tipo } } : {}),
-        // Panteón y sección van dentro del mismo filtro de lote: puestos por
-        // separado, el segundo pisaría al primero y se perdería uno de los dos.
-        ...(panteonId || seccion
-          ? { lote: { ...(panteonId ? { panteonId } : {}), ...(seccion ? whereSeccion(seccion) : {}) } }
-          : {}),
+        // Panteón, sección, manzana, lote, colindancia y titular van dentro del
+        // mismo filtro de lote, combinados con AND (ver filtrosLoteBusqueda).
+        ...(filtrosLote.length ? { lote: { AND: filtrosLote } } : {}),
       },
       include: {
         tipoTramite: true,

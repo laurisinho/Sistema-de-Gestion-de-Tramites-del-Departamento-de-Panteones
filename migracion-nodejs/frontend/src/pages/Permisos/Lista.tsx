@@ -10,7 +10,10 @@ import { useAuth } from "../../auth/AuthContext";
 interface Panteon {
   panteonId: number;
   nombre: string;
+  usaColindancias: boolean;
 }
+
+const FILTROS_VACIOS = { q: "", tipo: "", panteonId: "", seccion: "", manzana: "", lote: "", titular: "", colindancia: "" };
 
 interface PermisoFila {
   permisoId: number;
@@ -41,7 +44,11 @@ export function PermisosLista() {
   const [tipo, setTipo] = useState("");
   const [panteonId, setPanteonId] = useState("");
   const [seccion, setSeccion] = useState("");
-  const [filtros, setFiltros] = useState({ q: "", tipo: "", panteonId: "", seccion: "" });
+  const [manzana, setManzana] = useState("");
+  const [lote, setLote] = useState("");
+  const [titular, setTitular] = useState("");
+  const [colindancia, setColindancia] = useState("");
+  const [filtros, setFiltros] = useState(FILTROS_VACIOS);
   const [aCancelar, setACancelar] = useState<PermisoFila | null>(null);
   const [errorCancelar, setErrorCancelar] = useState<string | null>(null);
 
@@ -49,6 +56,10 @@ export function PermisosLista() {
     queryKey: ["catalogos", "panteones"],
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
   });
+
+  // En un panteón sin manzana/lote formal (se ubica por colindancias) no hay
+  // sección, manzana ni lote que buscar: en su lugar va la colindancia.
+  const usaColindancias = panteones?.find((p) => String(p.panteonId) === panteonId)?.usaColindancias ?? false;
 
   // Secciones del panteón elegido; sin panteón, las de todos. incluirVirtuales
   // trae también "ANG" (Angelitos), que solo existe para buscar/filtrar.
@@ -69,6 +80,10 @@ export function PermisosLista() {
       if (filtros.tipo) params.set("tipo", filtros.tipo);
       if (filtros.panteonId) params.set("panteonId", filtros.panteonId);
       if (filtros.seccion) params.set("seccion", filtros.seccion);
+      if (filtros.manzana) params.set("manzana", filtros.manzana);
+      if (filtros.lote) params.set("lote", filtros.lote);
+      if (filtros.titular) params.set("titular", filtros.titular);
+      if (filtros.colindancia) params.set("colindancia", filtros.colindancia);
       return api<{ permisos: PermisoFila[] }>(`/permisos?${params}`).then((r) => r.permisos);
     },
   });
@@ -104,52 +119,75 @@ export function PermisosLista() {
       <div className="card">
         <div className="card-body">
           <form
-            className="barra-filtros"
+            className="barra-filtros en-filas"
             style={{ marginBottom: 0 }}
             onSubmit={(e) => {
               e.preventDefault();
-              setFiltros({ q, tipo, panteonId, seccion });
+              // Solo viajan los campos que se ven (ver la nota en Titulos/Lista).
+              setFiltros({
+                q,
+                tipo,
+                panteonId,
+                seccion: usaColindancias ? "" : seccion,
+                manzana: usaColindancias ? "" : manzana,
+                lote: usaColindancias ? "" : lote,
+                titular,
+                colindancia: usaColindancias ? colindancia : "",
+              });
             }}
           >
-            <input
-              placeholder="Folio, solicitante o fallecido..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              style={{ minWidth: 260 }}
-            />
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-              <option value="">Todos los tipos</option>
-              {TIPOS.map((t) => (
-                <option key={t.clave} value={t.clave}>
-                  {t.nombre}
-                </option>
-              ))}
-            </select>
-            <select
-              value={panteonId}
-              onChange={(e) => {
-                setPanteonId(e.target.value);
-                setSeccion("");
-              }}
-            >
-              <option value="">Todos los panteones</option>
-              {panteones?.map((p) => (
-                <option key={p.panteonId} value={p.panteonId}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
-            <select value={seccion} onChange={(e) => setSeccion(e.target.value)}>
-              <option value="">Todas las secciones</option>
-              {secciones?.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <button className="boton" type="submit">
-              <i className="bi bi-search" /> Buscar
-            </button>
+            <div className="filtros-fila">
+              <input
+                className="crece"
+                placeholder="Folio, solicitante o fallecido..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+              <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                <option value="">Todos los tipos</option>
+                {TIPOS.map((t) => (
+                  <option key={t.clave} value={t.clave}>
+                    {t.nombre}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={panteonId}
+                onChange={(e) => {
+                  setPanteonId(e.target.value);
+                  setSeccion("");
+                }}
+              >
+                <option value="">Todos los panteones</option>
+                {panteones?.map((p) => (
+                  <option key={p.panteonId} value={p.panteonId}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="filtros-fila">
+              {usaColindancias ? (
+                <input className="crece" placeholder="Colindancia (vecino)" value={colindancia} onChange={(e) => setColindancia(e.target.value)} />
+              ) : (
+                <>
+                  <select value={seccion} onChange={(e) => setSeccion(e.target.value)}>
+                    <option value="">Todas las secciones</option>
+                    {secciones?.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  <input placeholder="Manzana" value={manzana} onChange={(e) => setManzana(e.target.value)} style={{ width: 120 }} />
+                  <input placeholder="Lote" value={lote} onChange={(e) => setLote(e.target.value)} style={{ width: 100 }} />
+                </>
+              )}
+              <input className="crece" placeholder="Titular del lote" value={titular} onChange={(e) => setTitular(e.target.value)} />
+              <button className="boton" type="submit">
+                <i className="bi bi-search" /> Buscar
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -157,7 +195,7 @@ export function PermisosLista() {
       <div className="card">
         <div className="card-header-guinda">
           <span>
-            <i className="bi bi-list-ul" /> {filtros.q || filtros.tipo || filtros.panteonId ? "Resultados" : "Últimos permisos"}
+            <i className="bi bi-list-ul" /> {Object.values(filtros).some(Boolean) ? "Resultados" : "Últimos permisos"}
           </span>
         </div>
         <div className="card-body p-0">

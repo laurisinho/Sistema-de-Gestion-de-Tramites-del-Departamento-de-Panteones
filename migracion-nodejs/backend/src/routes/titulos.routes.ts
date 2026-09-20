@@ -5,7 +5,7 @@ import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { generarFolio } from "../lib/folio";
-import { whereSeccion, whereUbicacionLote } from "../lib/ubicacion";
+import { filtrosLoteBusqueda, whereUbicacionLote } from "../lib/ubicacion";
 import { renderPdf } from "../lib/pdf";
 import { tituloHtml } from "../templates/titulo.template";
 import { obtenerAparienciaDocumento } from "../lib/apariencia";
@@ -27,9 +27,14 @@ titulosRouter.get(
   asyncHandler(async (req, res) => {
     const q = str(req.query.q);
     const seccion = str(req.query.seccion);
+    const manzana = str(req.query.manzana);
+    const lote = str(req.query.lote);
+    const titular = str(req.query.titular);
+    const colindancia = str(req.query.colindancia);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
     const porFallecido = req.query.tipoBusqueda === "fallecido";
-    const hayFiltros = !!(q || panteonId || seccion);
+    const hayFiltros = !!(q || panteonId || seccion || manzana || lote || titular || colindancia);
+    const filtrosLote = filtrosLoteBusqueda({ panteonId, seccion, manzana, lote, colindancia });
 
     // Modo "buscar por fallecido" (BusquedaController.Buscar, tipo="fallecido"):
     // el nombre del difunto no vive en el título, así que primero se resuelven
@@ -59,11 +64,10 @@ titulosRouter.get(
                 ],
               }
             : {}),
-        // Panteón y sección van dentro del mismo filtro de lote: puestos por
-        // separado, el segundo pisaría al primero y se perdería uno de los dos.
-        ...(panteonId || seccion
-          ? { lote: { ...(panteonId ? { panteonId } : {}), ...(seccion ? whereSeccion(seccion) : {}) } }
-          : {}),
+        ...(titular ? { titular: { nombreCompleto: { contains: titular, mode: "insensitive" as const } } } : {}),
+        // Panteón, sección, manzana, lote y colindancia van dentro del mismo
+        // filtro de lote, combinados con AND (ver filtrosLoteBusqueda).
+        ...(filtrosLote.length ? { lote: { AND: filtrosLote } } : {}),
       },
       include: { titular: true, lote: { include: { panteon: true } } },
       orderBy: { fechaCreacion: "desc" },

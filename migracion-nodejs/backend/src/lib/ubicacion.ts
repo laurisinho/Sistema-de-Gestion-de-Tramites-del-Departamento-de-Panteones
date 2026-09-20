@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { variantesManzana } from "./romanos";
 
 /**
  * El filtro con el que se busca si una ubicación ya está ocupada dentro de un
@@ -40,4 +41,48 @@ export function whereSeccion(seccion: string): Prisma.LoteWhereInput {
     return { seccion: "ADEII", numeroManzana: { contains: "ANGEL", mode: "insensitive" } };
   }
   return { seccion };
+}
+
+export interface FiltroUbicacionBusqueda {
+  panteonId?: number;
+  seccion?: string;
+  manzana?: string;
+  lote?: string;
+  // Texto que se busca en cualquiera de las cuatro colindancias (norte, sur,
+  // este, oeste), para los panteones que no tienen manzana/lote formal.
+  colindancia?: string;
+}
+
+/**
+ * Condiciones de lote para los buscadores de Títulos y Permisos. Se devuelven
+ * como lista para combinarlas con AND (`lote: { AND: [...] }`): puestas como
+ * llaves de un mismo objeto se pisarían entre sí -- por ejemplo "ANG" ya fija
+ * numeroManzana, y una manzana tecleada aparte lo sobrescribiría.
+ *
+ * Manzana y lote van con "contiene" (como Lotes > Buscar): "3" también trae
+ * 13 o 33, pero así "1A" o "XVI" se encuentran aunque no se teclee completo.
+ */
+export function filtrosLoteBusqueda(f: FiltroUbicacionBusqueda): Prisma.LoteWhereInput[] {
+  const filtros: Prisma.LoteWhereInput[] = [];
+  if (f.panteonId) filtros.push({ panteonId: f.panteonId });
+  if (f.seccion) filtros.push(whereSeccion(f.seccion));
+  if (f.manzana) {
+    // Algunas secciones antiguas capturaron la manzana en romano (p. ej.
+    // "XVI") y otras en arábigo ("16") para el mismo número real.
+    filtros.push({
+      OR: variantesManzana(f.manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
+    });
+  }
+  if (f.lote) filtros.push({ numeroLote: { contains: f.lote, mode: "insensitive" } });
+  if (f.colindancia) {
+    filtros.push({
+      OR: [
+        { colindanciaNorte: { contains: f.colindancia, mode: "insensitive" } },
+        { colindanciaSur: { contains: f.colindancia, mode: "insensitive" } },
+        { colindanciaEste: { contains: f.colindancia, mode: "insensitive" } },
+        { colindanciaOeste: { contains: f.colindancia, mode: "insensitive" } },
+      ],
+    });
+  }
+  return filtros;
 }
