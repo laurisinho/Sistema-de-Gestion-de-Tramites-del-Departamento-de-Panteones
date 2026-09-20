@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
+import { normalizarAgenteMp } from "../lib/agentesMp";
 import ExcelJS from "exceljs";
 import { prepararHoja, cerrarHoja, escribirFecha, fechaHoraTexto, GUINDA, type ColDef } from "../lib/excel";
 
@@ -92,16 +93,18 @@ noReclamadosRouter.get(
       prisma.fallecido.findMany({ where: { ministerioPublico: { not: null } }, select: { ministerioPublico: true }, distinct: ["ministerioPublico"] }),
       prisma.reconocimiento.findMany({ where: { ministerioPublico: { not: null } }, select: { ministerioPublico: true }, distinct: ["ministerioPublico"] }),
     ]);
-    const lista = [
-      ...new Set([
-        ...delCatalogo.map((a) => a.nombre),
-        ...deFallecidos.map((f) => f.ministerioPublico!),
-        ...deReconocimientos.map((r) => r.ministerioPublico!),
-      ]),
-    ]
-      .filter((m) => m.trim() !== "")
-      .sort((a, b) => a.localeCompare(b));
-    res.json(lista);
+    // Se normaliza cada nombre (misma regla que el sembrado del catálogo) para
+    // que "LIC, X" de un registro viejo no salga duplicado junto a "LIC. X".
+    const porClave = new Map<string, string>();
+    for (const nombre of [
+      ...delCatalogo.map((a) => a.nombre),
+      ...deFallecidos.map((f) => f.ministerioPublico!),
+      ...deReconocimientos.map((r) => r.ministerioPublico!),
+    ]) {
+      const n = normalizarAgenteMp(nombre);
+      if (n && !porClave.has(n.toUpperCase())) porClave.set(n.toUpperCase(), n);
+    }
+    res.json([...porClave.values()].sort((a, b) => a.localeCompare(b)));
   })
 );
 
