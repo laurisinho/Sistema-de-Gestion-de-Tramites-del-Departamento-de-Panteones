@@ -26,7 +26,7 @@ function nombreTipo(clave: string): string {
   }
 }
 
-// Puerto exacto de TextosCuerpo: arma las líneas de cuerpo según el tipo de trámite.
+// Equivale a TextosCuerpo del original: arma las líneas de cuerpo según el tipo de trámite.
 function textosCuerpo(p: PermisoParaPdf, tipo: string): string[] {
   const sinCosto = p.esDonacion && !p.numeroRecibo?.trim();
   const concepto = sinCosto
@@ -66,8 +66,7 @@ function filaDato(etiqueta: string, valor: string): string {
 }
 
 // Las filas sueltas van de dos en dos, en las mismas columnas que el resto del
-// recuadro: sueltas quedaban en una lista pegada a la izquierda con la mitad
-// derecha vacía. La celda que sobra en un número impar de filas va vacía para
+// recuadro. Si el número de filas es impar, la celda sobrante queda vacía para
 // que las columnas no se recorran.
 function filasEnDosColumnas(filas: string[]): string {
   const renglones: string[] = [];
@@ -88,9 +87,9 @@ export function permisoHtml(
   const usaColindancias = permiso.lote?.numeroManzana === "S/N";
   const { esReimpresion, fechaReimpresion, numeroReimpresion = 0 } = opts;
 
-  // En el recuadro gris solo va lo que el cuerpo del permiso no repite ya: el
-  // recibo lo menciona en los cuatro tipos, la donación solo la escribe
-  // inhumación y el tipo de obra solo construcción (ver textosCuerpo).
+  // En el recuadro gris solo va lo que el cuerpo del permiso no repite: el recibo
+  // lo menciona en los cuatro tipos, la donación solo la escribe inhumación y el
+  // tipo de obra solo construcción (ver textosCuerpo).
   const datosGeneralesFilas: string[] = [];
   if (permiso.fallecido?.numeroCaso?.trim()) {
     datosGeneralesFilas.push(filaDato("Núm. único de caso", permiso.fallecido.numeroCaso));

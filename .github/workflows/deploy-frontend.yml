@@ -37,7 +37,7 @@ jobs:
       - name: Compilar
         working-directory: migracion-nodejs/frontend
         env:
-          # URL pública del backend en Render (API + puerto /api del Express).
+          # URL pública del backend en Render (la API de Express, bajo /api).
           VITE_API_URL: https://sistema-de-gestion-de-tramites-del.onrender.com/api
           # GitHub Pages sirve este repo en /<nombre-del-repo>/, no en la raíz.
           VITE_BASE_PATH: /${{ github.event.repository.name }}/

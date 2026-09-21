@@ -7,15 +7,15 @@ interface Props {
   className: string;
   title?: string;
   children?: ReactNode;
-  // Para reportes cuyos filtros aún están incompletos (p. ej. falta una de las
-  // dos fechas de un rango): mejor no dejar pedir un documento a medio llenar
-  // y que el usuario vea el error genérico de "no se pudo generar".
+  // Para reportes cuyos filtros están incompletos (p. ej. falta una de las dos
+  // fechas de un rango): evita pedir un documento a medio llenar y que el
+  // usuario vea el error genérico de "no se pudo generar".
   disabled?: boolean;
 }
 
-// Reemplaza los <a href> directos a la API: esos no pueden llevar el header
-// Authorization (solo lo hace una petición de JS), así que dependían de la
-// cookie entre sitios distintos que varios navegadores bloquean.
+// Reemplaza los <a href> directos a la API: no pueden llevar el header
+// Authorization (solo lo hace una petición de JS) y dependían de la cookie entre
+// sitios distintos, que varios navegadores bloquean.
 export function BotonImprimir({ ruta, nombreArchivo, className, title, children, disabled }: Props) {
   const [generando, setGenerando] = useState(false);
 

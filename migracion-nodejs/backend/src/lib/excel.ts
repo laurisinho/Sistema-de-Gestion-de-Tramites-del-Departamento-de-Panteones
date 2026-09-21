@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { fechaHoraLocalCorta } from "./fechas";
 import { obtenerLogosBuffer } from "./apariencia";
 
 const GUINDA = "6B1229";
@@ -18,10 +19,9 @@ export interface ColDef {
 
 export const FILA_ENCABEZADO = 6;
 
-// Puerto de PrepararHoja: encabezado con logos, título, subtítulo, periodo y
-// la fila de columnas. Las fórmulas de ancho son las mismas unidades de
-// caracteres que usa ClosedXML/Excel, por eso los números de ColDef se
-// copian tal cual del original sin necesidad de conversión.
+// Equivale a PrepararHoja del sistema original: encabezado con logos, título,
+// subtítulo, periodo y fila de columnas. Los anchos de ColDef usan las mismas
+// unidades que Excel/ClosedXML, por lo que se conservan sin conversión.
 export async function prepararHoja(
   wb: ExcelJS.Workbook,
   nombreHoja: string,
@@ -44,14 +44,14 @@ export async function prepararHoja(
     const idRight = wb.addImage({ buffer: logos.frontera as never, extension: "png" });
     ws.addImage(idRight, { tl: { col: Math.max(ncol - 1.7, 0.5), row: 0.1 }, ext: { width: 95, height: 52 } });
   } catch {
-    // si fallan los logos, el reporte sigue sin ellos
+    // Si fallan los logos, el reporte se genera sin ellos.
   }
 
   ws.getCell(1, 1).value = "H. AYUNTAMIENTO DE NOGALES";
   ws.getCell(2, 1).value = "Sindicatura Municipal · Departamento de Control de Panteones";
   ws.getCell(3, 1).value = titulo;
   ws.getCell(4, 1).value = subtituloFijo;
-  ws.getCell(5, 1).value = `${periodo}    ·    Total: ${totalItems}    ·    Generado: ${new Date().toLocaleString("es-MX")}`;
+  ws.getCell(5, 1).value = `${periodo}    ·    Total: ${totalItems}    ·    Generado: ${fechaHoraLocalCorta(new Date())}`;
 
   for (let r = 1; r <= 5; r++) {
     ws.mergeCells(r, 1, r, ncol);
@@ -88,8 +88,8 @@ export async function prepararHoja(
   return ws;
 }
 
-// Puerto de CerrarHoja: renglón de total (o "sin registros"), bordes de tabla,
-// anchos de columna, congelar encabezado y configuración de impresión.
+// Equivale a CerrarHoja del sistema original: renglón de total (o "sin
+// registros"), bordes, anchos de columna, encabezado congelado e impresión.
 export function cerrarHoja(ws: ExcelJS.Worksheet, cols: ColDef[], totalItems: number, filaSiguiente: number): void {
   const ncol = cols.length;
   let ultimaFila: number;
@@ -151,7 +151,7 @@ export function cerrarHoja(ws: ExcelJS.Worksheet, cols: ColDef[], totalItems: nu
   };
 }
 
-// Las fechas centinela (1900/1905) de la migración no deben imprimirse.
+// No se imprimen las fechas centinela (1900/1905) usadas en la migración.
 export function escribirFecha(cell: ExcelJS.Cell, f: Date | null | undefined): void {
   if (!f || f.getUTCFullYear() <= 1905) {
     cell.value = "";

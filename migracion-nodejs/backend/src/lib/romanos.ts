@@ -1,6 +1,6 @@
-// Varias secciones antiguas capturaron el número de manzana en romano (III,
-// VIII, IX...) y otras en arábigo (3, 8, 9...) para la misma numeración real.
-// Esto deja que buscar "16" encuentre una manzana guardada como "XVI" y viceversa.
+// Algunas secciones capturaron la manzana en romano (III, VIII, IX) y otras en
+// arábigo (3, 8, 9) para el mismo número. Estas funciones permiten que buscar
+// "16" encuentre "XVI" y viceversa.
 
 const SIMBOLOS: [string, number][] = [
   ["M", 1000],
@@ -33,9 +33,8 @@ export function aRomano(n: number): string {
   return out;
 }
 
-// Convierte solo si el texto es un numeral romano válido: se valida
-// reconstruyendo el romano a partir del total y comparando -- así "IIII" o
-// cualquier variante no canónica se descarta en vez de aceptarse a medias.
+// Convierte solo si el texto es un romano válido: se reconstruye el romano a
+// partir del valor y se compara, así variantes como "IIII" se descartan.
 export function aArabigo(texto: string): number | null {
   const v = texto.trim().toUpperCase();
   if (!v || !/^[IVXLCDM]+$/.test(v)) return null;
@@ -50,10 +49,9 @@ export function aArabigo(texto: string): number | null {
   return aRomano(total) === v ? total : null;
 }
 
-// Variantes equivalentes de un término de manzana para ampliar la búsqueda:
-// si es puramente numérico agrega su forma romana, si es un romano válido
-// agrega su forma arábiga. Cualquier otro texto (p. ej. "1A", "TALUD") se
-// devuelve tal cual, sin intentar convertirlo.
+// Variantes equivalentes de un término de manzana: si es numérico agrega su
+// forma romana y si es un romano válido agrega la arábiga. Cualquier otro texto
+// ("1A", "TALUD") se devuelve sin cambios.
 export function variantesManzana(termino: string): string[] {
   const t = termino.trim();
   if (!t) return [];

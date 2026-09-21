@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { hoyLocal } from "../lib/fechas";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
@@ -39,14 +40,10 @@ const nuevaCesionSchema = z.object({
   fechaCesion: fechaISO.optional(),
 });
 
-function hoy(): Date {
-  return new Date(new Date().toDateString());
-}
-
-// Una cesión toca tres tablas (nuevo título, título viejo, registro de
-// cesión). Sin transacción, una falla a medias deja el título viejo en CEDIDO
-// y el nuevo VIGENTE sin registro de cesión: cambia el dueño y no queda
-// constancia de quién cedió a quién. Puerto exacto de CesionesController.Nueva.
+// Una cesión toca tres tablas (nuevo título, título anterior y registro de
+// cesión). Sin transacción, una falla intermedia dejaría el título anterior en
+// CEDIDO y el nuevo VIGENTE sin registro de cesión. Equivale a
+// CesionesController.Nueva.
 cesionesRouter.post(
   "/",
   asyncHandler(async (req, res) => {
@@ -95,7 +92,7 @@ cesionesRouter.post(
             loteId: titulo.loteId,
             titularId: cesionario.personaId,
             folio: nuevoFolio,
-            fechaEmision: vm.fechaCesion ?? hoy(),
+            fechaEmision: vm.fechaCesion ?? hoyLocal(),
             usuarioEmitioId: usuarioId,
             estado: "VIGENTE",
             estadoEntrega: "PENDIENTE_ENTREGA",
@@ -112,7 +109,7 @@ cesionesRouter.post(
             cedenteId: titulo.titularId,
             cesionarioId: cesionario.personaId,
             folio: folioCesion,
-            fechaCesion: vm.fechaCesion ?? hoy(),
+            fechaCesion: vm.fechaCesion ?? hoyLocal(),
             usuarioRegistroId: usuarioId,
             estado: "VIGENTE",
           },
@@ -151,9 +148,9 @@ cesionesRouter.get(
     });
     if (!cesion) return res.status(404).json({ error: "Cesión no encontrada" });
 
-    // Título cedido (para mostrar su folio/fecha en la carta): el del cedente
-    // sobre ese lote. Si no se encuentra (dato migrado incompleto), un folio
-    // de reserva "—" en vez de tronar. Puerto exacto de CesionesController.Imprimir.
+    // Título cedido (para mostrar su folio y fecha en la carta): el del cedente
+    // sobre ese lote. Si no se encuentra (dato migrado incompleto) se usa un folio
+    // de reserva "—". Equivale a CesionesController.Imprimir.
     const tituloDb = await prisma.tituloPropiedad.findFirst({
       where: { loteId: cesion.loteId, titularId: cesion.cedenteId },
       orderBy: { tituloId: "desc" },

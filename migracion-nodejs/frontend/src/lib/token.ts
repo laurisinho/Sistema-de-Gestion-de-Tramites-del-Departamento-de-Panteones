@@ -1,10 +1,9 @@
 const CLAVE = "auth_token";
 
-// Cookies entre sitios distintos (github.io -> onrender.com) las bloquean
-// varios navegadores por privacidad (Brave, Safari, y cada vez más Chrome),
-// sin importar cómo se configure SameSite/Secure. El token viaja explícito
-// en el header Authorization en su lugar; localStorage solo lo persiste
-// entre recargas de esta misma pestaña/navegador.
+// Varios navegadores (Brave, Safari y cada vez más Chrome) bloquean por
+// privacidad las cookies entre sitios distintos (github.io -> onrender.com), sin
+// importar SameSite/Secure. Por eso el token viaja en el header Authorization;
+// localStorage solo lo conserva entre recargas.
 export function getToken(): string | null {
   try {
     return localStorage.getItem(CLAVE);

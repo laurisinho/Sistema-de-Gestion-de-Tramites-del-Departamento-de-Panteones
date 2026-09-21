@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { hoyLocal } from "../lib/fechas";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
@@ -11,7 +12,7 @@ import { prepararHoja, cerrarHoja, escribirFecha, type ColDef } from "../lib/exc
 export const incidenciasRouter = Router();
 incidenciasRouter.use(requiereAuth, requiereEscritura);
 
-// Mismos catálogos estáticos que Models/Entities/Incidencia.cs.
+// Mismos catálogos estáticos que la entidad Incidencia del original.
 export const ESTADOS_INCIDENCIA = ["REPORTADA", "EN_PROCESO", "ATENDIDA"] as const;
 export const TIPOS_INCIDENCIA = [
   "VANDALISMO",
@@ -75,7 +76,7 @@ incidenciasRouter.get(
 
 // Ubicación: si se eligió un lote del catálogo se copia de él; si no, se
 // conserva lo capturado a mano para incidencias de área (pasillos, bardas).
-// Puerto exacto de AsignarUbicacion.
+// Equivale a AsignarUbicacion.
 async function asignarUbicacion(loteId: number | null | undefined, seccion?: string, numeroManzana?: string, numeroLote?: string) {
   if (loteId) {
     const lote = await prisma.lote.findUnique({ where: { loteId } });
@@ -156,9 +157,9 @@ incidenciasRouter.post(
   })
 );
 
-// ── REPORTE EN EXCEL ─────────────────────────────────────────
-// Registrada antes de "/:id": si no, Express toma "reporte" como el id y
-// Prisma truena con un entero inválido (NaN).
+// Reporte en Excel
+// Se registra antes de "/:id": si no, Express toma "reporte" como el id y Prisma
+// falla con un entero inválido (NaN).
 const ColsIncidencias: ColDef[] = [
   { titulo: "FOLIO", ancho: 8, align: "center" },
   { titulo: "PANTEÓN", ancho: 26, align: "left" },
@@ -229,7 +230,7 @@ incidenciasRouter.get(
       ws.getCell(r, 5).alignment = { wrapText: true };
       ws.getCell(r, 13).alignment = { wrapText: true };
 
-      // Las pendientes saltan a la vista: es lo que el departamento persigue.
+      // Las pendientes se destacan: son las que requieren seguimiento.
       ws.getCell(r, 10).font = { bold: true, color: { argb: COLOR_ESTADO[it.estado] ?? COLOR_ESTADO.REPORTADA } };
 
       // Sin manzana ni lote es una incidencia de área general.
@@ -255,7 +256,7 @@ incidenciasRouter.get(
 
     const buffer = await wb.xlsx.writeBuffer();
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="Incidencias_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx"`);
+    res.setHeader("Content-Disposition", `attachment; filename="Incidencias_${hoyLocal().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx"`);
     res.send(Buffer.from(buffer));
   })
 );
@@ -333,7 +334,7 @@ incidenciasRouter.patch(
         atendidoPor: atendidoPor?.trim(),
         resolucion: resolucion?.trim(),
         // La fecha de atención solo tiene sentido cuando ya quedó resuelta.
-        fechaAtencion: estado === "ATENDIDA" ? new Date(new Date().toDateString()) : null,
+        fechaAtencion: estado === "ATENDIDA" ? hoyLocal() : null,
       },
     });
 

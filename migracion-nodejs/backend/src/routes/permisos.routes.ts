@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Permiso } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { hoyLocal } from "../lib/fechas";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
@@ -18,10 +19,10 @@ function str(v: unknown): string | undefined {
   return s === "" ? undefined : s;
 }
 
-// Sin filtros: últimos 50 (como PermisosController.Index). Con filtros: hasta
-// 100 resultados (como BusquedaController.Permisos) -- misma ruta cubre ambas
-// pantallas del original, folio/solicitante/fallecido en texto libre + tipo +
-// panteón, con estado persistido en la URL por el propio querystring.
+// Sin filtros devuelve los últimos 50 (PermisosController.Index del original).
+// Con filtros, hasta 100 resultados (BusquedaController.Permisos): folio,
+// solicitante o fallecido en texto libre, más tipo y panteón. Una sola ruta
+// cubre ambas pantallas.
 permisosRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -35,8 +36,8 @@ permisosRouter.get(
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
     const hayFiltros = !!(q || tipo || panteonId || seccion || manzana || lote || titular || colindancia);
 
-    // Aquí "titular" es el del lote donde se hizo el trámite (título vigente),
-    // no el solicitante -- ese ya lo cubre el buscador general de arriba.
+    // Aquí "titular" es el del lote donde se hizo el trámite (título vigente), no
+    // el solicitante, que ya cubre el buscador general.
     const filtrosLote = filtrosLoteBusqueda({ panteonId, seccion, manzana, lote, colindancia });
     if (titular) {
       filtrosLote.push({ titulos: { some: { estado: "VIGENTE", titular: { nombreCompleto: { contains: titular, mode: "insensitive" } } } } });
@@ -107,9 +108,9 @@ const nuevoPermisoSchema = z.object({
 
   loteId: z.coerce.number().int().optional(),
 
-  // Panteones antiguos sin título de propiedad registrado: en vez de elegir
-  // un lote ya existente, se captura su ubicación (según use manzana/lote o
-  // colindancias) y se crea u obtiene el lote sin exigirle título vigente.
+  // Panteones antiguos sin título de propiedad: en lugar de elegir un lote
+  // existente se captura su ubicación (manzana/lote o colindancias) y se crea u
+  // obtiene el lote sin exigir título vigente.
   sinTituloRegistrado: z.boolean().default(false),
   panteonId: z.coerce.number().int().optional(),
   seccion: z.string().optional(),
@@ -132,10 +133,10 @@ const nuevoPermisoSchema = z.object({
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-// Folio correlativo por tipo de trámite que continúa la numeración existente.
-// Toma el número más alto usado en folios de ese tipo (incluye los migrados
-// LEG-SEP-000XX, que se ignoran porque su sufijo no es puramente numérico) y
-// suma 1. Ej: SEP-0066, SEP-0067, EXH-0001. Puerto exacto de GenerarFolioPermiso.
+// Folio correlativo por tipo de trámite, a continuación de la numeración
+// existente. Toma el número más alto usado en folios de ese tipo y suma 1
+// (SEP-0066, SEP-0067, EXH-0001). Los migrados LEG-SEP-000XX se ignoran porque
+// su sufijo no es numérico. Equivale a GenerarFolioPermiso del original.
 async function generarFolioPermiso(clave: string, tipoTramiteId: number, tx: Tx): Promise<string> {
   const permisos = await tx.permiso.findMany({
     where: { tipoTramiteId },
@@ -166,9 +167,9 @@ function ubicacionLote(lote: { claveLegado: string | null; numeroManzana: string
 
 // Al exhumar, los restos salen del lote. En fosa común eso lo deja libre para la
 // siguiente persona no reclamada; un lote particular sigue siendo de su titular
-// aunque quede vacío, así que NO se marca como disponible. Si el difunto tenía un
-// reconocimiento pendiente, se enlaza con este permiso para cerrar el ciclo
-// "no reclamado -> identificado -> exhumado". Puerto exacto de RegistrarExhumacionEnLote.
+// aunque quede vacío, por lo que no se marca como disponible. Si el difunto tenía
+// un reconocimiento pendiente, se enlaza con este permiso (no reclamado ->
+// identificado -> exhumado). Equivale a RegistrarExhumacionEnLote del original.
 async function registrarExhumacionEnLote(permiso: Permiso, usuarioId: number, tx: Tx, ip?: string): Promise<void> {
   if (!permiso.loteId) return;
 
@@ -179,9 +180,9 @@ async function registrarExhumacionEnLote(permiso: Permiso, usuarioId: number, tx
     await tx.lote.update({ where: { loteId: lote.loteId }, data: { estado: "DISPONIBLE" } });
   }
 
-  // Lo normal es encontrarlo por difunto, porque el permiso ya se enlaza al
-  // expediente existente. La búsqueda por lote queda de red: cubre el caso en
-  // que el capturista escribió el nombre en vez de enlazarlo.
+  // Normalmente se encuentra por difunto, porque el permiso ya se enlaza al
+  // expediente existente. La búsqueda por lote cubre el caso en que el capturista
+  // escribió el nombre en lugar de enlazarlo.
   let rec = permiso.fallecidoId
     ? await tx.reconocimiento.findFirst({
         where: { fallecidoId: permiso.fallecidoId, permisoExhumacionId: null },
@@ -214,9 +215,9 @@ async function registrarExhumacionEnLote(permiso: Permiso, usuarioId: number, tx
   );
 }
 
-// Marca el lote como ocupado al sepultar o depositar cenizas. Sólo deja rastro
-// en bitácora cuando el estado de verdad cambió: casi todos los lotes ya están
-// ocupados y registrarlo siempre sería puro ruido. Puerto exacto de RegistrarOcupacionDeLote.
+// Marca el lote como ocupado al sepultar o depositar cenizas. Solo registra en
+// bitácora cuando el estado realmente cambia, porque casi todos los lotes ya
+// están ocupados. Equivale a RegistrarOcupacionDeLote del original.
 async function registrarOcupacionDeLote(permiso: Permiso, usuarioId: number, tx: Tx, ip?: string): Promise<void> {
   if (!permiso.loteId) return;
 
@@ -247,12 +248,11 @@ type UbicacionSinTitulo = {
   colindanciaOeste?: string;
 };
 
-// Panteones antiguos que nunca tuvieron título de propiedad registrado: en
-// vez de buscar un lote existente (que exige título vigente o fosa común),
-// se captura su ubicación tal como la use ese panteón y se obtiene u origina
-// el lote al vuelo. Los de colindancias siempre se crean nuevos -- no tienen
-// un número de lote que el capturista conozca de antemano para buscarlo, es
-// un consecutivo interno (mismo criterio que TitulosController.Nuevo).
+// Panteones antiguos sin título de propiedad registrado: en lugar de buscar un
+// lote existente (que exige título vigente o fosa común), se captura la
+// ubicación según use el panteón y se obtiene o crea el lote. En los de
+// colindancias el lote siempre es nuevo, con un consecutivo interno (mismo
+// criterio que TitulosController.Nuevo).
 async function resolverLoteSinTitulo(vm: UbicacionSinTitulo, tx: Tx): Promise<{ loteId: number } | { error: string }> {
   if (!vm.panteonId) return { error: "Selecciona el panteón." };
   const panteon = await tx.panteon.findUnique({ where: { panteonId: vm.panteonId } });
@@ -345,10 +345,9 @@ permisosRouter.post(
           },
         });
 
-        // Si el capturista eligió un expediente existente se reutiliza. Antes se
-        // creaba siempre un difunto nuevo, lo que dejaba huérfano al registro de no
-        // reclamado y salía sin lote en el reporte de Fiscalía -- es el bug que
-        // motivó todo este bloque, no simplificar de vuelta a "siempre crear".
+        // Si el capturista eligió un expediente existente se reutiliza; crear siempre
+        // un difunto nuevo dejaba huérfano el registro de no reclamado y sin lote en el
+        // reporte de Fiscalía.
         let fallecido = vm.fallecidoId
           ? await tx.fallecido.findUnique({ where: { fallecidoId: vm.fallecidoId } })
           : null;
@@ -383,7 +382,7 @@ permisosRouter.post(
             solicitanteId: solicitante.personaId,
             fallecidoId: fallecido?.fallecidoId,
             folio,
-            fechaSolicitud: new Date(new Date().toDateString()),
+            fechaSolicitud: hoyLocal(),
             usuarioRegistroId: usuarioId,
             estado: "APROBADO",
             motivoExhumacion: vm.motivoExhumacion,
@@ -403,9 +402,8 @@ permisosRouter.post(
           await registrarExhumacionEnLote(permiso, usuarioId, tx, req.ip);
         }
 
-        // Sepultar o depositar cenizas vuelve a ocupar el lote. Sin esto, un lote de
-        // fosa común liberado seguía anunciándose como disponible aunque ya se
-        // hubiera vuelto a usar.
+        // Sepultar o depositar cenizas vuelve a ocupar el lote; sin esto un lote de
+        // fosa común liberado seguiría apareciendo como disponible.
         if (vm.tipoClave === "SEP" || vm.tipoClave === "CEN") {
           await registrarOcupacionDeLote(permiso, usuarioId, tx, req.ip);
         }
@@ -431,10 +429,10 @@ permisosRouter.post(
   })
 );
 
-// Puerto exacto de BusquedaController.EditarPermiso: el solicitante siempre
-// se actualiza; el fallecido solo si el permiso ya tiene uno enlazado y
-// mandaron un nombre; los campos del trámite se actualizan sin condición
-// (los que no aplican al tipo simplemente quedan vacíos).
+// Equivale a BusquedaController.EditarPermiso: el solicitante siempre se
+// actualiza; el fallecido solo si el permiso ya tiene uno enlazado y se manda un
+// nombre; los campos del trámite se actualizan sin condición (los que no aplican
+// al tipo quedan vacíos).
 const editarPermisoSchema = z.object({
   nombreSolicitante: z.string().min(1, "El nombre del solicitante es requerido"),
   telefonoSolicitante: z.string().optional(),
@@ -466,10 +464,9 @@ permisosRouter.put(
     }
     const vm = parseo.data;
 
-    // El original .NET confirma solicitante + fallecido + permiso con un solo
-    // SaveChangesAsync; partirlo en 3 updates sueltos podía guardar, por
-    // ejemplo, la corrección del fallecido pero no el cambio de estado del
-    // permiso si el último paso fallaba, sin que el usuario lo notara.
+    // El original confirma solicitante, fallecido y permiso con un solo
+    // SaveChangesAsync; aquí van en una transacción para que una falla intermedia no
+    // deje el expediente a medias.
     await prisma.$transaction(async (tx) => {
       await tx.persona.update({
         where: { personaId: permiso.solicitanteId },
@@ -513,8 +510,8 @@ permisosRouter.put(
   })
 );
 
-// Puerto exacto de BusquedaController.EliminarPermiso: nunca borra la fila,
-// solo la marca CANCELADO -- conserva el folio y el historial.
+// Equivale a BusquedaController.EliminarPermiso: no borra la fila, la marca
+// CANCELADO y conserva folio e historial.
 permisosRouter.post(
   "/:id/cancelar",
   asyncHandler(async (req, res) => {

@@ -25,11 +25,10 @@ export function firmarToken(payload: TokenPayload): string {
 }
 
 export function cookieOpciones(req: Request) {
-  // En local, frontend y backend comparten origen (localhost) y no hay HTTPS,
-  // así que "strict" + secure dinámico basta -- igual que el .NET original.
-  // En producción viven en dominios distintos (GitHub Pages + Render), y un
-  // navegador nunca manda una cookie "strict" entre sitios distintos, sin
-  // importar el CORS: hace falta "none", que a su vez exige Secure.
+  // En local, frontend y backend comparten origen y no hay HTTPS, así que basta
+  // "strict" con secure dinámico (igual que el original). En producción están en
+  // dominios distintos y un navegador no envía cookies "strict" entre sitios
+  // distintos, sin importar el CORS: se requiere "none", que exige Secure.
   if (env.isProduction) {
     return {
       httpOnly: true,
@@ -47,11 +46,10 @@ export function cookieOpciones(req: Request) {
 }
 
 export function requiereAuth(req: Request, res: Response, next: NextFunction) {
-  // El header gana: es lo que manda el frontend real (github.io -> onrender.com)
-  // desde que se descubrió que varios navegadores (Brave, Safari y cada vez más
-  // Chrome) bloquean por privacidad la cookie entre sitios distintos sin
-  // importar cómo se configure SameSite/Secure. La cookie queda como respaldo
-  // para cuando frontend y backend sí comparten origen (desarrollo local).
+  // El header tiene prioridad: es lo que envía el frontend en producción, porque
+  // varios navegadores (Brave, Safari y cada vez más Chrome) bloquean la cookie
+  // entre sitios distintos sin importar SameSite/Secure. La cookie queda como
+  // respaldo cuando frontend y backend comparten origen (desarrollo local).
   const encabezado = req.headers.authorization;
   const tokenHeader = encabezado?.startsWith("Bearer ") ? encabezado.slice(7) : undefined;
   const token = tokenHeader ?? req.cookies?.[COOKIE_NAME];
@@ -66,12 +64,11 @@ export function requiereAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-// El .NET original nunca llegó a restringir nada por rol (solo exigía sesión
-// iniciada) -- los 4 roles existían solo como descripción en la base, sin
-// ningún permiso real detrás. "Consulta" se documenta como "sin posibilidad
-// de edición", así que se hace cumplir aquí: puede hacer cualquier GET, pero
-// ningún método que escriba. Se aplica junto con requiereAuth a nivel de
-// router para que ningún endpoint de escritura se quede afuera por descuido.
+// El original nunca restringió nada por rol (solo exigía sesión iniciada): los 4
+// roles existían solo como descripción en la base. "Consulta" se documenta como
+// "sin posibilidad de edición", así que aquí se hace cumplir: puede hacer
+// cualquier GET pero ningún método que escriba. Se aplica junto con requiereAuth
+// a nivel de router para que ningún endpoint de escritura quede sin proteger.
 export function requiereEscritura(req: Request, res: Response, next: NextFunction) {
   if (req.usuario?.rol === "Consulta" && req.method !== "GET") {
     return res.status(403).json({ error: "Tu rol (Consulta) solo tiene permiso de lectura." });

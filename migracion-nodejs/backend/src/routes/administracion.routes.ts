@@ -7,11 +7,10 @@ import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { invalidarCacheApariencia } from "../lib/apariencia";
 
-// Alta y mantenimiento de los catálogos que antes solo se tocaban con
-// scripts (seed.ts, separar-cipreses.ts): Panteones, Secciones y Agentes del
-// Ministerio Público. Nada aquí se borra físicamente -- igual que Usuarios,
-// solo activar/desactivar, para que el histórico (títulos, reportes) nunca
-// se quede con una referencia rota.
+// Alta y mantenimiento de los catálogos de Panteones, Secciones y Agentes del
+// Ministerio Público. Nada se borra físicamente, igual que en Usuarios: solo se
+// activa o desactiva, para que títulos y reportes históricos no queden con una
+// referencia rota.
 export const administracionRouter = Router();
 administracionRouter.use(requiereAuth, requiereRol("Administrador"));
 
@@ -20,7 +19,7 @@ function str(v: unknown): string | undefined {
   return s === "" ? undefined : s;
 }
 
-// ═══════════ PANTEONES ═══════════
+// Panteones
 
 administracionRouter.get(
   "/panteones",
@@ -116,11 +115,10 @@ administracionRouter.post(
   })
 );
 
-// ═══════════ SECCIONES ═══════════
+// Secciones
 // Catálogo por panteón (ver Seccion en schema.prisma). Solo alimenta las
-// sugerencias / el selector al dar de alta un lote nuevo -- Lote.seccion
-// sigue siendo el texto libre de siempre, así que nada de esto toca lotes
-// ya existentes.
+// sugerencias al dar de alta un lote; Lote.seccion sigue siendo texto libre, así
+// que no afecta lotes existentes.
 
 administracionRouter.get(
   "/secciones",
@@ -236,7 +234,7 @@ administracionRouter.post(
   })
 );
 
-// ═══════════ AGENTES DEL MINISTERIO PÚBLICO ═══════════
+// Agentes del Ministerio Público
 
 administracionRouter.get(
   "/agentes-mp",
@@ -327,9 +325,9 @@ administracionRouter.post(
   })
 );
 
-// ═══════════ APARIENCIA ═══════════
-// La lectura (GET /api/apariencia) es pública -- ver apariencia.routes.ts --
-// solo cambiarla requiere ser Administrador.
+// Apariencia
+// La lectura (GET /api/apariencia) es pública (ver apariencia.routes.ts); solo
+// cambiarla requiere ser Administrador.
 
 const colorHexSchema = z
   .string()
@@ -367,9 +365,9 @@ administracionRouter.put(
   })
 );
 
-// ═══════════ SÍNDICO MUNICIPAL ═══════════
-// Nombre de quien firma títulos, permisos y cesiones. Antes vivía copiado a
-// mano en 3 plantillas; ahora es un solo valor que las 3 comparten.
+// Síndico municipal
+// Nombre de quien firma títulos, permisos y cesiones; lo comparten las tres
+// plantillas.
 
 const sindicoSchema = z.object({
   nombreSindico: z.string().trim().min(1, "El nombre es obligatorio.").max(200),
@@ -402,10 +400,10 @@ administracionRouter.put(
   })
 );
 
-// ═══════════ LOGOS ═══════════
-// Se reciben como data URI base64 (no multipart/form-data) para no meter
-// multer solo por esto -- son dos archivos chicos. limit propio en vez de
-// subir el límite global de JSON, que el resto de la API no necesita.
+// Logos
+// Se reciben como data URI base64 y no como multipart/form-data para no
+// agregar multer por dos archivos pequeños. El límite se define en la ruta en
+// lugar de subir el límite global de JSON.
 const cargaLogoSchema = z.object({
   dataUri: z
     .string()

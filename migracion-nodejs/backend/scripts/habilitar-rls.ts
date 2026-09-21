@@ -1,19 +1,18 @@
-// Enciende Row Level Security en todas las tablas del esquema public.
+// Activa Row Level Security en todas las tablas del esquema public.
 //
-// Por que hace falta: Supabase le concede SELECT a los roles `anon` y
-// `authenticated` sobre todo lo que vive en `public`. Esos roles son los que
-// atiende la API REST del proyecto (PostgREST), y la llave `anon` es, por
-// diseno, una llave publicable -- no un secreto. Con RLS apagado, cualquiera
-// que tenga esa llave puede leer `fallecidos`, `personas` o `usuarios`
-// enteras desde internet. Con RLS encendido y sin politicas, esos roles no
-// ven ni una fila.
+// Motivo: Supabase concede SELECT a los roles `anon` y `authenticated` sobre lo
+// que vive en `public`. Esos roles son los que atiende la API REST del proyecto
+// (PostgREST) y la llave `anon` es publicable, no un secreto. Con RLS apagado,
+// cualquiera con esa llave podría leer tablas completas (`fallecidos`,
+// `personas`, `usuarios`). Con RLS activo y sin políticas, esos roles no ven
+// ninguna fila.
 //
-// Por que no rompe la aplicacion: la API se conecta con el rol `postgres`,
-// que tiene rolbypassrls = true, asi que ignora RLS por completo. Lo mismo
-// aplica a `service_role` y a las migraciones de Prisma.
+// No afecta a la aplicación: la API se conecta con el rol `postgres`, que tiene
+// rolbypassrls = true. Lo mismo aplica a `service_role` y a las migraciones de
+// Prisma.
 //
-// Es idempotente y conviene volver a correrlo despues de agregar tablas
-// nuevas (`prisma db push` las crea con RLS apagado).
+// Es idempotente y hay que volver a ejecutarlo al agregar tablas nuevas, porque
+// las migraciones de Prisma las crean con RLS apagado. Solo aplica a Supabase.
 //
 // Uso: npx tsx scripts/habilitar-rls.ts [--dry-run]
 
@@ -50,8 +49,8 @@ async function main() {
   console.log(`${dryRun ? "[dry-run] " : ""}Se enciende RLS en: ${apagadas.map((t) => t.tabla).join(", ")}`);
   if (dryRun) return;
 
-  // FORCE ROW LEVEL SECURITY queda deliberadamente fuera: eso aplicaria las
-  // politicas tambien al dueno de la tabla y dejaria a la API sin acceso.
+  // No se usa FORCE ROW LEVEL SECURITY: aplicaría las políticas también al dueño
+  // de la tabla y la API perdería acceso.
   for (const t of apagadas) {
     await prisma.$executeRawUnsafe(`alter table public."${t.tabla}" enable row level security`);
   }

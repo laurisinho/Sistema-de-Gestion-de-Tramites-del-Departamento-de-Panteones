@@ -1,23 +1,20 @@
 import type { NextFunction, Request, Response } from "express";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 
-// Freno de fuerza bruta para /auth/login. Sin esto nada impide probar
-// contraseñas en serie contra las cuentas del departamento.
+// Freno de fuerza bruta para /auth/login.
 //
-// Se cuenta por dos llaves a la vez, porque cada una tapa un hueco de la otra:
+// Se cuenta por dos llaves, porque cada una cubre lo que la otra no:
 //
-//   - Por usuario: protege una cuenta concreta aunque el atacante cambie de
-//     IP (una botnet reparte los intentos entre cientos de direcciones).
-//   - Por IP: frena el barrido de muchos usuarios distintos desde un mismo
-//     equipo, que al contarse por usuario nunca llegaría al tope.
+//   - Por usuario: protege una cuenta aunque el atacante cambie de IP.
+//   - Por IP: frena el barrido de muchos usuarios desde un mismo equipo, que
+//     por usuario nunca llegaría al tope.
 //
-// El tope por IP es holgado a propósito: el departamento sale a internet por
-// una sola dirección, así que un límite corto dejaría fuera a todo el
-// personal por culpa de un compañero que se equivocó tres veces.
+// El tope por IP es alto porque el departamento sale a internet por una sola
+// dirección: un límite bajo dejaría fuera a todo el personal por los errores de
+// una persona.
 //
-// El estado vive en memoria del proceso. Alcanza porque la API corre en una
-// sola instancia; si algún día se escala a varias, cada una llevaría su
-// propia cuenta y el tope real se multiplicaría por el número de instancias.
+// El estado vive en memoria del proceso, lo que basta mientras la API corra en
+// una sola instancia; con varias, cada una llevaría su propia cuenta.
 
 const VENTANA_MS = 15 * 60 * 1000;
 const BLOQUEO_MS = 15 * 60 * 1000;
@@ -35,18 +32,16 @@ interface Intento {
 const porUsuario = new Map<string, Intento>();
 const porIp = new Map<string, Intento>();
 
-/** Misma cuenta escrita distinto no debe estrenar contador. */
+/** Normaliza el nombre de usuario para que las variantes de escritura compartan contador. */
 function claveUsuario(nombreUsuario: unknown): string {
   return typeof nombreUsuario === "string" ? nombreUsuario.trim().toLowerCase() : "";
 }
 
 /**
- * Solo cuenta por IP cuando la dirección identifica de verdad a quien llama.
- * Si sale una privada o de loopback es que no se está viendo al cliente sino
- * a un proxy intermedio, y entonces todo el departamento caería en el mismo
- * cubo: bastaría con que una persona fallara 30 veces para dejar fuera a los
- * demás. En ese caso se prefiere quedarse solo con el límite por usuario,
- * que sigue protegiendo cada cuenta.
+ * Solo cuenta por IP cuando la dirección identifica a quien llama. Si es
+ * privada o de loopback, lo que se ve es un proxy intermedio y todo el
+ * departamento caería en el mismo cubo, así que en ese caso se usa solo el
+ * límite por usuario.
  */
 function ipUtilizable(ip: string | undefined): ip is string {
   if (!ip) return false;
@@ -85,7 +80,7 @@ function sumarFallo(mapa: Map<string, Intento>, clave: string, max: number, ahor
   return false;
 }
 
-/** Evita que los mapas crezcan sin fin con llaves que ya caducaron. */
+/** Elimina las llaves caducadas para que los mapas no crezcan indefinidamente. */
 function purgar(ahora: number): void {
   for (const mapa of [porUsuario, porIp]) {
     for (const [clave, intento] of mapa) {
@@ -138,8 +133,8 @@ export async function registrarFalloLogin(nombreUsuario: unknown, ip: string | u
   const bloqueoUsuario = usuario ? sumarFallo(porUsuario, usuario, MAX_POR_USUARIO, ahora) : false;
   const bloqueoIp = ipUtilizable(ip) ? sumarFallo(porIp, ip, MAX_POR_IP, ahora) : false;
 
-  // Solo se asienta el bloqueo, no cada intento: durante un ataque, registrar
-  // uno por uno inundaría la bitácora con miles de renglones inútiles.
+  // Solo se registra el bloqueo, no cada intento: durante un ataque se llenaría
+  // la bitácora.
   if (bloqueoUsuario) {
     await registrarBitacora(
       null,
@@ -163,9 +158,9 @@ export async function registrarFalloLogin(nombreUsuario: unknown, ip: string | u
 }
 
 /**
- * Se llama al entrar bien: quien recuerda su contraseña no debe arrastrar los
- * fallos previos. El contador por IP no se limpia, para que un acierto suelto
- * no borre el rastro de un barrido en curso.
+ * Se llama al iniciar sesión correctamente: limpia los fallos previos de esa
+ * cuenta. El contador por IP no se limpia para que un acierto suelto no borre el
+ * rastro de un barrido en curso.
  */
 export function limpiarFallosLogin(nombreUsuario: unknown): void {
   const usuario = claveUsuario(nombreUsuario);

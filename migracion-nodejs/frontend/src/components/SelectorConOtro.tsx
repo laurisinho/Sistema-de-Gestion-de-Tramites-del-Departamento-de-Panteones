@@ -9,11 +9,11 @@ interface Props {
   placeholderOtro?: string;
 }
 
-// <select> con las opciones ya dadas de alta en Administración, más "Otro"
-// para cuando no está en la lista -- evita typos/duplicados en los nombres
-// más comunes sin bloquear nunca uno nuevo. Si el valor que ya trae el
-// campo (p. ej. al editar un registro viejo) no está entre las opciones,
-// arranca directo en modo "Otro" para no perderlo.
+// <select> con las opciones dadas de alta en Administración, más "Otro" para
+// cuando no está en la lista: evita errores de captura y duplicados en los
+// nombres más comunes sin bloquear uno nuevo. Si el valor que ya trae el campo
+// (p. ej. al editar un registro viejo) no está entre las opciones, arranca en
+// modo "Otro" para no perderlo.
 export function SelectorConOtro({ value, onChange, opciones, placeholderOtro = "Especifica..." }: Props) {
   const [modoOtro, setModoOtro] = useState(false);
 

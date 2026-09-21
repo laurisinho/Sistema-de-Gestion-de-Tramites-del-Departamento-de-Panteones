@@ -1,6 +1,6 @@
 .shell { display: flex; min-height: 100vh; }
 
-/* ═══════════ SIDEBAR ═══════════ */
+/* Sidebar */
 .shell-sidebar {
   position: fixed;
   top: 0; left: 0;
@@ -108,7 +108,7 @@
 .shell-link-sub { padding-left: 2.7rem; font-size: 0.79rem; font-weight: 400; }
 .shell-link-sub.activo { font-weight: 600; }
 
-/* ── Grupo colapsable ── */
+/* Grupo colapsable */
 .nav-group-head {
   display: flex;
   align-items: center;
@@ -166,7 +166,7 @@
   letter-spacing: 0.03em;
 }
 
-/* ═══════════ MAIN / TOPBAR ═══════════ */
+/* Main y topbar */
 .shell-main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .shell-topbar {
   background: linear-gradient(90deg, var(--guinda) 0%, var(--guinda-dark) 100%);
@@ -212,7 +212,7 @@ html.dark .shell-topbar { background: linear-gradient(90deg, var(--guinda-sombra
 
 .shell-content { padding: 1.6rem 1.75rem 2.2rem; flex: 1; width: 100%; max-width: 1480px; margin: 0 auto; }
 
-/* ═══════════ PAGE HEADER ═══════════ */
+/* Encabezado de página */
 .page-header {
   margin-bottom: 1.3rem;
   padding-bottom: 0.65rem;
@@ -244,7 +244,7 @@ html.dark .shell-topbar { background: linear-gradient(90deg, var(--guinda-sombra
 html.dark .page-header h2 { color: #d9d4dc; }
 .page-header-acciones { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-/* ═══════════ CARD ═══════════ */
+/* Tarjetas */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -268,11 +268,10 @@ html.dark .page-header h2 { color: #d9d4dc; }
   justify-content: space-between;
   gap: 10px;
 }
-/* Sin esto, un título largo (p. ej. "Permisos de Septiembre") se
-   partía en dos líneas cuando la tarjeta le tocaba angosta, dejando ese
-   encabezado más alto que el de al lado y todo el contenido de abajo
-   desnivelado entre tarjetas vecinas. min-width:0 es necesario para que
-   el ellipsis funcione dentro de un hijo flex. */
+/* Evita que un título largo (p. ej. "Permisos de Septiembre") se parta en dos
+   líneas cuando la tarjeta es angosta, lo que desnivelaría las tarjetas
+   vecinas. min-width:0 es necesario para que el ellipsis funcione dentro de un
+   hijo flex. */
 .card-header-guinda > span:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -285,7 +284,7 @@ html.dark .page-header h2 { color: #d9d4dc; }
 .card-body { padding: 1.1rem 1.2rem; }
 .card-body.p-0 { padding: 0; }
 
-/* ═══════════ TABLES ═══════════ */
+/* Tablas */
 .tabla-contenedor { width: 100%; overflow-x: auto; }
 .tabla { width: 100%; border-collapse: collapse; background: transparent; font-size: 13.5px; color: var(--text-base); }
 .tabla th, .tabla td { text-align: left; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
@@ -305,7 +304,7 @@ html.dark .page-header h2 { color: #d9d4dc; }
 .tabla tbody tr { transition: background 0.1s ease; }
 .tabla tbody tr:hover td { background: var(--hover-row); }
 
-/* ═══════════ FILTERS / FORMS ═══════════ */
+/* Filtros y formularios */
 .barra-filtros { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
 .barra-filtros input, .barra-filtros select {
   padding: 0.48rem 0.8rem; border: 1px solid var(--input-border); border-radius: 9px; font-size: 13.5px; background: var(--input-bg); color: var(--text-base);
@@ -313,9 +312,9 @@ html.dark .page-header h2 { color: #d9d4dc; }
 }
 .barra-filtros input:focus, .barra-filtros select:focus { outline: none; border-color: var(--guinda); box-shadow: 0 0 0 4px var(--ring); }
 
-/* Buscadores con varios campos (Títulos, Permisos): renglones fijos en vez de
-   una sola fila que se parte donde caiga. Los campos .crece se estiran para
-   que el borde derecho de cada renglón quede parejo. */
+/* Buscadores con varios campos (Títulos, Permisos): renglones fijos en lugar de
+   una sola fila que se parte donde caiga. Los campos .crece se estiran para que
+   el borde derecho de cada renglón quede parejo. */
 .barra-filtros.en-filas { flex-direction: column; align-items: stretch; }
 .filtros-fila { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .filtros-fila > .crece { flex: 1 1 200px; min-width: 0; }
@@ -331,9 +330,9 @@ html.dark .page-header h2 { color: #d9d4dc; }
 .form-campo input:focus, .form-campo select:focus, .form-campo textarea:focus { outline: none; border-color: var(--guinda); box-shadow: 0 0 0 4px var(--ring); }
 .form-campo.span2 { grid-column: 1 / -1; }
 
-/* Campo de solo-lectura que muestra el resultado de una búsqueda (expediente
-   enlazado, lote seleccionado): distinto de un input real para que se note
-   que no se escribe directamente ahí. */
+/* Campo de solo lectura que muestra el resultado de una búsqueda (expediente
+   enlazado, lote seleccionado): se distingue de un input real para que se note
+   que no se escribe ahí. */
 .campo-resultado {
   flex: 1; display: flex; align-items: center;
   padding: 0.48rem 0.8rem; border: 1px solid var(--input-border); border-radius: 9px;
@@ -344,14 +343,14 @@ html.dark .page-header h2 { color: #d9d4dc; }
 html.dark .form-campo input::placeholder, html.dark .barra-filtros input::placeholder { color: #6b6475; }
 
 /* Grid de tarjetas para pantallas de detalle: las tarjetas de una misma fila
-   quedan a la misma altura (equivalente al row/col-md-6/h-100 de Bootstrap
-   del sistema original), evitando huecos como el que dejaba el flex anidado. */
+   quedan a la misma altura (equivalente a row/col-md-6/h-100 de Bootstrap en el
+   sistema original), evitando huecos como los del flex anidado. */
 .detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
 .detalle-grid > .card { margin: 0; }
 .detalle-grid .span2 { grid-column: 1 / -1; }
 @media (max-width: 860px) { .detalle-grid { grid-template-columns: 1fr; } }
 
-/* ═══════════ BUTTONS ═══════════ */
+/* Botones */
 .boton {
   background: linear-gradient(160deg, var(--guinda-light) -20%, var(--guinda) 60%);
   color: #fff; border: none; padding: 0.5rem 1.1rem; border-radius: 9px;
@@ -375,7 +374,7 @@ html.dark .boton { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
 .boton-secundario:active { transform: translateY(1px); }
 html.dark .boton-secundario { border-color: var(--border); background: transparent; }
 
-/* Variante para acciones destructivas (cancelar/eliminar) — se distingue en rojo, igual que btn-outline-danger del sistema original */
+/* Variante para acciones destructivas (cancelar/eliminar), en rojo como btn-outline-danger del sistema original */
 .boton-peligro {
   background: transparent; color: #b02a37; border: 1px solid #e3a5ac; padding: 0.5rem 1.1rem; border-radius: 9px;
   cursor: pointer; font-size: 13.5px; font-weight: 600;
@@ -400,7 +399,7 @@ html.dark .boton-peligro:hover:not(:disabled) { background: #7f1d1d; color: #fff
 .boton-peligro-solido:active:not(:disabled) { transform: translateY(1px); }
 .boton-peligro-solido:disabled { opacity: 0.6; cursor: default; }
 
-/* ═══════════ TARJETAS DE REPORTE ═══════════ */
+/* Tarjetas de reporte */
 .rep-card {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: 14px; box-shadow: var(--shadow-card); height: 100%;
@@ -410,8 +409,8 @@ html.dark .boton-peligro:hover:not(:disabled) { background: #7f1d1d; color: #fff
 .rep-titulo { font-size: 1.02rem; font-weight: 700; color: var(--text-base); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
 .rep-desc { font-size: 0.85rem; color: var(--text-sub); margin: 0.35rem 0 0; line-height: 1.5; }
 .rep-body { padding: 0.5rem 1.25rem 1.25rem; margin-top: auto; }
-/* Fila de botones aparte de los filtros: mantiene alineadas las tarjetas que
-   van lado a lado aunque cada una muestre distinto número de filtros. */
+/* Fila de botones aparte de los filtros: mantiene alineadas las tarjetas que van
+   lado a lado aunque cada una tenga distinto número de filtros. */
 .rep-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .rep-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .rep-chip {
@@ -423,7 +422,7 @@ html.dark .rep-chip { background: rgba(192, 74, 99, 0.18); color: #e493a5; }
 .rep-chip.alerta { background: rgba(239, 68, 68, 0.13); color: #b02a37; }
 html.dark .rep-chip.alerta { background: rgba(239, 68, 68, 0.16); color: #f79ba3; }
 
-/* ═══════════ MODAL DE CONFIRMACIÓN ═══════════ */
+/* Modal de confirmación */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(20, 8, 13, 0.5);
   display: flex; align-items: center; justify-content: center;
@@ -460,7 +459,7 @@ html.dark .rep-chip.alerta { background: rgba(239, 68, 68, 0.16); color: #f79ba3
 }
 .tabla-acciones { display: flex; gap: 4px; flex-wrap: nowrap; }
 
-/* ═══════════ BADGES ═══════════ */
+/* Badges */
 .badge { font-weight: 600; letter-spacing: 0.015em; padding: 0.32em 0.7em; border-radius: 20px; font-size: 12px; display: inline-block; white-space: nowrap; }
 .badge-guinda { background: rgba(107, 18, 41, 0.1); color: var(--guinda); border: 1px solid rgba(107, 18, 41, 0.16); }
 html.dark .badge-guinda { background: rgba(176, 58, 84, 0.16); color: #e493a5; border-color: rgba(176, 58, 84, 0.3); }
@@ -475,7 +474,7 @@ html.dark .badge-warning { background: rgba(245, 180, 0, 0.13); color: #f0ce7a; 
 html.dark .badge-info { background: rgba(56, 189, 248, 0.13); color: #85d3f7; }
 html.dark .badge-secondary { background: rgba(255, 255, 255, 0.08); color: #a49aa4; }
 
-/* ═══════════ ALERTS ═══════════ */
+/* Alertas */
 .aviso-error, .aviso-exito, .aviso-advertencia, .aviso-info { border-radius: 11px; border: none; font-size: 0.875rem; padding: 0.65rem 1rem; border-left: 4px solid transparent; }
 .aviso-exito { background: #ebf7f0; color: #10613b; border-left-color: #2fb875; }
 .aviso-error { background: #fdefef; color: #9c2531; border-left-color: #e35d6a; }
@@ -486,7 +485,7 @@ html.dark .aviso-error { background: #290d12; color: #f5a1a9; border-left-color:
 html.dark .aviso-advertencia { background: #2a2007; color: #f0ce7a; border-left-color: #8a6207; }
 html.dark .aviso-info { background: #0d2130; color: #8ec4ec; border-left-color: #2a6da3; }
 
-/* ═══════════ TIMELINE ═══════════ */
+/* Timeline */
 .tl { list-style: none; padding: 0; margin: 0; }
 .tl-item { display: flex; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--border); }
 .tl-item:last-child { border-bottom: none; }
@@ -496,7 +495,7 @@ html.dark .aviso-info { background: #0d2130; color: #8ec4ec; border-left-color: 
 .tl-titulo { font-size: 13.5px; }
 .tl-detalle { font-size: 12.5px; color: var(--text-sub); }
 
-/* ═══════════ EXPEDIENTE DE LOTE ═══════════ */
+/* Expediente de lote */
 .exp-clave { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text-base); margin: 0; }
 .exp-sub { color: var(--text-sub); font-size: 0.9rem; }
 .exp-stats { display: flex; flex-wrap: wrap; gap: 2rem; }
@@ -550,7 +549,7 @@ html.dark .t-verde { color: #6ee7a0; }
 html.dark .t-azul { color: #85d3f7; }
 html.dark .t-gris { color: #a49aa4; }
 
-/* ═══════════ STAT CARDS (dashboard) ═══════════ */
+/* Tarjetas de estadísticas (dashboard) */
 .tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; max-width: 960px; }
 .tarjeta {
   display: flex; align-items: center; gap: 1rem;

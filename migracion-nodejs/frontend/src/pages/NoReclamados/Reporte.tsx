@@ -14,9 +14,9 @@ const TRIMESTRES = [
 ];
 
 export function NoReclamadosReporte() {
-  // El corte trimestral es el que el departamento entrega a la Fiscalía; el
-  // rango libre sirve para periodos que no caen en un trimestre cerrado.
-  // Son el mismo reporte, así que comparten tarjeta y solo cambia el periodo.
+  // El corte trimestral es el que el departamento entrega a la Fiscalía; el rango
+  // libre sirve para periodos que no caen en un trimestre cerrado. Es el mismo
+  // reporte, por eso comparten tarjeta y solo cambia el periodo.
   const [porRango, setPorRango] = useState(false);
   const [anioTrim, setAnioTrim] = useState(String(anioActual));
   const [trimestre, setTrimestre] = useState(String(trimActual));
@@ -111,8 +111,8 @@ export function NoReclamadosReporte() {
                 </>
               )}
             </div>
-            {/* Los botones van en su propia fila para que las dos tarjetas se
-                alineen igual, sin importar cuántos filtros muestre cada una. */}
+            {/* Los botones van en su propia fila para que las dos tarjetas se alineen
+                igual, sin importar cuántos filtros muestre cada una. */}
             <div className="rep-acciones">
               <BotonDescarga
                 className="boton"

@@ -15,16 +15,14 @@ function str(v: unknown): string | undefined {
 }
 
 // Buscador de lotes para llegar al expediente. Sin filtros no devuelve nada:
-// son casi 7,000 lotes y volcarlos no le sirve a nadie (igual que en el .NET original).
+// con miles de lotes, listarlos todos no sirve (igual que en el original).
 lotesRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const manzana = str(req.query.manzana);
     const lote = str(req.query.lote);
     const clave = str(req.query.clave);
-    // La sección se elige de una lista, así que se compara exacta. Antes iba
-    // mezclada con la clave en un solo campo de texto y había que escribirla
-    // de memoria, sin ver cuáles existen en el panteón.
+    // La sección se elige de una lista, por lo que se compara exacta.
     const seccion = str(req.query.seccion);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
 
@@ -32,13 +30,13 @@ lotesRouter.get(
       return res.json({ resultados: [] });
     }
 
-    // Filtros combinados con AND, cada uno en su propia entrada: si "manzana"
-    // y "clave" pisaran el mismo where.OR, uno de los dos se perdería.
+    // Filtros combinados con AND, cada uno en su entrada: si "manzana" y "clave"
+    // compartieran where.OR, uno de los dos se perdería.
     const filtros: Prisma.LoteWhereInput[] = [];
     if (panteonId) filtros.push({ panteonId });
     if (manzana) {
-      // Algunas secciones antiguas capturaron la manzana en romano (p. ej.
-      // "XVI") y otras en arábigo ("16") para el mismo número real.
+      // Hay secciones que capturaron la manzana en romano ("XVI") y otras en arábigo
+      // ("16") para el mismo número.
       filtros.push({
         OR: variantesManzana(manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
       });
@@ -56,13 +54,12 @@ lotesRouter.get(
       },
     });
 
-    // Coincide como "exacta" también cuando son la misma manzana en romano y
-    // en arábigo (p. ej. la búsqueda "16" contra un lote guardado como "XVI").
+    // También es coincidencia exacta cuando es la misma manzana en romano y en
+    // arábigo (la búsqueda "16" contra un lote guardado como "XVI").
     const igual = (a: string, b?: string) => !!b && variantesManzana(a).some((v) => v.toLowerCase() === b.toLowerCase());
 
-    // "3" también coincide con 13, 33, 34...: la coincidencia exacta va primero.
-    // Se ordena en memoria (no en la DB) porque el total de coincidencias es
-    // acotado -- filtrar primero por manzana/lote/clave ya reduce el conjunto.
+    // "3" también coincide con 13, 33, 34...: la coincidencia exacta va primero. Se
+    // ordena en memoria porque el filtro previo ya acota el conjunto.
     const resultados = lotes
       .sort((a, b) => {
         const am = igual(a.numeroManzana, manzana) ? 0 : 1;
@@ -98,24 +95,24 @@ lotesRouter.get(
 );
 
 // Buscador de lotes para asignar en un permiso nuevo (PermisosController.BuscarLote).
-// A diferencia del buscador de expedientes de arriba, aquí solo se muestran los
-// lotes que de verdad se pueden usar: ocupados, de fosa común (donde se sepulta a
-// la siguiente persona no reclamada), o con título vigente (para que no
-// desaparezca un lote que quedó vacío pero sigue siendo de su titular).
+// A diferencia del buscador de expedientes, solo muestra lotes utilizables:
+// ocupados, de fosa común (donde se sepulta a la siguiente persona no
+// reclamada) o con título vigente (para que no desaparezca un lote vacío que
+// sigue siendo de su titular).
 lotesRouter.get(
   "/buscar",
   asyncHandler(async (req, res) => {
     const manzana = str(req.query.manzana);
     const lote = str(req.query.lote);
     const seccion = str(req.query.seccion);
-    // Titular del lote: alternativa a manzana/lote para paneones que sí los
-    // usan (a diferencia de "termino", que es la búsqueda de los panteones de
-    // colindancias -- ahí también entra el titular, pero junto con vecinos).
+    // Titular del lote: alternativa a manzana/lote para los panteones que sí los
+    // usan. "termino" es la búsqueda de los panteones de colindancias, donde también
+    // entra el titular junto con los vecinos.
     const titular = str(req.query.titular);
-    // Los panteones que usan colindancias (numeroManzana="S/N") no tienen
-    // sección ni un número de lote que el personal reconozca de memoria: ahí
-    // se busca por el titular o por el nombre de algún vecino registrado como
-    // colindancia, igual que ya hace TitulosRouter /buscar para Cesiones.
+    // Los panteones de colindancias (numeroManzana="S/N") no tienen sección ni un
+    // número de lote conocido por el personal: se busca por titular o por el nombre
+    // de un vecino registrado como colindancia, igual que /buscar en títulos para
+    // cesiones.
     const termino = str(req.query.termino);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
 
@@ -130,8 +127,8 @@ lotesRouter.get(
     if (panteonId) filtros.push({ panteonId });
     if (seccion) filtros.push(whereSeccion(seccion));
     if (manzana) {
-      // Algunas secciones antiguas capturaron la manzana en romano (p. ej.
-      // "XVI") y otras en arábigo ("16") para el mismo número real.
+      // Hay secciones que capturaron la manzana en romano ("XVI") y otras en arábigo
+      // ("16") para el mismo número.
       filtros.push({
         OR: variantesManzana(manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
       });
@@ -183,10 +180,9 @@ lotesRouter.get(
   })
 );
 
-// Quién está sepultado hoy en el lote (inhumados menos ya exhumados), en el
-// mismo formato que /fallecidos/buscar, para que al elegir el lote de una
-// EXHUMACIÓN el capturista no tenga que volver a teclear el nombre del
-// difunto que ya está enlazado a ese lote por su permiso de inhumación.
+// Quién está sepultado hoy en el lote (inhumados menos exhumados), en el mismo
+// formato que /fallecidos/buscar, para que al elegir el lote de una exhumación
+// no haya que volver a teclear el nombre del difunto ya enlazado.
 lotesRouter.get(
   "/:id/ocupantes",
   asyncHandler(async (req, res) => {
@@ -226,9 +222,9 @@ lotesRouter.get(
   })
 );
 
-// Un lote de fosa común se libera cuando se aprueba el permiso de exhumación
-// de quien lo ocupaba. Aquí se ve dónde puede sepultarse a la siguiente
-// persona no reclamada. Puerto exacto de NoReclamadosController.LotesDisponibles.
+// Un lote de fosa común se libera al aprobar el permiso de exhumación de quien
+// lo ocupaba. Aquí se ve dónde se puede sepultar a la siguiente persona no
+// reclamada. Equivale a NoReclamadosController.LotesDisponibles del original.
 lotesRouter.get(
   "/fosa-comun-disponibles",
   asyncHandler(async (req, res) => {
@@ -240,9 +236,9 @@ lotesRouter.get(
     const lotes = await prisma.lote.findMany({ where, include: { panteon: true } });
     const disponibles = lotes.filter((l) => l.estado === "DISPONIBLE");
 
-    // Historial de ocupantes previos de los lotes liberados. Sólo cuentan los
+    // Historial de ocupantes previos de los lotes liberados. Solo cuentan los
     // permisos de sepultura: el de exhumación apunta al mismo difunto y lo
-    // duplicaría en la lista.
+    // duplicaría.
     const idsDisponibles = disponibles.map((l) => l.loteId);
     const historialPermisos = await prisma.permiso.findMany({
       where: { loteId: { in: idsDisponibles }, fallecidoId: { not: null }, tipoTramite: { clave: "SEP" } },
@@ -318,9 +314,8 @@ function junta(...partes: (string | null | undefined)[]): string | null {
   return p.length ? p.join(" · ") : null;
 }
 
-// Todo lo que le ha pasado a una tumba en una sola línea de tiempo: título,
-// cesiones, inhumaciones, exhumaciones, obras e identificaciones. Sin esto hay
-// que reconstruir la historia brincando entre módulos.
+// Línea de tiempo de una tumba: título, cesiones, inhumaciones, exhumaciones,
+// obras e identificaciones, reunidos en un solo lugar.
 lotesRouter.get(
   "/:id/expediente",
   asyncHandler(async (req, res) => {
@@ -395,9 +390,8 @@ lotesRouter.get(
         fecha: limpia(p.fechaSolicitud),
         tipo: p.tipoTramite?.nombre ?? clave,
         titulo: p.fallecido?.nombreCompleto ?? p.solicitante?.nombreCompleto ?? "Sin nombre registrado",
-        // Un permiso CANCELADO no representa un movimiento real (sepultura,
-        // exhumación...) y sin esta nota se leía en la línea de tiempo igual
-        // que uno vigente -- títulos y cesiones ya marcan su estado, permisos no.
+        // Un permiso CANCELADO no es un movimiento real; se marca en la línea de tiempo
+        // para distinguirlo de uno vigente (títulos y cesiones ya muestran su estado).
         detalle: p.estado === "CANCELADO" ? junta(detalle, "Permiso cancelado") : (detalle ?? null),
         folio: p.folio,
         icono: p.estado === "CANCELADO" ? "bi-slash-circle" : icono,
@@ -419,7 +413,7 @@ lotesRouter.get(
       });
     }
 
-    // Orden narrativo: lo más viejo primero. Lo que no trae fecha va al final.
+    // De más antiguo a más reciente; lo que no trae fecha va al final.
     eventos.sort((a, b) => {
       if (a.fecha === null && b.fecha === null) return 0;
       if (a.fecha === null) return 1;

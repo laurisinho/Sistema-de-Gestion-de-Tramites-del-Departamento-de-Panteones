@@ -9,8 +9,8 @@ export type CesionParaPdf = Prisma.CesionDerechosGetPayload<{
   include: { cedente: true; cesionario: true; lote: { include: { panteon: true } } };
 }>;
 
-// El título cedido es el del cedente sobre ese lote (para mostrar folio/fecha
-// en la carta); si no se encuentra, un objeto mínimo de reserva con folio "—".
+// El título cedido es el del cedente sobre ese lote (para mostrar folio y fecha
+// en la carta); si no se encuentra, se usa un objeto de reserva con folio "—".
 export interface TituloCedidoParaPdf {
   folio: string;
   fechaEmision: Date | null;

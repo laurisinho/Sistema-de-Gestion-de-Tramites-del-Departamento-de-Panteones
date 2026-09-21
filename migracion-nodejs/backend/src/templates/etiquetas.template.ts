@@ -2,9 +2,9 @@ import { esc } from "../lib/html";
 
 const GUINDA = "#6B1229";
 
-// Medidas de la pestaña angosta que usa hoy el departamento en sus folders
-// (~9 x 1.3 cm). Si el tamaño real resulta distinto, solo hay que tocar estas
-// cuatro constantes: columnas, filas y el total por hoja se recalculan solos.
+// Medidas de la pestaña angosta que usa el departamento en sus folders
+// (~9 x 1.3 cm). Si el tamaño real es distinto, basta ajustar estas cuatro
+// constantes: columnas, filas y total por hoja se recalculan solos.
 const PAGINA_ANCHO_CM = 21.59; // Carta/Letter
 const PAGINA_ALTO_CM = 27.94;
 const MARGEN_CM = 1; // margen de seguridad: casi ninguna impresora llega al borde
@@ -58,10 +58,9 @@ export function etiquetasHtml(etiquetas: EtiquetaLote[]): string {
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, sans-serif; color: #1a1a1a; }
 
-  /* Cada .hoja mide exactamente una página Carta: el contenido que no cabe
-     en su grid no se reacomoda solo en la siguiente página (Chromium no
-     reparte una cuadrícula entre páginas), así que la paginación se hace
-     aquí, en TS, repartiendo el arreglo en tandas de ETIQUETAS_POR_HOJA. */
+  /* Cada .hoja mide una página Carta. Chromium no reparte una cuadrícula entre
+     páginas, así que la paginación se hace en TS, repartiendo el arreglo en
+     tandas de ETIQUETAS_POR_HOJA. */
   .hoja {
     width: ${PAGINA_ANCHO_CM}cm;
     height: ${PAGINA_ALTO_CM}cm;
@@ -86,8 +85,8 @@ export function etiquetasHtml(etiquetas: EtiquetaLote[]): string {
     flex-direction: column;
     justify-content: center;
   }
-  /* Una sola línea con puntos suspensivos si no cabe -- a este tamaño no hay
-     espacio para que un nombre largo se parta en dos renglones. */
+  /* Una sola línea con puntos suspensivos si no cabe: a este tamaño un nombre
+     largo no puede partirse en dos renglones. */
   .etq .clave {
     font-weight: 700;
     font-size: 10pt;

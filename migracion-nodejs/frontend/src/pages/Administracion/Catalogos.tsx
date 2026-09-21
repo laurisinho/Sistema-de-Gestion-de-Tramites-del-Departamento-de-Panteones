@@ -47,7 +47,7 @@ export function AdministracionCatalogos() {
   );
 }
 
-// ═══════════ PANTEONES ═══════════
+// Panteones
 
 function PanteonesCard() {
   const queryClient = useQueryClient();
@@ -254,7 +254,7 @@ function PanteonModal({ panteon, onCerrar, onGuardado }: { panteon: Panteon | nu
   );
 }
 
-// ═══════════ SECCIONES ═══════════
+// Secciones
 
 function SeccionesCard() {
   const queryClient = useQueryClient();
@@ -464,7 +464,7 @@ function SeccionesCard() {
   );
 }
 
-// ═══════════ AGENTES DEL MINISTERIO PÚBLICO ═══════════
+// Agentes del Ministerio Público
 
 function AgentesMpCard() {
   const queryClient = useQueryClient();

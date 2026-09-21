@@ -32,8 +32,8 @@ export function AdministracionApariencia() {
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
 
-  // Arranca en lo ya guardado; si cambia en otra pestaña/sesión, se refleja
-  // aquí también (sin pisar lo que el usuario ya esté probando a mano).
+  // Arranca con lo ya guardado; si cambia en otra pestaña o sesión se refleja
+  // aquí, sin pisar lo que el usuario esté probando.
   useEffect(() => {
     if (data) {
       setColorGuinda(data.colorGuinda);
@@ -41,8 +41,8 @@ export function AdministracionApariencia() {
     }
   }, [data]);
 
-  // Vista previa real: cambia toda la página al instante, no solo esta
-  // pantalla. Guardar es lo único que lo hace permanente para todos.
+  // Vista previa real: cambia toda la página al instante, no solo esta pantalla.
+  // Solo guardar lo hace permanente para todos.
   useEffect(() => {
     aplicarApariencia(colorGuinda, colorDorado);
   }, [colorGuinda, colorDorado]);
@@ -153,7 +153,7 @@ export function AdministracionApariencia() {
   );
 }
 
-// ═══════════ LOGOS ═══════════
+// Logos
 
 function LogoFila({ cual, etiqueta }: { cual: "nogales" | "frontera"; etiqueta: string }) {
   const [version, setVersion] = useState(0);
@@ -229,7 +229,7 @@ function LogosCard() {
   );
 }
 
-// ═══════════ SÍNDICO MUNICIPAL ═══════════
+// Síndico municipal
 
 function SindicoCard({ nombreGuardado }: { nombreGuardado: string | undefined }) {
   const queryClient = useQueryClient();

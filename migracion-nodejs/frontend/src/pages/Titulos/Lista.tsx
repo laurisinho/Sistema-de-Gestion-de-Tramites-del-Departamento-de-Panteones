@@ -126,9 +126,8 @@ export function TitulosLista() {
             style={{ marginBottom: 0 }}
             onSubmit={(e) => {
               e.preventDefault();
-              // Solo viajan los campos que se ven: los de manzana/lote/sección no
-              // deben seguir filtrando a escondidas al pasar a un panteón de
-              // colindancias, ni al revés.
+              // Solo se envían los campos visibles: los de manzana/lote/sección no deben
+              // seguir filtrando al pasar a un panteón de colindancias, ni al revés.
               setFiltros({
                 q,
                 panteonId,

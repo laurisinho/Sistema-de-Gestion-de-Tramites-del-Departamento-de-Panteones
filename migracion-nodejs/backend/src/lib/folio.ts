@@ -1,39 +1,32 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 /**
- * Arma el folio de un título nuevo siguiendo la forma que ya tienen las claves
- * de esa misma sección, en vez de imponer un formato propio.
+ * Arma el folio de un título nuevo con la forma que ya tienen las claves de su
+ * misma sección.
  *
- * Hace falta porque cada sección del departamento escribe su clave distinto y
- * no hay una regla común que valga para todas:
+ * Cada sección escribe su clave de manera distinta y no hay una regla común:
  *
  *   sección 7   mz "1"  lote "1-F"   ->  PJE-07-01-01
  *   AMP         mz "1"  lote "1-J"   ->  PJE-AMP-01-01
  *   TERRAZAS    mz "1"  lote "1"     ->  PJE-TRZA1-1
  *   ANEXO       mz "ANEXO" lote "1"  ->  PJE-ANEXO-01
  *
- * Ninguna abreviatura ("TRZA" por TERRAZAS) se deduce del nombre, así que la
- * única fuente confiable es el propio acervo: se prueban las distintas maneras
- * de escribir manzana y lote, se recorta ese sufijo de las claves existentes y
- * se toma el prefijo que más se repite.
+ * Las abreviaturas ("TRZA" por TERRAZAS) no se pueden deducir del nombre, así
+ * que se infieren de las claves existentes: se prueban distintas formas de
+ * escribir manzana y lote, se recorta ese sufijo y se toma el prefijo más
+ * frecuente.
  *
- * Se usa la moda y no el prefijo común a todas porque basta una clave mal
- * capturada -- en Jardines del Edén hay una escrita "PJE -ADEII17", con un
- * espacio de más -- para arruinar el prefijo de las 773 de su sección.
+ * Se usa la moda y no el prefijo común a todas las claves porque una sola
+ * clave mal capturada bastaría para descartar el prefijo de toda la sección.
  *
- * ADEII es la excepción: ahí conviven de verdad dos convenciones distintas
- * (un mismo lote de "Angelitos" no lleva manzana en la clave, el resto de
- * ADEII sí), y la deducción automática solo alcanzaba el 28 % de acierto.
- * En vez de adivinar, el propio departamento fijó la regla a mano -- ver
- * folioADEII más abajo.
+ * ADEII es la excepción: conviven dos convenciones y la deducción automática
+ * no es confiable, por eso tiene una regla fija (ver folioADEII).
  */
 
 const MUESTRA_MAX = 300;
-// Debajo de esto se entiende que la sección no tiene un formato que seguir.
-// Al 0.7 entra la sección 9, cuya forma canónica reproduce 44 de 58 claves y
-// el resto son capturas sueltas; queda fuera Árbol del Edén II (33 %), donde
-// de verdad conviven varias convenciones en la misma sección. ADEII no pasa
-// por aquí: tiene su propia regla fija (folioADEII).
+// Proporción mínima de claves que debe reproducir el formato inferido; por
+// debajo de ese valor se usa el formato de respaldo. ADEII no pasa por aquí
+// (ver folioADEII).
 const CONFIANZA_MINIMA = 0.7;
 
 const norm = (v: string) => v.trim().toUpperCase().replace(/\s+/g, "");
@@ -70,9 +63,9 @@ interface Plantilla {
   total: number;
 }
 
-// Un prefijo que termina en dígito casi siempre se comió el relleno de la
-// manzana: reproduce bien las manzanas 1 a 9 y se rompe en la 10. A igualdad
-// de aciertos se prefiere el que no termina en dígito, y luego el más corto.
+// Un prefijo que termina en dígito suele haber absorbido el relleno de la
+// manzana (funciona de la 1 a la 9 y falla en la 10). Ante un empate se prefiere
+// el que no termina en dígito y después el más corto.
 function esMejor(a: Plantilla, b: Plantilla): boolean {
   if (a.aciertos !== b.aciertos) return a.aciertos > b.aciertos;
   const da = /\d$/.test(a.prefijo);
@@ -112,17 +105,14 @@ function deducirPlantilla(lotes: LoteMuestra[]): Plantilla | null {
 }
 
 /**
- * Regla fija para la sección ADEII (Jardines del Edén), pedida directamente
- * por el departamento en vez de dejarla a la deducción automática:
+ * Regla fija para la sección ADEII (Jardines del Edén), definida por el
+ * departamento:
  *
- *   - Si la manzana es "Angelitos" (con sus variantes de captura --
- *     ANGELITOS, ANGELITIOS, etc.), el folio se captura tal como ya está en
- *     el acervo: PJE-ANG-{lote}, sin manzana. Ahí nunca se ha usado.
- *   - En cualquier otro caso de ADEII, el folio lleva manzana y lote:
- *     PJE-ADEII-{manzana}-{lote}, ambos como número de dos dígitos. Esto
- *     descarta el patrón antiguo que solo llevaba la manzana (486 lotes ya
- *     migrados); esos registros no se tocan, la regla es solo para los
- *     títulos que se emitan de aquí en adelante.
+ *   - Manzana "Angelitos" (incluidas sus variantes de captura): el folio es
+ *     PJE-ANG-{lote}, sin manzana.
+ *   - Cualquier otra manzana: PJE-ADEII-{manzana}-{lote}, ambos a dos dígitos.
+ *
+ * Solo aplica a los títulos nuevos; los folios ya registrados no se modifican.
  */
 function esAngelitos(manzana: string): boolean {
   return norm(manzana).includes("ANGEL");
@@ -138,12 +128,9 @@ function folioADEII(manzana: string, lote: string): string {
 }
 
 /**
- * Respaldo cuando la sección no tiene una forma reconocible: {clave}-{mz}-{lote},
- * que es el mismo formato que traía la aplicación antes y el que más se repite
- * en el acervo (todo el Jardín de los Cipreses y varias secciones del Edén).
- * No se mete el nombre de la sección porque inventaría un formato que no usa
- * nadie; si dos secciones coinciden en ubicación, el consecutivo de abajo las
- * separa igual que hoy.
+ * Formato de respaldo cuando la sección no tiene una forma reconocible:
+ * {clave}-{mz}-{lote}, el mismo que usaba el sistema anterior. Si dos secciones
+ * coinciden en ubicación, el consecutivo de generarFolio las distingue.
  */
 function folioGenerico(clavePanteon: string, manzana: string, lote: string): string {
   const limpia = (v: string) => v.trim().toUpperCase().replace(/[ /]/g, "");
@@ -152,8 +139,8 @@ function folioGenerico(clavePanteon: string, manzana: string, lote: string): str
 
 /**
  * Devuelve un folio libre para la ubicación dada. `tx` es el cliente de Prisma
- * (o el de la transacción en curso), para que la comprobación de unicidad vea
- * lo que se lleva escrito dentro de la misma transacción.
+ * (o el de la transacción en curso), de modo que la verificación de unicidad
+ * vea lo escrito dentro de la misma transacción.
  */
 export async function generarFolio(
   tx: Prisma.TransactionClient | PrismaClient,
@@ -184,8 +171,8 @@ export async function generarFolio(
     }
   }
 
-  // El folio es único en la base: si la ubicación ya tuvo título (uno
-  // cancelado, por ejemplo) se agrega un consecutivo en vez de fallar.
+  // El folio es único en la base: si la ubicación ya tuvo un título (por ejemplo,
+  // uno cancelado) se agrega un consecutivo.
   let folio = base;
   let n = 2;
   while (await tx.tituloPropiedad.findUnique({ where: { folio }, select: { folio: true } })) {
@@ -195,9 +182,9 @@ export async function generarFolio(
 }
 
 /**
- * Folio correlativo CES-####, para la cesión de derechos. Puerto exacto de
- * GenerarFolioCesion. Se movió aquí (antes vivía en cesiones.routes.ts) para
- * poder probarlo sin levantar la base ni el servidor.
+ * Folio correlativo CES-#### para la cesión de derechos. Equivale a
+ * GenerarFolioCesion del sistema original. Vive aquí para poder probarlo sin
+ * base de datos.
  */
 export async function generarFolioCesion(tx: Prisma.TransactionClient | PrismaClient): Promise<string> {
   const folios = await tx.cesionDerechos.findMany({ select: { folio: true } });

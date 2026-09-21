@@ -8,9 +8,9 @@ interface Apariencia {
   colorDorado: string;
 }
 
-// Sin UI propia: aplica los colores vigentes (o los de siempre, si nadie los
-// ha cambiado) en cuanto cargan. Va fuera de <ProtectedRoute> porque hasta
-// el login necesita pintarse con el color correcto.
+// Sin UI propia: aplica los colores vigentes (o los predeterminados, si nadie los
+// ha cambiado) al cargar. Va fuera de <ProtectedRoute> porque el login también
+// necesita el color correcto.
 export function AparienciaGlobal() {
   const { data } = useQuery({
     queryKey: ["apariencia"],

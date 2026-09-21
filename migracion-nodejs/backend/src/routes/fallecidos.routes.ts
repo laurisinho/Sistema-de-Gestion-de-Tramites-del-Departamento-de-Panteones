@@ -6,9 +6,9 @@ import { asyncHandler } from "../middleware/asyncHandler";
 export const fallecidosRouter = Router();
 fallecidosRouter.use(requiereAuth);
 
-// Difuntos ya registrados, para enlazarlos en un permiso nuevo en vez de
+// Difuntos ya registrados, para enlazarlos en un permiso nuevo en lugar de
 // duplicarlos. Busca por nombre, posible nombre, número de acta o número de
-// caso -- exactamente los mismos campos que PermisosController.BuscarFallecido.
+// caso, los mismos campos que PermisosController.BuscarFallecido.
 fallecidosRouter.get(
   "/buscar",
   asyncHandler(async (req, res) => {

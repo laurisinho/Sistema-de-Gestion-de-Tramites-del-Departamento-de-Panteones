@@ -13,11 +13,9 @@ function aDataUri(bytes: Uint8Array | null): string | null {
   return bytes ? `data:image/png;base64,${Buffer.from(bytes).toString("base64")}` : null;
 }
 
-// Cache en memoria del proceso: los títulos/permisos/cesiones se generan
-// mucho más seguido que lo que Administración cambia el logo o el síndico,
-// así que no tiene caso ir a la base en cada PDF/Excel. invalidarCache() se
-// llama justo después de cada PUT en administracion.routes.ts para que el
-// mismo proceso vea el cambio de inmediato, sin reiniciar el servidor.
+// Caché en memoria del proceso. Los documentos se generan con mucha más
+// frecuencia de lo que cambian los logos o el síndico. Se invalida tras cada
+// cambio hecho en administracion.routes.ts.
 let cache: AparienciaDocumento | null = null;
 
 export function invalidarCacheApariencia(): void {
@@ -36,8 +34,8 @@ export async function obtenerAparienciaDocumento(): Promise<AparienciaDocumento>
   return cache;
 }
 
-// Para prepararHoja() en excel.ts, que necesita el Buffer crudo (ExcelJS no
-// acepta data URIs), no el string base64 que sí usan las plantillas de PDF.
+// Para prepararHoja() en excel.ts, que necesita el Buffer (ExcelJS no acepta
+// data URIs) y no el base64 que usan las plantillas de PDF.
 export async function obtenerLogosBuffer(): Promise<{ nogales: Buffer; frontera: Buffer }> {
   const config = await prisma.configuracionApariencia.findUnique({ where: { id: 1 } });
   const deDataUri = (uri: string) => Buffer.from(uri.split(",")[1], "base64");

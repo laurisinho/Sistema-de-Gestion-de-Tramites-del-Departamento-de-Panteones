@@ -36,16 +36,16 @@ export function TituloNuevo() {
   const [enviando, setEnviando] = useState(false);
 
   // La venta del lote y el permiso de inhumación casi siempre se hacen en la
-  // misma visita, pero no siempre: también se venden lotes por anticipado. Por
-  // eso al emitir se ofrece continuar, en vez de mandar directo al permiso.
+  // misma visita, pero no siempre (también se venden lotes por anticipado). Por
+  // eso al emitir se ofrece continuar en lugar de ir directo al permiso.
   const [emitido, setEmitido] = useState<{ folio: string; loteId: number } | null>(null);
 
   const panteonSel = panteones?.find((p) => String(p.panteonId) === panteonId);
   const usaColindancias = panteonSel?.usaColindancias ?? false;
 
-  // Solo las secciones que Administración ya dio de alta para este panteón
-  // (soloCatalogo=1): a diferencia de buscar/filtrar, aquí se está creando un
-  // lote nuevo, así que no se ofrece texto libre ni lo histórico suelto.
+  // Solo las secciones que Administración dio de alta para este panteón
+  // (soloCatalogo=1): aquí se crea un lote nuevo, así que no se ofrece texto libre
+  // ni lo histórico suelto.
   const { data: secciones } = useQuery({
     queryKey: ["catalogos", "secciones", panteonId, "catalogo"],
     queryFn: () =>

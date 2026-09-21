@@ -8,17 +8,16 @@ interface Props {
   icono: string;
   children?: ReactNode;
   style?: CSSProperties;
-  // Para reportes cuyos filtros aún están incompletos (p. ej. falta una de las
-  // dos fechas de un rango): mejor no dejar pedir un archivo que saldría vacío.
+  // Para reportes cuyos filtros están incompletos (p. ej. falta una de las dos
+  // fechas de un rango): evita pedir un archivo que saldría vacío.
   disabled?: boolean;
 }
 
-// Igual que BotonImprimir pero para reportes/exportes (Excel, PDFs de
-// reportes) con ícono y texto propios de cada botón -- mismo problema de
-// fondo: un <a href> a la API no puede llevar el header Authorization.
-// nombreArchivo es obligatorio (y debe traer la extensión) porque el
-// diálogo de "Guardar como" lo necesita desde antes de pedir el archivo
-// real al servidor -- sin él, Windows no sabe qué tipo de archivo es.
+// Igual que BotonImprimir pero para reportes y exportes (Excel, PDFs de
+// reportes) con ícono y texto propios: un <a href> a la API no puede llevar el
+// header Authorization. nombreArchivo es obligatorio (y debe incluir la
+// extensión) porque el diálogo de "Guardar como" lo necesita antes de pedir el
+// archivo al servidor; sin él, Windows no sabe qué tipo de archivo es.
 export function BotonDescarga({ ruta, nombreArchivo, className, icono, children, style, disabled }: Props) {
   const [generando, setGenerando] = useState(false);
 

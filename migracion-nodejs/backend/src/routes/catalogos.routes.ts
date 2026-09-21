@@ -26,9 +26,9 @@ catalogosRouter.get(
   asyncHandler(async (req, res) => {
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
 
-    // Para dar de alta un lote nuevo: solo lo que Administración ya dio de
-    // alta como sección válida de este panteón, sin mezclar con texto suelto
-    // histórico (ver el punto medio acordado para Seccion en schema.prisma).
+    // Para dar de alta un lote nuevo: solo las secciones que Administración dio de
+    // alta para este panteón, sin mezclar texto suelto histórico (ver Seccion en
+    // schema.prisma).
     if (req.query.soloCatalogo === "1") {
       const delCatalogo = await prisma.seccion.findMany({
         where: { activo: true, ...(panteonId ? { panteonId } : {}) },
@@ -48,17 +48,15 @@ catalogosRouter.get(
       select: { nombre: true },
     });
 
-    // Unión de lo ya usado en lotes (histórico, incluye capturas sueltas que
-    // nunca se formalizaron aquí) con el catálogo de Administración (permite
-    // ofrecer una sección recién dada de alta aunque todavía no tenga ningún
-    // lote). Lote.seccion sigue siendo texto libre -- ver Seccion en
-    // schema.prisma -- así que ninguna de las dos fuentes es la "correcta"
-    // por sí sola.
+    // Unión de lo ya usado en lotes (incluye capturas que nunca se formalizaron)
+    // con el catálogo de Administración (permite ofrecer una sección recién dada de
+    // alta aunque aún no tenga lotes). Lote.seccion es texto libre (ver Seccion en
+    // schema.prisma), así que ninguna fuente es completa por sí sola.
     const secciones = [...new Set([...lotes.map((l) => l.seccion as string), ...delCatalogo.map((s) => s.nombre)])];
 
-    // "ANG" (Angelitos) se ofrece solo para buscar/filtrar, nunca para dar de
-    // alta un lote nuevo (ver lib/ubicacion): por eso es un parámetro aparte
-    // que cada pantalla pide a propósito, en vez de venir siempre incluido.
+    // "ANG" (Angelitos) se ofrece solo para buscar o filtrar, nunca para dar de alta
+    // un lote (ver lib/ubicacion); por eso es un parámetro aparte que cada pantalla
+    // pide explícitamente.
     if (req.query.incluirVirtuales === "1") {
       const hayAngelitos = await prisma.lote.count({
         where: { seccion: "ADEII", numeroManzana: { contains: "ANGEL", mode: "insensitive" }, ...(panteonId ? { panteonId } : {}) },

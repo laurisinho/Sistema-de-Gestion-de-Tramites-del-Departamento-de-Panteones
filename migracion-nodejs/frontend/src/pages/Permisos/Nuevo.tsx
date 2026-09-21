@@ -35,9 +35,9 @@ interface Panteon {
   usaColindancias: boolean;
 }
 
-// Los panteones de colindancias no tienen manzana/lote reales (todo queda
-// como "S/N" + un consecutivo interno) ni sección: se identifican por quién
-// es el titular y quiénes son los vecinos registrados en cada punto cardinal.
+// Los panteones de colindancias no tienen manzana/lote reales (todo queda como
+// "S/N" más un consecutivo interno) ni sección: se identifican por el titular y
+// por los vecinos registrados en cada punto cardinal.
 function ubicacionLote(l: LoteResultado): string {
   if (l.manzana !== "S/N") {
     return `${l.seccion ? `Secc. ${l.seccion} · ` : ""}Mz ${l.manzana} L ${l.lote}`;
@@ -66,10 +66,9 @@ export function PermisoNuevo() {
   const [tipoClave, setTipoClave] = useState(tipoInicial);
   const tipoNombre = TIPOS.find((t) => t.clave === tipoClave)?.nombre ?? tipoClave;
 
-  // Al llegar desde un título recién emitido: el lote viene en la URL y los
-  // datos del titular (que suele ser el mismo solicitante) en el state de la
-  // navegación, para no dejar el nombre ni el teléfono de una persona en la
-  // barra de direcciones.
+  // Al llegar desde un título recién emitido, el lote viene en la URL y los datos
+  // del titular (que suele ser el solicitante) en el state de la navegación, para
+  // no dejar nombre ni teléfono en la barra de direcciones.
   const loteIdInicial = searchParams.get("loteId");
   const estadoInicial = location.state as { solicitante?: string; telefono?: string } | null;
   const [nombreSolicitante, setNombreSolicitante] = useState(estadoInicial?.solicitante ?? "");
@@ -92,10 +91,9 @@ export function PermisoNuevo() {
   const [loteSel, setLoteSel] = useState<LoteResultado | null>(null);
   const [errorLote, setErrorLote] = useState<string | null>(null);
 
-  // Panteones antiguos que nunca tuvieron título de propiedad: en vez de
-  // buscar y elegir un lote existente, se captura su ubicación a mano
-  // (manzana/lote o colindancias, según use el panteón) y el permiso se
-  // guarda marcado como SIN REGISTRO.
+  // Panteones antiguos sin título de propiedad: en lugar de elegir un lote
+  // existente, se captura su ubicación (manzana/lote o colindancias, según el
+  // panteón) y el permiso se guarda marcado como SIN REGISTRO.
   const [loteNoRegistrado, setLoteNoRegistrado] = useState(false);
   const [colNorte, setColNorte] = useState("");
   const [colSur, setColSur] = useState("");
@@ -126,9 +124,9 @@ export function PermisoNuevo() {
     ? !!panteonIdLote && (usaColindanciasLote || (loteManzana.trim() !== "" && loteLote.trim() !== ""))
     : !!loteSel;
 
-  // Para buscar un lote ya existente: incluirVirtuales trae también "ANG"
-  // (Angelitos), que no es una sección real (ver lib/ubicacion en el
-  // backend) -- solo sirve para filtrar, nunca para capturar un lote nuevo.
+  // Para buscar un lote existente: incluirVirtuales trae también "ANG"
+  // (Angelitos), que no es una sección real (ver lib/ubicacion en el backend);
+  // solo sirve para filtrar, nunca para crear un lote.
   const { data: secciones } = useQuery({
     queryKey: ["catalogos", "secciones", panteonIdLote, "busqueda"],
     queryFn: () => {
@@ -139,9 +137,9 @@ export function PermisoNuevo() {
     enabled: !usaColindanciasLote,
   });
 
-  // Para el lote "sin registro": aquí sí se va a crear un lote, así que solo
-  // se ofrece lo que Administración ya dio de alta para este panteón
-  // (soloCatalogo=1) -- ni "ANG" ni texto suelto histórico.
+  // Para el lote "sin registro" se va a crear un lote, así que solo se ofrece lo
+  // que Administración dio de alta para este panteón (soloCatalogo=1), sin "ANG"
+  // ni texto histórico suelto.
   const { data: seccionesCreacion } = useQuery({
     queryKey: ["catalogos", "secciones", panteonIdLote, "catalogo"],
     queryFn: () => {
@@ -173,8 +171,8 @@ export function PermisoNuevo() {
     setActaDefuncionNumero("");
   }
 
-  // Lote ya elegido de antemano (se llega aquí desde el título recién
-  // emitido): se trae una sola vez para dejarlo seleccionado sin buscarlo.
+  // Lote elegido de antemano (se llega desde el título recién emitido): se trae
+  // una sola vez para dejarlo seleccionado sin buscarlo.
   useEffect(() => {
     if (!loteIdInicial) return;
 
@@ -189,10 +187,10 @@ export function PermisoNuevo() {
     };
   }, [loteIdInicial]);
 
-  // Al exhumar, el difunto casi siempre ya está en el sistema: es quien se
-  // sepultó ahí antes. En vez de obligar al capturista a buscarlo por nombre,
-  // se trae solo con elegir el lote -- si hay un único ocupante actual se
-  // enlaza de una vez; si hay varios, se dejan como opciones para elegir.
+  // Al exhumar, el difunto casi siempre ya está en el sistema (se sepultó ahí
+  // antes). Para no obligar al capturista a buscarlo por nombre, se trae al elegir
+  // el lote: con un solo ocupante actual se enlaza directamente; con varios se
+  // ofrecen como opciones.
   useEffect(() => {
     if (tipoClave !== "EXH" || !loteSel) return;
     if (fallecidoSel || nombreFallecido.trim() || fechaFallecimiento || actaDefuncionNumero.trim()) return;
@@ -567,9 +565,9 @@ export function PermisoNuevo() {
             ) : (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end", marginTop: 16 }}>
                 {usaColindanciasLote ? (
-                  // Este panteón no tiene manzana/lote reales ni sección: cada
-                  // tumba se identifica por su titular y por quiénes son los
-                  // vecinos registrados en cada punto cardinal.
+                  // Este panteón no tiene manzana/lote reales ni sección: cada tumba se
+                  // identifica por su titular y por los vecinos registrados en cada punto
+                  // cardinal.
                   <div className="form-campo" style={{ flex: "3 1 280px" }}>
                     <label>Titular o vecino (colindancia)</label>
                     <input

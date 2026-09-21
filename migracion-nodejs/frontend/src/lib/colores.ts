@@ -1,7 +1,7 @@
-// Deriva las variantes clara/oscura de guinda y dorado a partir de un solo
-// color base, en vez de pedirle a Administración que elija 6 tonos a mano.
-// Los números de ajuste (±9, ±8, etc.) reproducen aproximadamente la misma
-// relación que ya tienen los tonos fijos de index.css entre sí.
+// Deriva las variantes clara y oscura de guinda y dorado a partir de un solo
+// color base, en lugar de pedir a Administración que elija 6 tonos. Los ajustes
+// (±9, ±8, etc.) reproducen aproximadamente la relación que ya tienen los tonos
+// fijos de index.css.
 
 interface Hsl {
   h: number;
@@ -75,15 +75,13 @@ export function generarVariablesCss(colorGuinda: string, colorDorado: string): s
   const guindaDark = hslToHex(g.h, g.s, clamp(g.l - 8, 5));
   const doradoSuave = hslToHex(d.h, clamp(d.s - 8), clamp(d.l + 15));
 
-  // Fondo casi negro del sidebar y la topbar en modo oscuro: mismo tono que
-  // el elegido pero a luminosidad fija y baja, en vez de un color de fondo
-  // aparte (antes --bg-sidebar/--bg-topbar) que nunca se movía con el color
-  // de marca -- eso era lo que se veía "sucio" al cambiarlo.
+  // Fondo casi negro del sidebar y la topbar en modo oscuro: mismo tono que el
+  // elegido pero con luminosidad fija y baja, de modo que siga el color de marca.
   const guindaSombra = hslToHex(g.h, clamp(g.s, 45, 80), 8);
 
-  // Modo oscuro necesita un acento bastante más claro (el original pasa de
-  // ~25% a ~52% de luminosidad) para que se lea sobre el fondo casi negro;
-  // ahí "light" y "dark" convergen en el mismo tono, igual que en index.css.
+  // El modo oscuro necesita un acento más claro (el original pasa de ~25% a ~52%
+  // de luminosidad) para leerse sobre el fondo casi negro; ahí "light" y "dark"
+  // convergen en el mismo tono, igual que en index.css.
   const oscuroBase = hslToHex(g.h, clamp(g.s - 23), clamp(g.l + 28));
   const oscuroVariante = hslToHex(g.h, clamp(g.s - 18), clamp(g.l + 40));
 

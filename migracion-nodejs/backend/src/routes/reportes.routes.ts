@@ -1,6 +1,7 @@
 import { Router } from "express";
 import ExcelJS from "exceljs";
 import { prisma } from "../lib/prisma";
+import { hoyLocal } from "../lib/fechas";
 import { requiereAuth } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
@@ -25,13 +26,13 @@ reportesRouter.get(
   })
 );
 
-// Panel principal (Home/Index del original): KPIs del mes en curso + últimos
-// trámites + distribución por panteón. Distinto del resumen de arriba, que
+// Panel principal (Home/Index del original): KPIs del mes en curso, últimos
+// trámites y distribución por panteón. Distinto del resumen anterior, que
 // alimenta la página de Reportes.
 reportesRouter.get(
   "/dashboard",
   asyncHandler(async (_req, res) => {
-    const ahora = new Date();
+    const ahora = hoyLocal();
     const inicioMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1));
     const inicioMesSiguiente = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1));
     const rangoMes = { gte: inicioMes, lt: inicioMesSiguiente };
@@ -39,10 +40,9 @@ reportesRouter.get(
     const [totalExpedientesVigentes, permisosEsteMes, titulosPendientesEntrega, totalFallecidos, permisosDelMes, ultimosPermisos, panteones] =
       await Promise.all([
         prisma.tituloPropiedad.count({ where: { estado: "VIGENTE" } }),
-        // Cuenta por FechaSolicitud (fecha del trámite), no fechaCreacion (fecha
-        // de captura): un permiso solicitado el 30 y capturado el 1 del mes
-        // siguiente cuenta en el mes del trámite, no en el de la captura.
-        // Puerto exacto de HomeController.Index.
+        // Cuenta por FechaSolicitud (fecha del trámite) y no por fechaCreacion (fecha de
+        // captura): un permiso solicitado el 30 y capturado el 1 del mes siguiente
+        // cuenta en el mes del trámite. Equivale a HomeController.Index.
         prisma.permiso.count({ where: { fechaSolicitud: rangoMes, estado: { not: "CANCELADO" } } }),
         prisma.tituloPropiedad.count({ where: { estado: "VIGENTE", estadoEntrega: { not: "ENTREGADO" } } }),
         prisma.fallecido.count(),
@@ -65,8 +65,8 @@ reportesRouter.get(
     const contarTipo = (clave: string) => permisosDelMes.filter((p) => p.tipoTramite.clave === clave).length;
 
     // Todos los panteones activos, incluidos los que aún no tienen títulos
-    // vigentes -- filtrarlos los hacía desaparecer de la gráfica. Puerto
-    // exacto de HomeController.Index (GetValueOrDefault(..., 0)).
+    // vigentes; filtrarlos los hacía desaparecer de la gráfica. Equivale a
+    // HomeController.Index (GetValueOrDefault(..., 0)).
     const porPanteon = panteones
       .map((p) => ({
         nombre: p.nombre,
@@ -74,7 +74,7 @@ reportesRouter.get(
       }))
       .sort((a, b) => b.titulosVigentes - a.titulosVigentes);
 
-    const anioActual = ahora.getFullYear();
+    const anioActual = ahora.getUTCFullYear();
     const nombreMes = ahora.toLocaleDateString("es-MX", { month: "long", timeZone: "UTC" });
 
     res.json({
@@ -144,9 +144,8 @@ interface MovimientoDetalleItem {
   observacion: string | null;
 }
 
-// Relación mensual de movimientos por panteón: es el concentrado que el
-// departamento entregaba a mano cada mes (inhumaciones, exhumaciones,
-// cenizas, construcciones, títulos y cesiones). Puerto exacto de la
+// Relación mensual de movimientos por panteón: concentrado de inhumaciones,
+// exhumaciones, cenizas, construcciones, títulos y cesiones. Equivale a la
 // agregación de ReportesController.Movimientos.
 // Fecha "YYYY-MM-DD" a UTC; devuelve null si viene vacía o mal formada.
 function fechaParam(v: unknown): Date | null {
@@ -159,15 +158,15 @@ function ddmmaaaa(d: Date): string {
   return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
 }
 
-// Además del corte por ejercicio/mes (el que el departamento entrega cada mes),
-// acepta un rango libre de fechas: cuando vienen ambas, mandan sobre anio/mes.
+// Además del corte por ejercicio y mes, acepta un rango libre de fechas: si
+// vienen ambas, tienen prioridad sobre anio/mes.
 async function calcularMovimientos(anioParam: number, mesParam?: number, desdeParam?: unknown, hastaParam?: unknown) {
-    const anio = anioParam || new Date().getFullYear();
+    const anio = anioParam || hoyLocal().getUTCFullYear();
     const mes = mesParam && mesParam >= 1 && mesParam <= 12 ? mesParam : undefined;
 
     let desde = fechaParam(desdeParam);
     let hasta = fechaParam(hastaParam);
-    // Si las mandan al revés, se acomodan solas en vez de devolver cero resultados.
+    // Si vienen al revés, se invierten en lugar de devolver cero resultados.
     if (desde && hasta && desde > hasta) [desde, hasta] = [hasta, desde];
     const usaRango = !!(desde && hasta);
 
@@ -326,7 +325,7 @@ reportesRouter.get(
 
     const wb = new ExcelJS.Workbook();
 
-    // ── Hoja 1: el concentrado que se entrega ──
+    // Hoja 1: concentrado
     const totalMovs = resumen.reduce((s, x) => s + x.total, 0);
     const ws = await prepararHoja(wb, "Resumen", ColsResumen, "RELACIÓN MENSUAL DE MOVIMIENTOS", "Trámites realizados por panteón", periodo, totalMovs);
 
@@ -345,7 +344,7 @@ reportesRouter.get(
 
       ws.getCell(r, 8).font = { bold: true, color: { argb: `FF${GUINDA}` } };
 
-      // Un cero no aporta nada de leer: se atenúa para que resalte lo que sí hubo.
+      // Los ceros se atenúan para resaltar los valores con movimiento.
       for (let c = 2; c <= 9; c++) {
         const v = ws.getCell(r, c).value;
         if (v === 0) ws.getCell(r, c).font = { color: { argb: "FFBBBBBB" } };
@@ -378,11 +377,11 @@ reportesRouter.get(
       r++;
     }
 
-    // Se pasa el total de movimientos, no el de panteones: el pie dice
-    // "registro(s)" y contar renglones ahí contradecía al encabezado.
+    // Se pasa el total de movimientos y no el de panteones: el pie dice
+    // "registro(s)" y debe coincidir con el encabezado.
     cerrarHoja(ws, ColsResumen, totalMovs, r);
 
-    // ── Hoja 2: el respaldo movimiento por movimiento ──
+    // Hoja 2: detalle movimiento por movimiento
     const wd = await prepararHoja(wb, "Detalle", ColsDetalle, "DETALLE DE MOVIMIENTOS", "Cada trámite del periodo", periodo, detalle.length);
 
     let rd = 7;
@@ -416,18 +415,17 @@ reportesRouter.get(
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     const sufijoArchivo = usaRango
       ? `${String(req.query.desde)}_a_${String(req.query.hasta)}`
-      : String(req.query.anio ?? new Date().getFullYear());
+      : String(req.query.anio ?? hoyLocal().getUTCFullYear());
     res.setHeader("Content-Disposition", `attachment; filename="Movimientos_${sufijoArchivo}.xlsx"`);
     res.send(Buffer.from(buffer));
   })
 );
 
 // Etiquetas para la pestaña del folder de archivo: una franja angosta con la
-// clave del lote y el titular, para recortarse a mano y pegarse en la
-// carpeta física del expediente. Se identifica por LOTE (claveLegado) y no
-// por el folio del título vigente: una cesión cambia el folio, pero la
-// carpeta física del lote sigue siendo la misma. El alcance es por fecha de
-// emisión, para ir etiquetando lo nuevo en tandas conforme se emite.
+// clave del lote y el titular, para recortar y pegar en la carpeta física del
+// expediente. Se identifica por lote (claveLegado) y no por el folio del título
+// vigente, porque una cesión cambia el folio pero la carpeta sigue siendo la
+// misma. El alcance es por fecha de emisión, para etiquetar por tandas.
 reportesRouter.get(
   "/etiquetas",
   asyncHandler(async (req, res) => {
@@ -443,8 +441,8 @@ reportesRouter.get(
     const titulos = await prisma.tituloPropiedad.findMany({
       where: { estado: "VIGENTE", fechaEmision: { gte: desde, lte: finDia } },
       include: { titular: true, lote: true },
-      // Orden aproximado al que están archivadas las carpetas físicamente,
-      // para que se puedan ir pegando en secuencia sin buscar cada una.
+      // Orden aproximado al de archivo de las carpetas físicas, para pegarlas en
+      // secuencia.
       orderBy: [
         { lote: { panteonId: "asc" } },
         { lote: { seccion: "asc" } },

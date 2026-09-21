@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { hoyLocal } from "../lib/fechas";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
@@ -20,10 +21,9 @@ function fechaCortaLocal(d: Date): string {
   return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
 }
 
-// Mismo cálculo de periodo (trimestre / año / rango libre) usado por
-// AplicarPeriodo en el .NET original, generalizado para reusarse en ambos
-// reportes (Fallecidos filtra por fecha de fallecimiento, Reconocimientos por
-// fecha de reconocimiento).
+// Mismo cálculo de periodo (trimestre, año o rango libre) que AplicarPeriodo del
+// original, generalizado para ambos reportes (Fallecidos filtra por fecha de
+// fallecimiento y Reconocimientos por fecha de reconocimiento).
 function calcularPeriodo(
   desde?: string,
   hasta?: string,
@@ -49,7 +49,7 @@ function calcularPeriodo(
   return { subtitulo: "Todos los registros" };
 }
 
-// ── LISTADO + BÚSQUEDA ──────────────────────────────────────
+// Listado y búsqueda
 noReclamadosRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -81,10 +81,10 @@ noReclamadosRouter.get(
   })
 );
 
-// Agentes del M.P. para el selector del formulario: el catálogo que se da de
-// alta en Administración, más los que ya se hayan capturado como texto libre
-// en Fallecido/Reconocimiento (de antes de que existiera el catálogo, o
-// mientras alguien no encuentra al suyo en la lista y usa "Otro").
+// Agentes del M.P. para el selector del formulario: el catálogo de
+// Administración más los que ya se hayan capturado como texto libre en
+// Fallecido/Reconocimiento (registros anteriores al catálogo o capturados con
+// "Otro").
 noReclamadosRouter.get(
   "/ministerios-publicos",
   asyncHandler(async (_req, res) => {
@@ -93,8 +93,8 @@ noReclamadosRouter.get(
       prisma.fallecido.findMany({ where: { ministerioPublico: { not: null } }, select: { ministerioPublico: true }, distinct: ["ministerioPublico"] }),
       prisma.reconocimiento.findMany({ where: { ministerioPublico: { not: null } }, select: { ministerioPublico: true }, distinct: ["ministerioPublico"] }),
     ]);
-    // Se normaliza cada nombre (misma regla que el sembrado del catálogo) para
-    // que "LIC, X" de un registro viejo no salga duplicado junto a "LIC. X".
+    // Se normaliza cada nombre (misma regla que el sembrado del catálogo) para que
+    // "LIC, X" de un registro viejo no aparezca duplicado junto a "LIC. X".
     const porClave = new Map<string, string>();
     for (const nombre of [
       ...delCatalogo.map((a) => a.nombre),
@@ -108,9 +108,8 @@ noReclamadosRouter.get(
   })
 );
 
-// El lote donde está sepultada la persona: el permiso de sepultura más
-// antiguo con lote asignado. Puerto exacto de UbicacionDe / la búsqueda de
-// lote usada en Reconocer.
+// El lote donde está sepultada la persona: el permiso de sepultura más antiguo
+// con lote asignado. Equivale a UbicacionDe y a la búsqueda de lote de Reconocer.
 async function primerLoteDe(fallecidoId: number) {
   const permiso = await prisma.permiso.findFirst({
     where: { fallecidoId, loteId: { not: null } },
@@ -126,7 +125,7 @@ function ubicacionTexto(lote: { panteon: { nombre: string }; seccion: string | n
     .join(" · ");
 }
 
-// ── DETALLE ─────────────────────────────────────────────────
+// Detalle
 noReclamadosRouter.get(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -149,7 +148,7 @@ noReclamadosRouter.get(
   })
 );
 
-// ── RECONOCER (desconocido -> identificado) ────────────────
+// Reconocer (desconocido -> identificado)
 // Solo actualiza la identidad de la persona. El lote se libera hasta que se
 // aprueba el permiso de exhumación.
 noReclamadosRouter.get(
@@ -173,7 +172,7 @@ noReclamadosRouter.get(
       numeroCaso: f.numeroCaso,
       numeroActaDefuncion: f.actaDefuncionNumero,
       ministerioPublico: f.ministerioPublico,
-      fechaReconocimiento: new Date(new Date().toDateString()),
+      fechaReconocimiento: hoyLocal(),
       ubicacion: lote ? ubicacionTexto(lote) : null,
     });
   })
@@ -214,9 +213,9 @@ noReclamadosRouter.post(
 
     const lote = await primerLoteDe(id);
 
-    // Crear el reconocimiento y marcar reconocido=true deben confirmarse juntos:
-    // si el update fallara solo, el guard de arriba (f.reconocido) no lo detecta
-    // en un reintento y se crearía un segundo reconocimiento contradictorio.
+    // El reconocimiento y reconocido=true deben confirmarse juntos: si el update
+    // fallara solo, el guard de arriba (f.reconocido) no lo detectaría en un
+    // reintento y se crearía un segundo reconocimiento contradictorio.
     const reconocimiento = await prisma.$transaction(async (tx) => {
       const rec = await tx.reconocimiento.create({
         data: {
@@ -265,7 +264,7 @@ noReclamadosRouter.post(
   })
 );
 
-// ── RELACIÓN DE RECONOCIDOS ─────────────────────────────────
+// Relación de reconocidos
 noReclamadosRouter.get(
   "/reportes/reconocidos",
   asyncHandler(async (req, res) => {
@@ -320,7 +319,7 @@ noReclamadosRouter.get(
   })
 );
 
-// ── CREAR ───────────────────────────────────────────────────
+// Crear
 const noReclamadoSchema = z.object({
   nombreCompleto: z.string().min(1, "El nombre o descripción es obligatorio.").default("PERSONA DESCONOCIDA"),
   posibleNombre: z.string().optional(),
@@ -381,7 +380,7 @@ noReclamadosRouter.post(
   })
 );
 
-// ── EDITAR ──────────────────────────────────────────────────
+// Editar
 noReclamadosRouter.put(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -418,7 +417,7 @@ noReclamadosRouter.put(
   })
 );
 
-// ── ELIMINAR ────────────────────────────────────────────────
+// Eliminar
 noReclamadosRouter.delete(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -431,9 +430,9 @@ noReclamadosRouter.delete(
       return res.status(409).json({ error: "No se puede eliminar: el registro está vinculado a un permiso." });
     }
 
-    // El original en .NET solo validaba permisos y no esto -- un no reclamado ya
-    // reconocido (con Reconocimiento) truena con una violación de llave foránea
-    // sin control al intentar borrarlo. Se detecta antes en vez de heredar el bug.
+    // El original solo validaba permisos; un no reclamado ya reconocido (con
+    // Reconocimiento) fallaba con una violación de llave foránea al borrarlo. Aquí
+    // se detecta antes.
     const tieneReconocimiento = await prisma.reconocimiento.findFirst({ where: { fallecidoId: id } });
     if (tieneReconocimiento) {
       return res.status(409).json({ error: "No se puede eliminar: el registro ya tiene una identificación registrada." });
@@ -454,7 +453,7 @@ noReclamadosRouter.delete(
   })
 );
 
-// ── REPORTE A: SEPULTADAS EN FOSAS COMUNES (Excel) ─────────
+// Reporte A: sepultadas en fosas comunes (Excel)
 const ColsSepultados: ColDef[] = [
   { titulo: "CLAVE", ancho: 18, align: "left" },
   { titulo: "INSTANCIA QUE SOLICITA SEPULTAR", ancho: 32, align: "left" },
@@ -482,8 +481,8 @@ noReclamadosRouter.get(
       orderBy: { fechaFallecimiento: "asc" },
     });
 
-    // Permiso de sepultura de cada uno: aporta lote, folio e instancia. Solo
-    // el primero por difunto (igual que mapPermiso.GroupBy(...).First()).
+    // Permiso de sepultura de cada uno: aporta lote, folio e instancia. Solo el
+    // primero por difunto (igual que mapPermiso.GroupBy(...).First()).
     const ids = fallecidos.map((f) => f.fallecidoId);
     const permisos = await prisma.permiso.findMany({
       where: { fallecidoId: { in: ids }, loteId: { not: null } },
@@ -539,12 +538,12 @@ noReclamadosRouter.get(
 
     const buffer = await wb.xlsx.writeBuffer();
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="PersonasNoReclamadas_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx"`);
+    res.setHeader("Content-Disposition", `attachment; filename="PersonasNoReclamadas_${hoyLocal().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx"`);
     res.send(Buffer.from(buffer));
   })
 );
 
-// ── REPORTE B: IDENTIFICADAS Y EXHUMADAS (Excel) ───────────
+// Reporte B: identificadas y exhumadas (Excel)
 const ColsIdentificados: ColDef[] = [
   { titulo: "CLAVE", ancho: 18, align: "left" },
   { titulo: "INSTANCIA QUE SOLICITA EXHUMAR", ancho: 34, align: "left" },
@@ -609,7 +608,7 @@ noReclamadosRouter.get(
 
     const buffer = await wb.xlsx.writeBuffer();
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="Identificadas_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx"`);
+    res.setHeader("Content-Disposition", `attachment; filename="Identificadas_${hoyLocal().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx"`);
     res.send(Buffer.from(buffer));
   })
 );

@@ -1,6 +1,8 @@
-// Los datos vienen de la base (nombres, descripciones capturadas a mano) y se
-// interpolan directo en HTML real para Puppeteer -- a diferencia de QuestPDF,
-// aquí sí hay que escapar para no romper el documento ni permitir inyección.
+import { fechaHoraLocalCorta, hoyLocal } from "./fechas";
+
+// Los datos (nombres, descripciones capturadas a mano) se interpolan en HTML
+// que renderiza Puppeteer, así que hay que escaparlos para no romper el
+// documento ni permitir inyección de HTML.
 export function esc(valor: string | null | undefined): string {
   if (valor == null) return "";
   return valor
@@ -17,7 +19,7 @@ const MESES = [
 ];
 
 export function fechaLarga(fecha: Date | null | undefined): string {
-  const f = fecha ?? new Date();
+  const f = fecha ?? hoyLocal();
   return `${String(f.getUTCDate()).padStart(2, "0")} de ${MESES[f.getUTCMonth()]} de ${f.getUTCFullYear()}`;
 }
 
@@ -25,7 +27,7 @@ export function fechaLargaMayus(fecha: Date | null | undefined): string {
   return fechaLarga(fecha).toUpperCase();
 }
 
-// Las fechas centinela (1900/1905) de la migración no deben imprimirse.
+// No se imprimen las fechas centinela (1900/1905) usadas en la migración.
 export function esFechaReal(fecha: Date | null | undefined): boolean {
   return !!fecha && fecha.getUTCFullYear() > 1905;
 }
@@ -36,7 +38,5 @@ export function fechaCorta(fecha: Date | null | undefined): string {
 }
 
 export function fechaHoraCorta(fecha: Date): string {
-  const h = String(fecha.getHours()).padStart(2, "0");
-  const m = String(fecha.getMinutes()).padStart(2, "0");
-  return `${fechaCorta(fecha)} ${h}:${m}`;
+  return fechaHoraLocalCorta(fecha);
 }

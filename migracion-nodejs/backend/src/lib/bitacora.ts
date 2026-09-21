@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 
-// Mismas claves que Services/Acciones en el proyecto .NET original.
+// Mismas claves que Services/Acciones del sistema original.
 export const Acciones = {
   Login: "LOGIN",
   Logout: "LOGOUT",
@@ -14,12 +14,12 @@ export const Acciones = {
   Entrega: "ENTREGA",
   Reconocer: "RECONOCER",
   Liberar: "LIBERAR",
-  // Sin equivalente en el original: ahí no había freno de fuerza bruta.
+  // Nueva: el sistema original no limitaba los intentos de acceso.
   Bloqueo: "BLOQUEO",
 } as const;
 
-// La auditoría nunca debe tumbar la operación del usuario -- igual que
-// BitacoraService.RegistrarAsync en el .NET original, nunca lanza excepción.
+// El registro de auditoría nunca debe interrumpir la operación del usuario
+// (igual que BitacoraService.RegistrarAsync del sistema original).
 export async function registrarBitacora(
   usuarioId: number | null,
   accion: string,
@@ -40,6 +40,6 @@ export async function registrarBitacora(
       },
     });
   } catch {
-    // silencioso a propósito
+    // El error se ignora para no afectar la operación.
   }
 }

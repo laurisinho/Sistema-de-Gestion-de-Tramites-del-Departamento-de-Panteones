@@ -31,9 +31,8 @@ reimpresionesRouter.get(
 );
 
 // Busca entre permisos, títulos y cesiones por folio o nombre de la persona
-// involucrada, para elegir cuál se va a reimprimir. Puerto exacto de
-// ReimpresionesController.Buscar. La acción de reimprimir en sí (que genera
-// el PDF con sello de "REIMPRESIÓN") queda pendiente para la pasada de PDF.
+// involucrada, para elegir cuál se reimprime. Equivale a
+// ReimpresionesController.Buscar.
 reimpresionesRouter.get(
   "/buscar",
   asyncHandler(async (req, res) => {
@@ -107,10 +106,9 @@ reimpresionesRouter.get(
   })
 );
 
-// Trae UN documento puntual por tipo+id, en la misma forma que /buscar --
-// para precargar la selección cuando se llega desde el botón "Reimprimir con
-// sello" de otra pantalla (Permisos/Títulos/Cesiones), sin tener que
-// volver a teclear la búsqueda.
+// Trae un documento puntual por tipo e id, en la misma forma que /buscar, para
+// precargar la selección cuando se llega desde el botón "Reimprimir con sello"
+// de otra pantalla.
 reimpresionesRouter.get(
   "/documento",
   asyncHandler(async (req, res) => {
@@ -144,8 +142,8 @@ const reimprimirSchema = z.object({
 });
 
 // Crea el registro de reimpresión y regenera el PDF con el sello de
-// "REIMPRESIÓN" y el número de reimpresión correspondiente a ese documento.
-// Puerto exacto de ReimpresionesController.Reimprimir.
+// "REIMPRESIÓN" y el número de reimpresión de ese documento. Equivale a
+// ReimpresionesController.Reimprimir.
 reimpresionesRouter.post(
   "/",
   asyncHandler(async (req, res) => {

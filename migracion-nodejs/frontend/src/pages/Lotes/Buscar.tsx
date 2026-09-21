@@ -43,10 +43,10 @@ export function LotesBuscar() {
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
   });
 
-  // Secciones del panteón elegido; sin panteón, las de todos. Se muestran en
-  // una lista porque cada panteón tiene las suyas y nadie las recuerda todas.
-  // incluirVirtuales trae también "ANG" (Angelitos), que solo existe para
-  // buscar -- no es una sección real, así que un lote nuevo nunca la ofrece.
+  // Secciones del panteón elegido; sin panteón, las de todos. Se muestran en una
+  // lista porque cada panteón tiene las suyas. incluirVirtuales trae también
+  // "ANG" (Angelitos), que solo existe para buscar: no es una sección real y un
+  // lote nuevo nunca la ofrece.
   const { data: secciones } = useQuery({
     queryKey: ["catalogos", "secciones", panteonId],
     queryFn: () => {
@@ -96,8 +96,8 @@ export function LotesBuscar() {
               value={panteonId}
               onChange={(e) => {
                 setPanteonId(e.target.value);
-                // Las secciones cambian con el panteón: la que estaba elegida
-                // puede no existir en el nuevo.
+                // Las secciones cambian con el panteón: la elegida puede no existir en el
+                // nuevo.
                 setSeccion("");
               }}
             >

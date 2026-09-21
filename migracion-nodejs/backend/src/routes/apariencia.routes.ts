@@ -3,9 +3,8 @@ import { prisma } from "../lib/prisma";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { obtenerLogosBuffer } from "../lib/apariencia";
 
-// Sin requiereAuth a propósito: hasta la pantalla de login (antes de que
-// exista sesión) necesita pintarse con el color/logo vigente. Nada de esto
-// es información sensible.
+// Sin requiereAuth: la pantalla de login también necesita el color y logo
+// vigentes antes de que exista sesión. No expone información sensible.
 export const aparienciaRouter = Router();
 
 const POR_DEFECTO = { colorGuinda: "#6b1229", colorDorado: "#f5b400", nombreSindico: "MAESTRA EDNA ELINORA SOTO GRACIA" };

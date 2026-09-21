@@ -61,8 +61,8 @@ function iniciales(nombre: string | undefined): string {
 }
 
 // Equivale a ViewData["Title"] del original: cada vista .cshtml lo fijaba y
-// _Layout.cshtml lo mostraba en la topbar y en <title>. Aquí no hay ViewData,
-// así que se deriva de la ruta -- del más específico al más genérico.
+// _Layout.cshtml lo mostraba en la topbar y en <title>. Aquí se deriva de la
+// ruta, del más específico al más genérico.
 function tituloDePagina(pathname: string): string {
   if (pathname === "/") return "Panel Principal";
   if (pathname.endsWith("/expediente")) return "Expediente del lote";

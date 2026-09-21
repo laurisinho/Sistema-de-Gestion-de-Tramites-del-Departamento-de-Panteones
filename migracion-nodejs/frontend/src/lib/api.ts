@@ -15,7 +15,7 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<
   const token = getToken();
   const res = await fetch(`${API_URL}${ruta}`, {
     ...opciones,
-    credentials: "include", // conveniencia en local (mismo origen); en producción el auth real va por el header de abajo
+    credentials: "include", // útil en local (mismo origen); en producción la autenticación va por el header de abajo
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -23,15 +23,14 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<
     },
   });
 
-  // Un 401 fuera del propio flujo de login significa que la cookie murió a
-  // mitad de la sesión (expiró o el servidor la invalidó). El original .NET
-  // resuelve esto solo porque cada navegación es una petición nueva al
-  // servidor; aquí, sin este redirect, la SPA se queda mostrando una pantalla
-  // rota con errores 401 silenciosos en vez de mandar a /login como se espera.
+  // Un 401 fuera del flujo de login significa que la sesión expiró o el servidor
+  // la invalidó. El original lo resuelve porque cada navegación es una petición
+  // nueva; aquí, sin este redirect, la SPA se quedaría mostrando una pantalla
+  // rota con errores 401 silenciosos en lugar de enviar a /login.
   if (res.status === 401 && !ruta.startsWith("/auth/")) {
     clearToken();
-    // Con HashRouter, la app siempre vive en BASE_URL/index.html -- la ruta
-    // real la decide todo lo que va después de "#".
+    // Con HashRouter la app siempre vive en BASE_URL/index.html; la ruta real la
+    // define lo que va después de "#".
     window.location.href = `${import.meta.env.BASE_URL}#/login`;
     return new Promise<T>(() => {});
   }
@@ -45,19 +44,17 @@ export async function api<T>(ruta: string, opciones: RequestInit = {}): Promise<
   return cuerpo as T;
 }
 
-// Único método que existe en la web para que el usuario elija dónde guardar
-// un archivo (ningún sitio puede imponer una ruta): el diálogo nativo de
-// "Guardar como" vía File System Access API. Solo Chromium (Chrome, Edge,
-// Brave) lo soporta -- en Firefox/Safari simplemente no existe la función.
-// El navegador recuerda la última carpeta usada por este sitio, así que a
-// partir de la segunda vez ya "sabe" dónde guardarlo.
+// El diálogo nativo de "Guardar como" (File System Access API) es la única forma
+// de que el usuario elija dónde guardar un archivo. Solo lo soportan los
+// navegadores Chromium (Chrome, Edge, Brave); en Firefox y Safari la función no
+// existe. El navegador recuerda la última carpeta usada por el sitio.
 interface DestinoGuardado {
   createWritable(): Promise<{ write(datos: Blob): Promise<void>; close(): Promise<void> }>;
 }
 
-// Sin esto, el diálogo no sabe qué extensión proponer y lo deja en "Todos
-// los archivos" -- justo lo que causaba que los reportes se guardaran como
-// "documento" sin .xlsx y Windows ya no supiera abrirlos con Excel.
+// Sin esto el diálogo no sabe qué extensión proponer y muestra "Todos los
+// archivos", con lo que los reportes se guardaban sin .xlsx y Windows no los
+// abría con Excel.
 function tiposParaExtension(nombre: string): { description: string; accept: Record<string, string[]> }[] | undefined {
   const ext = nombre.split(".").pop()?.toLowerCase();
   if (ext === "pdf") return [{ description: "PDF", accept: { "application/pdf": [".pdf"] } }];
@@ -78,13 +75,11 @@ async function elegirDestinoGuardado(nombreSugerido: string): Promise<DestinoGua
   return showSaveFilePicker({ suggestedName: nombreSugerido, types: tiposParaExtension(nombreSugerido) });
 }
 
-// Vista previa incrustada en la misma página en vez de una pestaña nueva:
-// window.open() y showSaveFilePicker() son APIs que "consumen" la activación
-// del clic (solo una de las dos tiene éxito por cada clic, sin importar el
-// orden en que se llamen -- se probó y la segunda siempre falla en silencio),
-// así que no se pueden ofrecer las dos a la vez con window.open(). Un
-// <iframe> no depende de esa activación ni puede bloquearse como popup, así
-// que convive sin problema con el diálogo de "Guardar como".
+// Vista previa incrustada en la misma página en lugar de una pestaña nueva:
+// window.open() y showSaveFilePicker() consumen la activación del clic (solo una
+// de las dos tiene éxito por cada clic, sin importar el orden), así que no se
+// pueden ofrecer ambas con window.open(). Un <iframe> no depende de esa
+// activación ni se bloquea como popup, por lo que convive con "Guardar como".
 function mostrarVistaPrevia(blob: Blob): void {
   const url = URL.createObjectURL(blob);
 
@@ -122,10 +117,9 @@ function mostrarVistaPrevia(blob: Blob): void {
 }
 
 // Los botones de imprimir eran <a href> directos a la API: una navegación de
-// enlace normal no puede llevar el header Authorization, así que dependían
-// por completo de la cookie -- justo la que los navegadores con protección
-// de privacidad bloquean entre sitios distintos. Se descarga por JS en su
-// lugar, con el mismo token que usa el resto de la app.
+// enlace no puede llevar el header Authorization y dependía de la cookie, que
+// los navegadores con protección de privacidad bloquean entre sitios distintos.
+// Ahora se descarga por JS con el mismo token que usa el resto de la app.
 export async function descargarArchivo(
   ruta: string,
   nombreRespaldo = "documento",
@@ -142,10 +136,10 @@ export async function descargarArchivo(
     // cualquier otro problema (permiso denegado, etc.) -> sigue como descarga normal
   }
 
-  // Cancelar "Guardar como" solo cancela todo el proceso cuando esa era la
-  // única forma de obtener el archivo (p. ej. un Excel). Si además se pidió
-  // vista previa (imprimir), lo más probable es que solo quería verlo/
-  // imprimirlo, no guardar una copia -- así que se sigue con la vista previa.
+  // Cancelar "Guardar como" solo cancela todo el proceso cuando era la única forma
+  // de obtener el archivo (p. ej. un Excel). Si además se pidió vista previa
+  // (imprimir), lo más probable es que solo quisiera verlo o imprimirlo, así que
+  // se continúa con la vista previa.
   if (cancelado && !opciones.verEnNavegador) return;
 
   const token = getToken();

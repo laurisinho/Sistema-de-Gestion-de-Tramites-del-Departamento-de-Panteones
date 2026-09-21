@@ -21,17 +21,14 @@ import { aparienciaRouter } from "./routes/apariencia.routes";
 
 const app = express();
 
-// La API corre detrás de varios proxies. Sin esto, req.ip devuelve la
-// dirección del último de ellos para todo el mundo: la bitácora registraría
-// siempre la misma IP y el límite de intentos por dirección dejaría fuera a
-// todo el departamento en cuanto una sola persona fallara varias veces.
-// Se confía en un número fijo de saltos y no en toda la cadena, porque así
-// nadie puede adelantarse una posición mandando su propio X-Forwarded-For.
+// La API corre detrás de proxies. Sin esta configuración req.ip devolvería la
+// dirección del último proxy para todos los clientes: la bitácora registraría
+// siempre la misma IP y el límite de intentos por dirección afectaría a todo el
+// departamento. Se confía en un número fijo de saltos (TRUST_PROXY) y no en toda
+// la cadena, para que un cliente no pueda falsear X-Forwarded-For.
 app.set("trust proxy", env.trustProxy);
 
-// Express anuncia "X-Powered-By: Express" en cada respuesta. No sirve de nada
-// al cliente y le regala a quien sondee el servidor con qué está hecho, que es
-// el primer paso para buscarle vulnerabilidades conocidas.
+// Se oculta la cabecera X-Powered-By para no revelar la tecnología del servidor.
 app.disable("x-powered-by");
 
 app.use(express.json());
@@ -56,8 +53,8 @@ app.use("/api/apariencia", aparienciaRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// Red de seguridad: cualquier error no atrapado en una ruta (p. ej. la base de
-// datos caída) cae aquí en vez de dejar la request colgada o tumbar el proceso.
+// Último recurso: cualquier error no atrapado en una ruta (p. ej. base de datos
+// caída) responde aquí en lugar de dejar la petición colgada.
 const manejadorErrores: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ error: "Error interno del servidor" });
@@ -68,8 +65,8 @@ const servidor = app.listen(env.port, () => {
   console.log(`API escuchando en http://localhost:${env.port}`);
 });
 
-// Evita que un error de conexión a la base de datos (o cualquier rechazo no
-// capturado en algún punto fuera de una ruta) tumbe el proceso completo.
+// Evita que un rechazo no capturado fuera de una ruta (p. ej. un error de
+// conexión a la base) tumbe el proceso.
 process.on("unhandledRejection", (err) => console.error("unhandledRejection:", err));
 
 process.on("SIGTERM", () => servidor.close());

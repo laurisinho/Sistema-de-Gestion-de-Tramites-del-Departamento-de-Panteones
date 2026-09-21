@@ -43,9 +43,9 @@ bitacoraRouter.get(
       take: 250,
     });
 
-    // Ancladas en UTC para coincidir con los filtros desde/hasta de arriba
-    // (también en UTC): si no, "Hoy" en las tarjetas y filtrar Desde=Hasta=hoy
-    // podían dar totales distintos según el huso horario del servidor.
+    // Ancladas en UTC para coincidir con los filtros desde/hasta (también en UTC);
+    // si no, "Hoy" en las tarjetas y Desde=Hasta=hoy podrían dar totales distintos
+    // según el huso horario del servidor.
     const ahora2 = new Date();
     const hoy = new Date(Date.UTC(ahora2.getUTCFullYear(), ahora2.getUTCMonth(), ahora2.getUTCDate()));
     const iniSemana = new Date(hoy);

@@ -68,8 +68,8 @@ authRouter.post("/logout", requiereAuth, asyncHandler(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// Necesario porque React no tiene, como Razor, el usuario disponible del lado
-// del servidor en cada render: la SPA pregunta quién es al cargar la app.
+// La SPA consulta quién es el usuario al cargar, porque a diferencia de Razor no
+// lo recibe del servidor en cada render.
 authRouter.get("/me", requiereAuth, (req, res) => {
   res.json({ usuario: req.usuario });
 });

@@ -1,67 +1,66 @@
-# ─────────────────────────────────────────────────────────────
-#  Compilados de .NET  (aqui vive el 98% del peso: ~968 MB)
-# ─────────────────────────────────────────────────────────────
-bin/
-obj/
-[Dd]ebug/
-[Rr]elease/
-publish/
-*.user
-*.suo
-.vs/
-
-# ─────────────────────────────────────────────────────────────
-#  SECRETOS  —  no subir nunca
-# ─────────────────────────────────────────────────────────────
-# Trae la llave JWT que firma las sesiones y la cadena de conexion.
-appsettings.Production.json
-appsettings.*.local.json
-*.pfx
-*.key
-
-# ─────────────────────────────────────────────────────────────
-#  Respaldos de base de datos  (datos personales de ciudadanos)
-# ─────────────────────────────────────────────────────────────
-*.bak
-*.bacpac
-*.mdf
-*.ldf
-USB/
-
-# ─────────────────────────────────────────────────────────────
-#  Adjuntos de los correos de Fiscalia
-#  Actas, oficios e INE escaneadas: datos personales sensibles.
-# ─────────────────────────────────────────────────────────────
-*.eml
-*.tif
-*.tiff
-adjuntos/
-
-# ─────────────────────────────────────────────────────────────
-#  Material de trabajo de la raiz  —  no es parte del sistema
-#  Padrones reales en Excel, plantillas con nombres de personas,
-#  volcados SQL, el proyecto .NET original y los de prueba.
-#  El repositorio es PUBLICO: nada de esto debe subirse. Las
-#  rutas con "/" delante solo aplican a la raiz, para no tocar
-#  los archivos del propio sistema (p. ej. schema_postgres.sql).
-# ─────────────────────────────────────────────────────────────
+# Material de trabajo de la raíz, fuera del sistema (proyecto .NET original,
+# padrones, pruebas). El repositorio es público: nada de esto debe subirse.
 EXCEL/
 PanteonesMunicipales/
 Prueba2/
 PruebaPanteones/
-/*.sql
-/*.doc
-/*.docx
-/*.pdf
-/*.xls
-/*.xlsx
-/*.xlsb
+ProyectoPanteones/
+USB/
+adjuntos/
 
-# ─────────────────────────────────────────────────────────────
-#  Basura
-# ─────────────────────────────────────────────────────────────
+# Datos personales y documentos: padrones, actas, oficios, reportes exportados
+*.xls
+*.xlsx
+*.xlsb
+*.csv
+*.doc
+*.docx
+*.pdf
+*.eml
+*.tif
+*.tiff
 *.rpt
-~$*
+
+# Volcados y respaldos de base de datos
+respaldos/
+*.dump
+*.dump.parcial
+*.backup
+*.bak
+*.bacpac
+*.mdf
+*.ldf
+*.sql
+!migracion-nodejs/backend/prisma/migrations/**/*.sql
+
+# Secretos y certificados
+.env
+.env.*
+!.env.example
+appsettings.Production.json
+appsettings.*.local.json
+*.pem
+*.key
+*.pfx
+certs/
+
+# Configuración local del servidor
+docker-compose.override.yml
+
+# Dependencias y archivos generados
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Editor y sistema
+.vs/
+.vscode/
+.idea/
+.claude/
+.DS_Store
 Thumbs.db
 desktop.ini
-node_modules/
+~$*

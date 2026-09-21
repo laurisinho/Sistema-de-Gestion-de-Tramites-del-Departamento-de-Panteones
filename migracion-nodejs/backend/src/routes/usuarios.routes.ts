@@ -7,10 +7,10 @@ import { requiereAuth, requiereRol } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 
-// El original .NET nunca llegó a construir este módulo -- el menú traía un
-// "Usuarios (pronto)" deshabilitado (_Layout.cshtml). No hay vista ni
-// controlador que portar; esto es una pantalla nueva sobre el modelo Usuario/Rol
-// que la autenticación ya usaba. Solo un Administrador puede entrar aquí.
+// El sistema original no incluía este módulo (el menú tenía "Usuarios (pronto)"
+// deshabilitado), así que no hay vista ni controlador que portar: es una
+// pantalla nueva sobre el modelo Usuario/Rol que ya usaba la autenticación. Solo
+// un Administrador puede entrar.
 export const usuariosRouter = Router();
 usuariosRouter.use(requiereAuth, requiereRol("Administrador"));
 
@@ -195,10 +195,9 @@ usuariosRouter.patch(
   })
 );
 
-// Antes de apagar una cuenta: nunca la propia (te deja fuera a media sesión)
-// ni al último Administrador activo (deja el sistema sin nadie que pueda
-// volver a dar de alta a alguien). Puerto de ninguna regla del original --
-// es la salvaguarda mínima que cualquier alta de usuarios necesita.
+// Antes de desactivar una cuenta: nunca la propia (dejaría fuera al usuario a
+// media sesión) ni el último Administrador activo (nadie podría volver a dar de
+// alta usuarios). No existe en el original; es la salvaguarda mínima del módulo.
 async function bloqueoDesactivar(id: number, solicitanteId: number): Promise<string | null> {
   if (id === solicitanteId) return "No puedes desactivar tu propia cuenta.";
 

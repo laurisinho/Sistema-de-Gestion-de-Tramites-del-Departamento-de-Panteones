@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { hoyLocal } from "../lib/fechas";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
@@ -18,10 +19,10 @@ function str(v: unknown): string | undefined {
   return s === "" ? undefined : s;
 }
 
-// Sin filtros: últimos 50 (TitulosController.Index). Con filtros: hasta 100
-// (BusquedaController.Index/Buscar) -- por folio/titular/manzana/lote en
-// texto libre + panteón, todos los estados (no solo VIGENTE, a diferencia de
-// /buscar que es solo para elegir título a ceder).
+// Sin filtros devuelve los últimos 50 (TitulosController.Index). Con filtros,
+// hasta 100 (BusquedaController.Index/Buscar) por folio, titular, manzana o lote
+// en texto libre más panteón, en cualquier estado. A diferencia de /buscar, que
+// solo trae VIGENTES para elegir un título a ceder.
 titulosRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -36,10 +37,10 @@ titulosRouter.get(
     const hayFiltros = !!(q || panteonId || seccion || manzana || lote || titular || colindancia);
     const filtrosLote = filtrosLoteBusqueda({ panteonId, seccion, manzana, lote, colindancia });
 
-    // Modo "buscar por fallecido" (BusquedaController.Buscar, tipo="fallecido"):
-    // el nombre del difunto no vive en el título, así que primero se resuelven
-    // los lotes donde se sepultó a alguien con ese nombre (permiso de
-    // inhumación) y luego se filtran los títulos de esos lotes.
+    // Modo "buscar por fallecido" (BusquedaController.Buscar, tipo="fallecido"): el
+    // nombre del difunto no está en el título, así que primero se buscan los lotes
+    // donde se sepultó a alguien con ese nombre (permiso de inhumación) y luego los
+    // títulos de esos lotes.
     let loteIdsPorFallecido: number[] | undefined;
     if (porFallecido && q) {
       const permisos = await prisma.permiso.findMany({
@@ -77,10 +78,9 @@ titulosRouter.get(
   })
 );
 
-// Búsqueda de títulos VIGENTES por folio / titular / manzana / lote, para
-// elegir cuál se va a ceder. Puerto exacto de CesionesController.BuscarTitulo.
-// Va antes de "/:id": es una ruta literal, si quedara después "buscar" se
-// interpretaría como un tituloId inválido (mismo bug ya corregido en Incidencias).
+// Búsqueda de títulos VIGENTES por folio, titular, manzana o lote, para elegir
+// cuál se cede. Equivale a CesionesController.BuscarTitulo. Va antes de "/:id":
+// si quedara después, "buscar" se interpretaría como un tituloId.
 titulosRouter.get(
   "/buscar",
   asyncHandler(async (req, res) => {
@@ -117,9 +117,9 @@ titulosRouter.get(
   })
 );
 
-// Puerto exacto de BusquedaController.Detalle: además del título en sí, trae
-// los fallecidos sepultados en el lote y el historial completo de permisos,
-// para que el expediente cuente la historia completa del lote de un vistazo.
+// Equivale a BusquedaController.Detalle: además del título, trae los fallecidos
+// sepultados en el lote y el historial de permisos, para ver el expediente
+// completo de un vistazo.
 titulosRouter.get(
   "/:id",
   asyncHandler(async (req, res) => {
@@ -181,12 +181,8 @@ const nuevoTituloSchema = z.object({
   numeroRecibo: z.string().optional(),
 });
 
-function hoy(): Date {
-  return new Date(new Date().toDateString());
-}
-
-// Emite un título de propiedad para un lote NUEVO (a diferencia de Permisos,
-// que opera sobre lotes ya existentes). Puerto exacto de TitulosController.Nuevo.
+// Emite un título de propiedad para un lote nuevo (a diferencia de Permisos, que
+// opera sobre lotes existentes). Equivale a TitulosController.Nuevo.
 titulosRouter.post(
   "/",
   asyncHandler(async (req, res) => {
@@ -218,10 +214,8 @@ titulosRouter.post(
       manzana = vm.numeroManzana.trim();
       lote = vm.numeroLote.trim();
 
-      // La sección entra en la comprobación porque también entra en la
-      // restricción de unicidad de la base (ver lib/ubicacion). Sin este
-      // filtro, 52 ubicaciones que hoy conviven en dos secciones quedaban
-      // imposibles de dar de alta, aunque la base sí las admite.
+      // La sección entra en la comprobación porque también forma parte de la
+      // restricción de unicidad de la base (ver lib/ubicacion).
       const existe = await prisma.lote.findFirst({
         where: whereUbicacionLote(vm.panteonId, vm.seccion ?? null, manzana, lote),
       });
@@ -235,13 +229,10 @@ titulosRouter.post(
 
     // Persona, lote y título se confirman juntos: si el título fallara después de
     // crear la persona y el lote (p. ej. choque de folio entre dos capturistas
-    // simultáneos), sin transacción quedarían un titular huérfano y un lote
-    // marcado OCUPADO sin ningún título -- visibles en búsquedas y expedientes.
+    // simultáneos), quedarían un titular huérfano y un lote OCUPADO sin título.
     try {
       const resultado = await prisma.$transaction(async (tx) => {
-        // El folio sigue la forma que ya tienen las claves de esa misma
-        // sección (ver lib/folio): cada sección escribe la suya distinto y no
-        // hay una regla común que valga para todas.
+        // El folio sigue la forma de las claves de esa misma sección (ver lib/folio).
         const clave = panteon.clave?.trim() || `P${vm.panteonId}`;
         const seccion = panteon.usaColindancias ? null : vm.seccion ?? null;
         const folio = await generarFolio(tx, vm.panteonId, clave, seccion, manzana, lote);
@@ -279,7 +270,7 @@ titulosRouter.post(
             loteId: nuevoLote.loteId,
             titularId: titular.personaId,
             folio,
-            fechaEmision: vm.fechaEmision ?? hoy(),
+            fechaEmision: vm.fechaEmision ?? hoyLocal(),
             usuarioEmitioId: usuarioId,
             estado: "VIGENTE",
             estadoEntrega: "PENDIENTE_ENTREGA",
@@ -299,8 +290,8 @@ titulosRouter.post(
         req.ip
       );
 
-      // El loteId va de vuelta para poder encadenar el permiso de sepultura
-      // sin volver a buscar el lote que se acaba de dar de alta.
+      // Se devuelve el loteId para encadenar el permiso de sepultura sin volver a
+      // buscar el lote recién creado.
       res.status(201).json({
         tituloId: resultado.titulo.tituloId,
         folio: resultado.folio,
@@ -332,7 +323,7 @@ titulosRouter.patch(
       where: { tituloId: id },
       data: {
         estadoEntrega,
-        fechaEntrega: estadoEntrega === "ENTREGADO" ? new Date(new Date().toDateString()) : titulo.fechaEntrega,
+        fechaEntrega: estadoEntrega === "ENTREGADO" ? hoyLocal() : titulo.fechaEntrega,
       },
     });
 
@@ -349,9 +340,9 @@ titulosRouter.patch(
   })
 );
 
-// Puerto exacto de BusquedaController.EditarExpediente: titular + lote
-// (manzana/lote/sección, o las 4 colindancias si NumeroManzana=="S/N") +
-// datos del título, todo en un solo guardado.
+// Equivale a BusquedaController.EditarExpediente: titular, lote (manzana/lote/
+// sección, o las 4 colindancias si NumeroManzana=="S/N") y datos del título en
+// un solo guardado.
 const editarTituloSchema = z.object({
   nombreTitular: z.string().min(1, "El nombre del titular es obligatorio."),
   telefonoTitular: z.string().optional(),
@@ -385,9 +376,9 @@ titulosRouter.put(
     const vm = parseo.data;
     const usaColindancias = titulo.lote.numeroManzana === "S/N";
 
-    // El original .NET confirma titular + lote + título con un solo
-    // SaveChangesAsync; aquí eran 3 updates sueltos y una falla a la mitad
-    // dejaba el expediente editado a medias sin que el usuario lo notara.
+    // El original confirma titular, lote y título con un solo SaveChangesAsync; aquí
+    // van en una transacción para que una falla intermedia no deje el expediente a
+    // medias.
     await prisma.$transaction(async (tx) => {
       await tx.persona.update({
         where: { personaId: titulo.titularId },
@@ -433,8 +424,8 @@ titulosRouter.put(
   })
 );
 
-// Puerto exacto de BusquedaController.EliminarExpediente: nunca borra la
-// fila, solo la marca CANCELADO.
+// Equivale a BusquedaController.EliminarExpediente: no borra la fila, la marca
+// CANCELADO.
 titulosRouter.post(
   "/:id/cancelar",
   asyncHandler(async (req, res) => {

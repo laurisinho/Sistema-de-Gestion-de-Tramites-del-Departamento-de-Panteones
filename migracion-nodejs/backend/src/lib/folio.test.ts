@@ -2,12 +2,10 @@ import { describe, expect, it } from "vitest";
 import { generarFolio, generarFolioCesion } from "./folio";
 
 /**
- * `generarFolio` y `generarFolioCesion` solo necesitan un puñado de métodos
- * de Prisma (`lote.findMany`, `tituloPropiedad.findUnique`,
- * `cesionDerechos.findMany`/`findUnique`). En vez de levantar una base de
- * datos para probarlos, este fake implementa justo esos métodos sobre datos
- * en memoria -- por eso el `as any` al final: no pretende ser un cliente de
- * Prisma completo, solo lo mínimo que estas dos funciones tocan.
+ * Cliente de Prisma falso con solo los métodos que usan generarFolio y
+ * generarFolioCesion (lote.findMany, tituloPropiedad.findUnique,
+ * cesionDerechos.findMany/findUnique), sobre datos en memoria. Evita depender
+ * de una base para las pruebas.
  */
 type LoteFalso = { numeroManzana: string; numeroLote: string; claveLegado: string | null };
 
@@ -18,9 +16,8 @@ function crearTxFalso(opts: { lotes?: LoteFalso[]; foliosOcupados?: string[]; ce
 
   return {
     lote: {
-      // generarFolio ya filtra por sección en la consulta real; aquí basta con
-      // devolver la muestra tal cual, porque cada prueba ya la arma acotada
-      // a la sección que le interesa.
+      // generarFolio ya filtra por sección en la consulta real; aquí se devuelve la
+      // muestra tal cual porque cada prueba la arma acotada.
       findMany: async () => lotes.slice(),
     },
     tituloPropiedad: {
@@ -46,7 +43,7 @@ describe("generarFolio", () => {
       ],
     });
     const folio = await generarFolio(tx, 1, "PJE", "TERRAZAS", "9", "99");
-    // Verificado a mano contra producción el 3 de septiembre: da PJE-TRZA9-99.
+    // Resultado esperado: PJE-TRZA9-99.
     expect(folio).toBe("PJE-TRZA9-99");
   });
 
@@ -63,9 +60,8 @@ describe("generarFolio", () => {
   });
 
   it("ADEII sin Angelitos captura manzana y lote, sin importar el acervo", async () => {
-    // Se le pasa a propósito una muestra con el patrón antiguo (solo manzana,
-    // sin lote) para comprobar que la regla fija de ADEII lo ignora: esa
-    // deducción automática solo llegaba al 28 % de acierto en producción.
+    // La muestra usa el patrón antiguo (solo manzana, sin lote) para comprobar que
+    // la regla fija de ADEII lo ignora.
     const tx = crearTxFalso({
       lotes: [
         { numeroManzana: "IX", numeroLote: "1", claveLegado: "PJE-ADEII-09" },
@@ -110,8 +106,8 @@ describe("generarFolio", () => {
   });
 
   it("agrega un consecutivo si el folio base ya está ocupado", async () => {
-    // Sección sin acervo -> cae al respaldo {clave}-{manzana}-{lote}, que
-    // limpia el valor tal cual (sin relleno de ceros): "PJE-ANEXO-1".
+    // Sección sin acervo: usa el respaldo {clave}-{manzana}-{lote} sin relleno de
+    // ceros ("PJE-ANEXO-1").
     const tx = crearTxFalso({ foliosOcupados: ["PJE-ANEXO-1"] });
     const folio = await generarFolio(tx, 1, "PJE", "ANEXO NUEVA", "ANEXO", "1");
     expect(folio).toBe("PJE-ANEXO-1-2");

@@ -2,17 +2,13 @@ import type { Prisma } from "@prisma/client";
 import { variantesManzana } from "./romanos";
 
 /**
- * El filtro con el que se busca si una ubicación ya está ocupada dentro de un
- * panteón, para el alta de un título nuevo.
+ * Filtro para saber si una ubicación ya está ocupada dentro de un panteón
+ * (alta de un título nuevo).
  *
- * La sección entra en el filtro a propósito: también entra en la restricción
- * de unicidad de la base (@@unique([panteonId, seccion, numeroManzana,
- * numeroLote])). Las secciones existen justamente para que la misma
- * numeración de manzana y lote se repita entre ellas -- omitir la sección
- * aquí hacía que 52 ubicaciones que hoy conviven en dos secciones (47 en
- * Jardines del Edén, 5 en Cipreses) quedaran imposibles de dar de alta,
- * aunque la base sí las admite. Se separó en su propia función para poder
- * probar este filtro sin levantar la base de datos.
+ * Incluye la sección porque también forma parte de la restricción de unicidad
+ * de la base (@@unique([panteonId, seccion, numeroManzana, numeroLote])): la
+ * misma manzana y lote pueden repetirse entre secciones. Está en su propia
+ * función para poder probarla sin base de datos.
  */
 export function whereUbicacionLote(
   panteonId: number,
@@ -28,12 +24,10 @@ export function whereUbicacionLote(
   };
 }
 
-// "ANG" (Angelitos) no es un valor real de lotes.seccion: esos lotes viven
-// dentro de ADEII con manzana "ANGELITOS" -- así es como folio.ts los
-// reconoce para darles su propio folio PJE-ANG-#. Esta función deja elegir
-// "ANG" en cualquier buscador como si fuera una sección más, sin tocar cómo
-// se guardan los datos. Nunca debe usarse al CREAR un lote: si "ANG" se
-// guardara como sección literal, folio.ts dejaría de reconocerlo como ADEII.
+// "ANG" (Angelitos) no es un valor real de lotes.seccion: esos lotes están en
+// ADEII con manzana "ANGELITOS" (así los reconoce folio.ts). Esta función
+// permite elegir "ANG" en los buscadores como si fuera una sección más. No debe
+// usarse al crear un lote: guardar "ANG" como sección rompería el folio.
 export const SECCION_VIRTUAL_ANGELITOS = "ANG";
 
 export function whereSeccion(seccion: string): Prisma.LoteWhereInput {
@@ -48,27 +42,25 @@ export interface FiltroUbicacionBusqueda {
   seccion?: string;
   manzana?: string;
   lote?: string;
-  // Texto que se busca en cualquiera de las cuatro colindancias (norte, sur,
-  // este, oeste), para los panteones que no tienen manzana/lote formal.
+  // Texto en cualquiera de las cuatro colindancias, para los panteones sin
+  // manzana y lote formales.
   colindancia?: string;
 }
 
 /**
  * Condiciones de lote para los buscadores de Títulos y Permisos. Se devuelven
- * como lista para combinarlas con AND (`lote: { AND: [...] }`): puestas como
- * llaves de un mismo objeto se pisarían entre sí -- por ejemplo "ANG" ya fija
- * numeroManzana, y una manzana tecleada aparte lo sobrescribiría.
+ * como lista para combinarlas con AND (`lote: { AND: [...] }`); en un solo
+ * objeto se pisarían entre sí (por ejemplo, "ANG" ya fija numeroManzana).
  *
- * Manzana y lote van con "contiene" (como Lotes > Buscar): "3" también trae
- * 13 o 33, pero así "1A" o "XVI" se encuentran aunque no se teclee completo.
+ * Manzana y lote usan "contiene", igual que Lotes > Buscar.
  */
 export function filtrosLoteBusqueda(f: FiltroUbicacionBusqueda): Prisma.LoteWhereInput[] {
   const filtros: Prisma.LoteWhereInput[] = [];
   if (f.panteonId) filtros.push({ panteonId: f.panteonId });
   if (f.seccion) filtros.push(whereSeccion(f.seccion));
   if (f.manzana) {
-    // Algunas secciones antiguas capturaron la manzana en romano (p. ej.
-    // "XVI") y otras en arábigo ("16") para el mismo número real.
+    // Hay secciones que capturaron la manzana en romano ("XVI") y otras en arábigo
+    // ("16") para el mismo número.
     filtros.push({
       OR: variantesManzana(f.manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
     });
