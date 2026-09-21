@@ -1,0 +1,28 @@
+# SITE_ADDRESS decide el modo (ver DEPLOY.md):
+#   ":80"                        HTTP simple, sin certificado (red interna / pruebas)
+#   "panteones.midominio.gob.mx" HTTPS automático con Let's Encrypt (puertos 80 y 443
+#                                abiertos y el dominio apuntando a este servidor)
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# La API (nunca se expone directo: solo Caddy la alcanza, dentro de la red de Docker)
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+
+	# El frontend. El sitio usa rutas con "#" (HashRouter), así que no hace falta
+	# reescribir URLs; try_files solo cubre que abrir "/" siempre entregue index.html.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

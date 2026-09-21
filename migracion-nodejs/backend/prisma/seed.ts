@@ -1,6 +1,14 @@
-// Equivalente a los INSERT semilla de schema_postgres.sql, para usarse con
-// `npm run prisma:seed` después de `prisma migrate dev` (flujo estándar de Prisma,
-// en vez de correr el .sql a mano).
+// Datos mínimos para una instalación nueva (base vacía): roles, tipos de
+// trámite, tipos de lote, los 8 panteones y el usuario "admin".
+// Es idempotente: se puede ejecutar más de una vez sin duplicar datos.
+//
+// No ejecutarlo si se va a restaurar un respaldo con datos reales
+// (deploy/importar-datos.sh): el respaldo ya incluye todo esto y chocaría.
+//
+//   npm run prisma:seed
+//   ADMIN_PASSWORD='...' npm run prisma:seed   (para elegir la contraseña)
+import { randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -37,9 +45,10 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // upsert en vez de createMany+skipDuplicates: antes de agregar @unique a
-  // `clave`, correr el seed dos veces dejó panteones duplicados en Supabase
-  // porque no había ninguna restricción contra la que Prisma pudiera detectarlos.
+  // upsert en lugar de createMany + skipDuplicates: sin @unique en `clave` no
+  // había forma de detectar duplicados al correr el seed varias veces.
+  // El Jardín de los Cipreses son dos panteones (Jardines y Monumentos) con
+  // numeración de manzana independiente.
   const panteones = [
     { nombre: "Jardines del Edén", clave: "PJE", usaColindancias: false, direccion: "Carretera Internacional" },
     { nombre: "Agua Zarca", clave: "PAZ", usaColindancias: false, direccion: "Fraccionamiento La Mesa" },
@@ -47,28 +56,44 @@ async function main() {
     { nombre: "Del Rosario", clave: "PR", usaColindancias: true, direccion: "Reforma e Independencia" },
     { nombre: "Nacional", clave: "PN", usaColindancias: true, direccion: "Calle Reforma Final" },
     { nombre: "Nacional Anexo", clave: "PNA", usaColindancias: true, direccion: "Calle Reforma Final" },
-    { nombre: "Jardín de los Cipreses - Jardines y Monumentos", clave: "PC", usaColindancias: false, direccion: "Calle Reforma Final" },
+    { nombre: "Jardín de los Cipreses - Jardines", clave: "PC", usaColindancias: false, direccion: "Calle Reforma Final" },
+    { nombre: "Jardín de los Cipreses - Monumentos", clave: "PCM", usaColindancias: false, direccion: "Calle Reforma Final" },
   ];
   for (const p of panteones) {
     await prisma.panteon.upsert({ where: { clave: p.clave }, update: {}, create: p });
   }
 
   const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: "Administrador" } });
+  const yaExiste = await prisma.usuario.findUnique({ where: { nombreUsuario: "admin" } });
 
-  await prisma.usuario.upsert({
-    where: { nombreUsuario: "admin" },
-    update: {},
-    create: {
-      rolId: rolAdmin.rolId,
-      nombreUsuario: "admin",
-      nombreCompleto: "Administrador del Sistema",
-      email: "panteones@nogales.gob.mx",
-      // Hash bcrypt heredado del seed .NET, portable sin cambios. Es solo para
-      // poder entrar la primera vez: la contraseña que le corresponde estuvo
-      // publicada en este repositorio, así que hay que cambiarla al instalar.
-      passwordHash: "$2b$12$i6Ulmy7m9B5FdA7eVTQbX.vDhUDNOIxYWD1NLZ9RmbPt34EH.xr32",
-    },
-  });
+  if (yaExiste) {
+    console.log('El usuario "admin" ya existe: no se toca su contraseña.');
+  } else {
+    // No hay contraseña por defecto: se toma de ADMIN_PASSWORD o se genera una al
+    // azar que se muestra una sola vez.
+    const elegida = process.env.ADMIN_PASSWORD?.trim();
+    if (elegida && elegida.length < 8) throw new Error("ADMIN_PASSWORD debe tener al menos 8 caracteres.");
+    const contrasena = elegida || randomBytes(12).toString("base64url");
+
+    await prisma.usuario.create({
+      data: {
+        rolId: rolAdmin.rolId,
+        nombreUsuario: "admin",
+        nombreCompleto: "Administrador del Sistema",
+        email: "panteones@nogales.gob.mx",
+        passwordHash: await bcrypt.hash(contrasena, 12),
+      },
+    });
+
+    console.log("");
+    console.log('Usuario "admin" creado.');
+    if (!elegida) {
+      console.log(`   Contraseña generada: ${contrasena}`);
+      console.log("   Guárdala ahora: no se vuelve a mostrar. Cámbiala desde Administración > Usuarios.");
+    } else {
+      console.log("   Con la contraseña indicada en ADMIN_PASSWORD.");
+    }
+  }
 
   console.log("Seed completado.");
 }

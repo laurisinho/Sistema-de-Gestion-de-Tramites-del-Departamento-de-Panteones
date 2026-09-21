@@ -1,6 +1,7 @@
-// Traducido desde schema_postgres.sql / QueryPAnteones.sql (SQL Server original).
-// Modelos en PascalCase (mismo vocabulario que las entidades C# actuales) mapeados
-// a tablas/columnas snake_case (idiomático en Postgres) vía @@map / @map.
+// Esquema traducido desde el modelo original en SQL Server. Junto con
+// prisma/migrations es la fuente de verdad de la base.
+// Los modelos van en PascalCase (mismo vocabulario que las entidades C# del
+// original) y se mapean a tablas y columnas snake_case con @@map / @map.
 
 generator client {
   provider = "prisma-client-js"
@@ -9,9 +10,9 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // Supabase (y cualquier Postgres detrás de pgbouncer) necesita una conexión
-  // directa aparte para migraciones: el pooler en modo transacción no soporta
-  // los prepared statements que usa `prisma migrate`. Ver .env.example.
+  // Conexión directa para las migraciones: Supabase (y cualquier Postgres detrás
+  // de pgbouncer en modo transacción) no soporta los prepared statements que usa
+  // `prisma migrate`. Ver .env.example.
   directUrl = env("DIRECT_URL")
 }
 
@@ -65,14 +66,11 @@ model Panteon {
   @@map("panteones")
 }
 
-// Catálogo liviano de nombres de sección sugeridos por panteón. A propósito
-// NO es de donde Lote.seccion toma su valor (ese sigue siendo texto libre,
-// ver ubicacion.ts y folio.ts, que dependen de comparar ese string tal cual
-// está capturado históricamente) -- esto solo sirve para poder "dar de
-// alta" una sección desde Administración antes de que exista ningún lote
-// ahí, y que igual aparezca sugerida. Un lote ya existente con una sección
-// que nunca se formalizó aquí sigue funcionando igual: /catalogos/secciones
-// combina esta tabla con lo que ya haya en lotes.
+// Catálogo de secciones sugeridas por panteón. Lote.seccion sigue siendo texto
+// libre (ubicacion.ts y folio.ts dependen de comparar el valor tal como se
+// capturó); este catálogo solo permite dar de alta una sección desde
+// Administración antes de que exista algún lote en ella y que aparezca como
+// sugerencia. /catalogos/secciones lo combina con lo ya existente en lotes.
 model Seccion {
   seccionId Int      @id @default(autoincrement()) @map("seccion_id")
   panteonId Int      @map("panteon_id")
@@ -86,11 +84,11 @@ model Seccion {
   @@map("secciones")
 }
 
-// Catálogo de agentes del Ministerio Público para sugerir en los formularios
-// de No Reclamados. Igual que Seccion, es aditivo: Fallecido.ministerioPublico
-// y Reconocimiento.ministerioPublico siguen siendo texto libre (el
-// formulario ofrece "Otro" para capturar uno que no esté aquí), así que dar
-// de alta o desactivar un agente no toca ningún registro ya existente.
+// Catálogo de agentes del Ministerio Público para sugerir en los formularios de
+// No Reclamados. Igual que Seccion, es aditivo: Fallecido.ministerioPublico y
+// Reconocimiento.ministerioPublico siguen siendo texto libre (el formulario
+// ofrece "Otro"), por lo que dar de alta o desactivar un agente no modifica
+// registros existentes.
 model AgenteMinisterioPublico {
   agenteId  Int      @id @default(autoincrement()) @map("agente_id")
   nombre    String   @unique @db.VarChar(200)
@@ -100,22 +98,19 @@ model AgenteMinisterioPublico {
   @@map("agentes_ministerio_publico")
 }
 
-// Renglón único (id fijo en 1) con los dos colores de marca configurables
-// desde Administración. Se lee sin autenticación (GET /api/apariencia)
-// porque hasta la pantalla de login necesita pintarse con el color vigente.
+// Renglón único (id fijo en 1) con los colores de marca, los logos y el nombre
+// del síndico configurables desde Administración. Se lee sin autenticación
+// (GET /api/apariencia) porque la pantalla de login también lo necesita.
 model ConfiguracionApariencia {
   id            Int      @id @default(1)
   colorGuinda   String   @default("#6b1229") @db.VarChar(7)
   colorDorado   String   @default("#f5b400") @db.VarChar(7)
-  // Null = usar el logo empaquetado de siempre (backend/src/assets); solo se
-  // llenan cuando Administración sube uno propio. Van en la base y no en
-  // disco porque el disco de Render es efímero -- un archivo subido ahí se
-  // perdería en el siguiente despliegue.
+  // Null usa el logo empaquetado (backend/src/assets). Se guardan en la base y no
+  // en disco porque el disco de algunos hospedajes es efímero.
   logoNogales   Bytes?
   logoFrontera  Bytes?
   // Nombre de quien firma como Síndico Municipal en títulos, permisos y
-  // cesiones -- cambia con cada administración (period. de 4 años). Antes
-  // vivía copiado tal cual en 3 plantillas distintas.
+  // cesiones; cambia con cada administración.
   nombreSindico String   @default("MAESTRA EDNA ELINORA SOTO GRACIA") @db.VarChar(200)
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 

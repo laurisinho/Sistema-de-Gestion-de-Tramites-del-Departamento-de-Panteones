@@ -47,8 +47,9 @@ sistema original en .NET, sobre la misma base de datos relacional.
 cd backend
 npm install
 cp .env.example .env   # completar DATABASE_URL, DIRECT_URL, JWT_SECRET
-npx prisma generate
-npm run dev             # http://localhost:4000
+npx prisma migrate deploy   # crea las tablas (base vacía)
+npm run prisma:seed         # roles, panteones y el usuario admin
+npm run dev                 # http://localhost:4000
 
 # Frontend
 cd frontend
@@ -56,15 +57,26 @@ npm install
 npm run dev              # http://localhost:5173
 ```
 
-Usuario sembrado por `prisma/seed.ts`: `admin` (rol Administrador). Su contraseña
-inicial no se documenta aquí a propósito — una contraseña escrita en el repositorio
-deja de ser secreta. Cámbiala en cuanto levantes el entorno.
+El seed no trae contraseña fija: genera una para `admin` y la imprime una sola vez
+(o usa `ADMIN_PASSWORD` si se define).
+
+Si cambias `prisma/schema.prisma`, genera la migración con
+`npx prisma migrate dev --name lo-que-cambiaste` y sube la carpeta nueva de
+`prisma/migrations/`. No uses `prisma db push` contra una base con datos reales.
+
+---
+
+## Despliegue en un servidor
+
+Está todo en el repositorio (Docker Compose, Caddy, respaldos): ver
+[DEPLOY.md](DEPLOY.md).
 
 ---
 
 ## Estructura
 
 ```
-backend/    API Express + Prisma (routes, middleware, lib)
+backend/    API Express + Prisma (routes, middleware, lib, prisma/migrations)
 frontend/   SPA React (pages, components, auth)
+deploy/     scripts de instalación, respaldo, restauración y verificación
 ```

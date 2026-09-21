@@ -12,19 +12,18 @@ export const env = {
   jwtSecret: requerida("JWT_SECRET"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "8h",
   frontendOrigin: process.env.FRONTEND_ORIGIN ?? "http://localhost:5173",
-  // Saltos de proxy que hay delante de la API, para que req.ip sea la
-  // dirección de quien llama y no la del último proxy. Medido en el
-  // hospedaje actual: X-Forwarded-For llega como
-  // "<cliente>, <Cloudflare>, <proxy interno>" y el socket es ::1, o sea
-  // tres saltos. En local no hay ninguno. Si cambia la infraestructura se
-  // ajusta con TRUST_PROXY, sin tocar el código.
+  // Ruta al Chromium del sistema para generar los PDF (imagen de Docker). Si no
+  // se define, producción usa @sparticuz/chromium.
+  chromiumPath: process.env.CHROMIUM_PATH || undefined,
+  // Número de proxies delante de la API, para que req.ip sea la dirección del
+  // cliente. En local no hay ninguno; se ajusta con TRUST_PROXY según la
+  // infraestructura.
   trustProxy: Number(process.env.TRUST_PROXY ?? (process.env.NODE_ENV === "production" ? 3 : 0)),
 };
 
-// Misma protección que Program.cs tenía en el proyecto .NET: nunca arrancar en
-// producción con una llave por defecto o demasiado corta para firmar JWT.
-// El valor de .env.example es público (el repo lo es) -- que sea "largo" no
-// lo hace secreto, así que se rechaza también por coincidencia exacta.
+// Igual que Program.cs en el sistema original: en producción no se arranca con
+// una llave JWT por defecto o demasiado corta. El valor de .env.example es
+// público, por lo que también se rechaza por coincidencia exacta.
 if (env.isProduction && env.jwtSecret.length < 32) {
   throw new Error("JWT_SECRET debe tener al menos 32 caracteres en producción.");
 }

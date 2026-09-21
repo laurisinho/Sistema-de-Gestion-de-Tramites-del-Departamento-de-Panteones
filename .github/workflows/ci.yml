@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (compila y pruebas)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: migracion-nodejs/backend
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: migracion-nodejs/backend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  frontend:
+    name: Frontend (compila)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: migracion-nodejs/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: migracion-nodejs/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  # Verifica que lo que se entrega al servidor arranca: construye las imágenes,
+  # levanta base, API y sitio, siembra, inicia sesión y genera un PDF.
+  docker:
+    name: Docker (instalación completa)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: migracion-nodejs
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Crear .env con claves al azar
+        run: bash deploy/generar-secretos.sh
+
+      - name: Construir imágenes
+        run: docker compose build
+
+      - name: Levantar (espera a que la base y la API estén sanas)
+        run: docker compose up -d --wait --wait-timeout 300
+
+      - name: Sembrar datos base
+        run: docker compose exec -T -e ADMIN_PASSWORD=contrasena-de-ci-123 api npm run prisma:seed
+
+      - name: Autodiagnóstico (base, migraciones, admin y PDF)
+        run: docker compose exec -T api npx tsx scripts/verificar-instalacion.ts
+
+      - name: El sitio y la API responden por el proxy
+        run: |
+          curl -fsS http://localhost/api/health
+          curl -fsS http://localhost/ | grep -q 'id="root"'
+
+      - name: Iniciar sesión por el proxy
+        run: |
+          curl -fsS -X POST http://localhost/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"nombreUsuario":"admin","password":"contrasena-de-ci-123"}' | grep -q '"token"'
+
+      - name: Logs (solo si algo falló)
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - name: Limpiar
+        if: always()
+        run: docker compose down -v

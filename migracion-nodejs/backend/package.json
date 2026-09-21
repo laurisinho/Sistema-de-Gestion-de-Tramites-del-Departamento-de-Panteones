@@ -4,13 +4,18 @@
   "private": true,
   "description": "API del Sistema de Gestión de Trámites del Departamento de Panteones (Node.js/Express/PostgreSQL)",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc -p tsconfig.json && node -e \"require('fs').cpSync('src/assets','dist/assets',{recursive:true})\"",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
+    "verificar": "tsx scripts/verificar-instalacion.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

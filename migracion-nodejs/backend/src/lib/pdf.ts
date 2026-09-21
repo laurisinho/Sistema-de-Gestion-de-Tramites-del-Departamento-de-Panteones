@@ -2,16 +2,25 @@ import puppeteerCore, { type Browser } from "puppeteer-core";
 import puppeteerCompleto from "puppeteer";
 import { env } from "../env";
 
-// Un solo navegador reutilizado entre requests -- abrir Chromium en cada PDF
-// sería lentísimo. Se cierra solo cuando el proceso termina.
+// Un solo navegador compartido entre peticiones: abrir Chromium por cada PDF
+// es muy lento. Se cierra al terminar el proceso.
 let browserPromise: Promise<Browser> | null = null;
 
-// Render (y la mayoría de hosts tipo contenedor mínimo) no trae las librerías
-// del sistema que el Chromium normal de Puppeteer necesita para arrancar
-// (libnss3, libatk, etc.), así que en producción se usa un build de Chromium
-// que no depende de ellas. En local se sigue usando el Puppeteer completo,
-// que trae su propio Chrome descargado y sí corre tal cual en Windows/Mac.
+// En hospedajes con contenedores mínimos faltan las librerías del sistema que
+// necesita el Chromium de Puppeteer (libnss3, libatk, etc.), por lo que en
+// producción se usa @sparticuz/chromium, que no depende de ellas. En local se
+// usa Puppeteer completo, que descarga su propio Chrome.
 async function launchBrowser(): Promise<Browser> {
+  // Chromium del sistema (imagen de Docker), con sus librerías y fuentes.
+  // --no-sandbox porque el sandbox de Chromium no puede crear namespaces dentro
+  // de un contenedor; el propio contenedor hace de aislamiento.
+  if (env.chromiumPath) {
+    return puppeteerCore.launch({
+      executablePath: env.chromiumPath,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+      headless: true,
+    });
+  }
   if (env.isProduction) {
     const chromium = (await import("@sparticuz/chromium")).default;
     return puppeteerCore.launch({
@@ -20,10 +29,8 @@ async function launchBrowser(): Promise<Browser> {
       headless: true,
     });
   }
-  // "puppeteer" se importa arriba (estático), no con await import() como
-  // @sparticuz/chromium: bajo "tsx watch" (el dev server) un import()
-  // dinámico de este paquete se queda colgado para siempre sin error --
-  // nunca llega a lanzar Chrome. Con import estático no pasa.
+  // "puppeteer" se importa de forma estática (arriba) y no con await import():
+  // bajo "tsx watch" el import() dinámico de este paquete se queda colgado.
   return puppeteerCompleto.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] }) as unknown as Promise<Browser>;
 }
 
@@ -36,7 +43,7 @@ export async function renderPdf(html: string): Promise<Buffer> {
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
-    // "load" basta: los logos van embebidos como data URI, no hay red que esperar.
+    // Con "load" basta: los logos van embebidos como data URI.
     await page.setContent(html, { waitUntil: "load" });
     const buffer = await page.pdf({
       format: "Letter",

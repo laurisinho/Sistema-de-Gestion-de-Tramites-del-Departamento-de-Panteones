@@ -1,0 +1,81 @@
+# Sistema de Panteones: base de datos + API + sitio web. Todo con un comando:
+#
+#   ./deploy/generar-secretos.sh      (una sola vez: crea .env con claves al azar)
+#   docker compose up -d --build
+#
+# Guía completa: DEPLOY.md
+name: panteones
+
+# Rotación de logs: sin límite, Docker los acumula en disco indefinidamente.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_USER: panteones
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (corre ./deploy/generar-secretos.sh)}
+      POSTGRES_DB: panteones
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U panteones -d panteones"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    # Sin "ports": la base solo se alcanza desde la red interna de Docker (la
+    # API), nunca desde afuera. Contiene datos personales de ciudadanos.
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://panteones:${POSTGRES_PASSWORD}@db:5432/panteones?schema=public
+      DIRECT_URL: postgresql://panteones:${POSTGRES_PASSWORD}@db:5432/panteones?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en .env (corre ./deploy/generar-secretos.sh)}
+      JWT_EXPIRES_IN: 8h
+      FRONTEND_ORIGIN: ${PUBLIC_URL:-http://localhost}
+      # Un salto de proxy delante de la API (Caddy). De esto depende que la IP de
+      # la bitácora y del límite de intentos de login sea la real del cliente y no
+      # una falseable.
+      TRUST_PROXY: 1
+      CHROMIUM_PATH: /usr/bin/chromium
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

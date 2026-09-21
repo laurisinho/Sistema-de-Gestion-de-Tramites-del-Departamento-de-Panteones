@@ -5,7 +5,7 @@ Base: inventario real de acciones en `PanteonesMunicipales/Controllers/*.cs` (no
 
 ## Convención de nombres
 
-- **Base de datos**: `snake_case` (ver `schema_postgres.sql`) — idiomático en Postgres, evita entrecomillar identificadores en consultas crudas o en `psql`.
+- **Base de datos**: `snake_case` (ver `backend/prisma/schema.prisma`) — idiomático en Postgres, evita entrecomillar identificadores en consultas crudas o en `psql`.
 - **Modelos Prisma**: `PascalCase` (igual que las entidades C# actuales: `Permiso`, `Fallecido`, `Lote`...) mapeados a las tablas snake_case con `@@map("permisos")` / columnas con `@map("fallecido_id")`. Esto conserva el vocabulario mental ya usado en este proyecto durante el port.
 - **JSON de la API**: `camelCase` (convención de JS/React) — Prisma ya expone los campos del modelo en camelCase por defecto, no se necesita transformación extra.
 - **Rutas**: `kebab-case`, en español (igual que ahora), bajo prefijo `/api`.
