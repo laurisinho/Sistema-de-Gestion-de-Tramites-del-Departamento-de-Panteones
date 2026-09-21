@@ -359,6 +359,7 @@ administracionRouter.put(
       create: { id: 1, colorGuinda: vm.colorGuinda, colorDorado: vm.colorDorado },
       update: { colorGuinda: vm.colorGuinda, colorDorado: vm.colorDorado },
     });
+    invalidarCacheApariencia();
 
     await registrarBitacora(
       req.usuario!.usuarioId,
