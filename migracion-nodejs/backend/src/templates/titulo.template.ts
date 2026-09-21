@@ -31,18 +31,36 @@ export function tituloHtml(
       ? `<div class="hdr-reimp">REIMPRESIÓN ${numeroReimpresion > 0 ? `Nº ${numeroReimpresion} ` : ""}— ${fechaHoraCorta(fechaReimpresion)}</div>`
       : "";
 
+  const celda = (etiqueta: string, valor: string) =>
+    `<div class="ubic-celda"><div class="uf-et">${etiqueta}</div><div class="uf-val">${esc(valor)}</div></div>`;
+
   const ubicacionInterior = usaColindancias
-    ? `<div class="ubic-row">
-         <div><div class="ubic-fila"><span class="uf-et">NORTE: </span>${esc((titulo.lote?.colindanciaNorte || "—").toUpperCase())}</div>
-              <div class="ubic-fila"><span class="uf-et">ESTE: </span>${esc((titulo.lote?.colindanciaEste || "—").toUpperCase())}</div></div>
-         <div><div class="ubic-fila"><span class="uf-et">SUR: </span>${esc((titulo.lote?.colindanciaSur || "—").toUpperCase())}</div>
-              <div class="ubic-fila"><span class="uf-et">OESTE: </span>${esc((titulo.lote?.colindanciaOeste || "—").toUpperCase())}</div></div>
+    ? `<div class="ubic-grid2">
+         ${celda("NORTE", (titulo.lote?.colindanciaNorte || "—").toUpperCase())}
+         ${celda("ESTE", (titulo.lote?.colindanciaEste || "—").toUpperCase())}
+         ${celda("SUR", (titulo.lote?.colindanciaSur || "—").toUpperCase())}
+         ${celda("OESTE", (titulo.lote?.colindanciaOeste || "—").toUpperCase())}
        </div>`
-    : `<div class="ubic-row3">
-         <div><span class="uf-et">SECCIÓN: </span>${esc((titulo.lote?.seccion || "—").toUpperCase())}</div>
-         <div><span class="uf-et">MANZANA: </span>${esc((titulo.lote?.numeroManzana || "—").toUpperCase())}</div>
-         <div><span class="uf-et">LOTE: </span>${esc(titulo.lote?.numeroLote ?? "—")}</div>
+    : `<div class="ubic-grid3">
+         ${celda("SECCIÓN", (titulo.lote?.seccion || "—").toUpperCase())}
+         ${celda("MANZANA", (titulo.lote?.numeroManzana || "—").toUpperCase())}
+         ${celda("LOTE", titulo.lote?.numeroLote ?? "—")}
        </div>`;
+
+  // La hoja es de tamaño fijo. El nombre del titular sale dos veces (cuerpo y
+  // firma) y las colindancias pueden ser largas, así que con mucho texto la letra
+  // baja un poco para que el título siga cabiendo en una sola página. El nombre
+  // más largo hoy mide 200 caracteres; el promedio, 25.
+  const largoNombre = (titulo.titular.nombreCompleto || "").length;
+  const largoColindancia = usaColindancias
+    ? Math.max(
+        ...[titulo.lote?.colindanciaNorte, titulo.lote?.colindanciaSur, titulo.lote?.colindanciaEste, titulo.lote?.colindanciaOeste].map(
+          (c) => (c || "").length
+        )
+      )
+    : 0;
+  const carga = largoNombre + largoColindancia;
+  const escala = carga > 200 ? 0.78 : carga > 120 ? 0.84 : carga > 90 ? 0.9 : carga > 70 ? 0.95 : 1;
 
   const ident = titulo.titular.identificacionNumero;
   const identTexto = ident?.trim()
@@ -56,8 +74,8 @@ export function tituloHtml(
 <style>
   @page { size: Letter; margin: 0; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Arial, sans-serif; font-size: 10pt; color: #1a1a1a; }
-  .page { width: 8.5in; min-height: 11in; padding: 1cm 1.8cm; display: flex; flex-direction: column; position: relative; }
+  body { margin: 0; font-family: Arial, sans-serif; font-size: 11pt; color: #1a1a1a; }
+  .page { --k: ${escala}; width: 8.5in; min-height: 11in; padding: 1cm 1.8cm; display: flex; flex-direction: column; position: relative; }
   .watermark {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
     font-size: 62pt; font-weight: bold; color: ${p.marcaAgua}; letter-spacing: 2pt; white-space: nowrap; z-index: 0;
@@ -74,40 +92,44 @@ export function tituloHtml(
   .hdr-reimp { font-size: 7pt; color: #CC0000; font-weight: bold; padding-top: 2pt; }
   .hdr-rule { border-top: 2pt solid ${p.guinda}; margin-top: 3pt; }
 
-  .contenido { flex: 1; padding-top: 6pt; z-index: 1; }
+  /* El contenido se reparte a lo alto de la hoja: los cuatro grupos quedan
+     separados de forma pareja y las firmas al fondo, en lugar de amontonarse
+     arriba con el resto de la página en blanco. */
+  .contenido { flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 12pt; padding-top: 10pt; z-index: 1; }
 
-  .banner { display: flex; align-items: center; background: ${p.guinda}; color: #fff; padding: 6pt; margin-bottom: 2pt; }
-  .banner-titulo { flex: 1; font-weight: bold; font-size: 13pt; }
-  .banner-folio { width: 180pt; text-align: right; font-size: 10pt; }
-  .banner-folio span { color: #F5D58A; font-size: 9pt; font-weight: normal; }
+  .banner { display: flex; align-items: center; background: ${p.guinda}; color: #fff; padding: 11pt 12pt; }
+  .banner-titulo { flex: 1; font-weight: bold; font-size: 18pt; letter-spacing: 0.6pt; }
+  .banner-folio { width: 210pt; text-align: right; font-size: 13pt; }
+  .banner-folio span { color: #F5D58A; font-size: 10pt; font-weight: normal; }
 
-  .fecha-emision { text-align: right; padding-top: 6pt; font-size: 9.5pt; }
+  .fecha-emision { text-align: right; padding-top: 10pt; font-size: 11.5pt; }
 
-  .cuerpo-legal { padding-top: 8pt; font-size: 10pt; line-height: 1.4; text-align: justify; }
+  .cuerpo-legal { font-size: calc(var(--k) * 12.5pt); line-height: 1.6; text-align: justify; }
 
-  .ubic-tabla { margin-top: 8pt; border: 0.5pt solid #DDDDDD; }
-  .ubic-tabla-int { background: ${GRIS_CLARO}; padding: 6pt; }
-  .ubic-row, .ubic-row3 { display: flex; gap: 12pt; }
-  .ubic-row > div, .ubic-row3 > div { flex: 1; }
-  .ubic-fila { padding-bottom: 2pt; font-size: 9pt; }
-  .uf-et { font-weight: bold; color: ${p.guindaOscuro}; }
+  .ubic-tabla { margin-top: 14pt; border: 0.5pt solid #DDDDDD; border-left: 5pt solid ${p.guinda}; background: ${GRIS_CLARO}; padding: 14pt 18pt; }
+  .ubic-grid3 { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 14pt; }
+  /* Dos columnas rellenadas por columna: NORTE y ESTE a la izquierda, SUR y OESTE a la derecha. */
+  .ubic-grid2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2, auto); grid-auto-flow: column; gap: 8pt 16pt; }
+  .ubic-celda { min-width: 0; }
+  .uf-et { font-size: 9pt; font-weight: bold; letter-spacing: 1pt; color: ${p.guindaOscuro}; }
+  .uf-val { padding-top: 3pt; font-size: calc(var(--k) * 18pt); font-weight: bold; overflow-wrap: anywhere; }
+  .ubic-grid2 .uf-val { font-size: calc(var(--k) * 11.5pt); font-weight: normal; }
 
-  .clausulas { padding-top: 8pt; }
-  .clausula { display: flex; gap: 6pt; padding-bottom: 5pt; }
+  .clausula { display: flex; gap: 9pt; padding-bottom: 10pt; }
   .clausula-bullet { color: ${p.guinda}; font-weight: bold; width: 10pt; }
-  .clausula-texto { font-size: 9.5pt; line-height: 1.35; text-align: justify; flex: 1; }
+  .clausula-texto { font-size: calc(var(--k) * 11.5pt); line-height: 1.55; text-align: justify; flex: 1; }
 
-  .identificacion { padding-top: 4pt; font-size: 9.5pt; }
-  .recibo { padding-top: 3pt; font-size: 9.5pt; color: #555555; }
+  .identificacion { padding-top: 8pt; font-size: calc(var(--k) * 11.5pt); }
+  .recibo { padding-top: 6pt; font-size: calc(var(--k) * 11pt); color: #555555; }
 
-  .firmas { padding-top: 30pt; display: flex; }
+  .firmas { display: flex; padding-top: 28pt; }
   .firma-col { flex: 1; text-align: center; }
   .firma-sep { width: 40pt; }
-  .firma-linea { font-size: 9pt; }
-  .firma-nombre { padding-top: 1pt; font-weight: bold; font-size: 9pt; }
-  .firma-cargo { font-size: 8pt; color: ${p.guinda}; }
+  .firma-linea { font-size: 11pt; }
+  .firma-nombre { padding-top: 3pt; font-weight: bold; font-size: calc(var(--k) * 11pt); }
+  .firma-cargo { font-size: 10pt; color: ${p.guinda}; }
 
-  .pie { text-align: center; font-size: 6.5pt; color: #999999; z-index: 1; }
+  .pie { text-align: center; font-size: 7pt; color: #999999; padding-top: 10pt; z-index: 1; }
 </style>
 </head>
 <body>
@@ -126,13 +148,15 @@ export function tituloHtml(
   <div class="hdr-rule"></div>
 
   <div class="contenido">
-    <div class="banner">
-      <div class="banner-titulo">TÍTULO DE PROPIEDAD</div>
-      <div class="banner-folio"><span>Folio: </span><strong>${esc(titulo.folio)}</strong></div>
+    <div class="grupo">
+      <div class="banner">
+        <div class="banner-titulo">TÍTULO DE PROPIEDAD</div>
+        <div class="banner-folio"><span>Folio: </span><strong>${esc(titulo.folio)}</strong></div>
+      </div>
+      <div class="fecha-emision">H. Nogales, Sonora, México a ${fechaLarga(titulo.fechaEmision)}.</div>
     </div>
 
-    <div class="fecha-emision">H. Nogales, Sonora, México a ${fechaLarga(titulo.fechaEmision)}.</div>
-
+    <div class="grupo">
     <div class="cuerpo-legal">
       Que se expide a favor de C. <strong>${esc((titulo.titular.nombreCompleto || "").toUpperCase())}</strong>
       en relación a lote de terreno ubicado en el Panteón <strong>${esc((titulo.lote?.panteon.nombre || "").toUpperCase())}</strong>
@@ -142,18 +166,19 @@ export function tituloHtml(
       sus representados.
     </div>
 
-    <div class="ubic-tabla">
-      <div class="ubic-tabla-int">${ubicacionInterior}</div>
+    <div class="ubic-tabla">${ubicacionInterior}</div>
     </div>
 
-    <div class="clausulas">
-      ${CLAUSULAS.map((c) => `<div class="clausula"><div class="clausula-bullet">•</div><div class="clausula-texto">${esc(c)}</div></div>`).join("\n")}
-    </div>
+    <div class="grupo">
+      <div class="clausulas">
+        ${CLAUSULAS.map((c) => `<div class="clausula"><div class="clausula-bullet">•</div><div class="clausula-texto">${esc(c)}</div></div>`).join("\n")}
+      </div>
 
-    <div class="identificacion">
-      El titular se identifica con ${identTexto} al momento de la expedición del presente título.
+      <div class="identificacion">
+        El titular se identifica con ${identTexto} al momento de la expedición del presente título.
+      </div>
+      <div class="recibo">No. de Recibo: ${titulo.numeroRecibo?.trim() ? esc(titulo.numeroRecibo) : "____________________"}</div>
     </div>
-    <div class="recibo">No. de Recibo: ${titulo.numeroRecibo?.trim() ? esc(titulo.numeroRecibo) : "____________________"}</div>
 
     <div class="firmas">
       <div class="firma-col">
