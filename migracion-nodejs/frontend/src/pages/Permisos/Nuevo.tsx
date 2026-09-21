@@ -109,6 +109,11 @@ export function PermisoNuevo() {
   const [numeroRecibo, setNumeroRecibo] = useState("");
   const [funeraria, setFuneraria] = useState("");
 
+  // Construcción: el difunto se elige entre los sepultados en el lote. La
+  // elección guarda a qué lote pertenece para descartarla si luego se cambia de
+  // lote; null en fallecidoId significa que se quitó a propósito.
+  const [eleccionCon, setEleccionCon] = useState<{ loteId: number; fallecidoId: number | null } | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -116,6 +121,24 @@ export function PermisoNuevo() {
     queryKey: ["catalogos", "panteones"],
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
   });
+
+  const { data: ocupantesCon, isFetching: cargandoOcupantes } = useQuery({
+    queryKey: ["lotes", loteSel?.loteId, "ocupantes"],
+    queryFn: () => api<FallecidoResultado[]>(`/lotes/${loteSel!.loteId}/ocupantes`),
+    enabled: tipoClave === "CON" && !!loteSel,
+  });
+
+  // Con un solo sepultado se enlaza directamente; con varios hay que elegir. Todo
+  // se deriva del lote actual, así que no arrastra al difunto de otro lote.
+  const eleccionVigente = eleccionCon && eleccionCon.loteId === loteSel?.loteId ? eleccionCon : null;
+  const difuntoCon =
+    tipoClave !== "CON" || !ocupantesCon
+      ? null
+      : eleccionVigente
+        ? (ocupantesCon.find((o) => o.fallecidoId === eleccionVigente.fallecidoId) ?? null)
+        : ocupantesCon.length === 1
+          ? ocupantesCon[0]
+          : null;
 
   const panteonSelLote = panteones?.find((p) => String(p.panteonId) === panteonIdLote);
   const usaColindanciasLote = panteonSelLote?.usaColindancias ?? false;
@@ -263,7 +286,11 @@ export function PermisoNuevo() {
       } else {
         body.loteId = loteSel?.loteId;
       }
-      if (fallecidoSel) {
+      if (tipoClave === "CON") {
+        // Los campos de fallecido de otros trámites quedan ocultos pero conservan
+        // su valor; aquí no deben viajar.
+        if (difuntoCon) body.fallecidoId = difuntoCon.fallecidoId;
+      } else if (fallecidoSel) {
         body.fallecidoId = fallecidoSel.fallecidoId;
       } else {
         body.nombreFallecido = nombreFallecido || undefined;
@@ -713,6 +740,82 @@ export function PermisoNuevo() {
                 <label>Ubicación del depósito</label>
                 <input value={ubicacionDeposito} onChange={(e) => setUbicacionDeposito(e.target.value)} />
               </div>
+            </div>
+          </div>
+        )}
+
+        {tipoClave === "CON" && (
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="card-header-guinda">
+              <span>
+                <i className="bi bi-flower1" /> Difunto en el lote
+              </span>
+            </div>
+            <div className="card-body">
+              {!loteSel ? (
+                <p className="text-muted" style={{ margin: 0 }}>
+                  Elige un lote arriba para ver quién está sepultado ahí. Es opcional: si no hay difunto, el permiso sale sin nombre.
+                </p>
+              ) : cargandoOcupantes && !ocupantesCon ? (
+                <p className="text-muted" style={{ margin: 0 }}>
+                  Consultando los sepultados del lote…
+                </p>
+              ) : !ocupantesCon || ocupantesCon.length === 0 ? (
+                <p className="text-muted" style={{ margin: 0 }}>
+                  No hay personas sepultadas registradas en este lote. El permiso se imprime sin nombre de difunto.
+                </p>
+              ) : (
+                <>
+                  <div className="form-campo" style={{ maxWidth: 520 }}>
+                    <label>Difunto que aparecerá en el permiso</label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <div className={`campo-resultado${difuntoCon ? " lleno" : ""}`}>{difuntoCon ? difuntoCon.nombre : "Sin seleccionar"}</div>
+                      {difuntoCon && (
+                        <button
+                          type="button"
+                          className="boton-secundario"
+                          title="Quitar difunto"
+                          onClick={() => setEleccionCon({ loteId: loteSel.loteId, fallecidoId: null })}
+                        >
+                          <i className="bi bi-x-lg" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {(ocupantesCon.length > 1 || !difuntoCon) && (
+                    <div className="tabla-contenedor" style={{ marginTop: 12 }}>
+                      <table className="tabla">
+                        <tbody>
+                          {ocupantesCon
+                            .filter((o) => o.fallecidoId !== difuntoCon?.fallecidoId)
+                            .map((o) => (
+                              <tr key={o.fallecidoId}>
+                                <td style={{ fontWeight: 600 }}>{o.nombre}</td>
+                                <td className="text-muted">
+                                  <small>
+                                    {[o.fecha ? new Date(o.fecha).toLocaleDateString("es-MX", { timeZone: "UTC" }) : null, o.acta ? `Acta ${o.acta}` : null]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </small>
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="boton-secundario boton-sm"
+                                    onClick={() => setEleccionCon({ loteId: loteSel.loteId, fallecidoId: o.fallecidoId })}
+                                  >
+                                    Usar este
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         )}
