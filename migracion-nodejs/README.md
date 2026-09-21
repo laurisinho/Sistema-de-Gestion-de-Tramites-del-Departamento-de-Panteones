@@ -4,11 +4,12 @@ Aplicación web para el **Departamento de Panteones** de la Sindicatura Municipa
 del H. Ayuntamiento de Nogales, Sonora. Reescritura en React + Node.js del
 sistema original en .NET, sobre la misma base de datos relacional.
 
-> ⚠️ **Este repositorio debe permanecer privado.** La base de datos (Supabase)
+> ⚠️ **Este repositorio es público y aquí no va ningún dato real.** La base
 > contiene nombres de personas fallecidas, números de acta y expedientes de la
-> Fiscalía. El Ayuntamiento es sujeto obligado bajo la LPDPPSO. El repo en sí
-> no guarda esos datos (viven solo en la base), pero nunca subas archivos
-> `.env`, dumps de la base ni exportes con datos reales.
+> Fiscalía, y el Ayuntamiento es sujeto obligado bajo la LPDPPSO. Los datos
+> viven solo en la base; nunca subas archivos `.env`, respaldos, exportaciones
+> ni capturas con registros reales. El `.gitignore` de la raíz ya bloquea los
+> casos conocidos, pero revisa antes de cada commit.
 
 ---
 
@@ -21,7 +22,8 @@ sistema original en .NET, sobre la misma base de datos relacional.
 | Base de datos | PostgreSQL (Supabase) |
 | Frontend | React + TypeScript (Vite) |
 | Datos remotos | TanStack React Query |
-| Sesión | JWT en cookie HttpOnly + bcrypt |
+| Sesión | JWT por encabezado `Authorization` (cookie como respaldo) + bcrypt |
+| Documentos | Chromium para los PDF, ExcelJS para los reportes |
 
 ---
 
@@ -37,6 +39,8 @@ sistema original en .NET, sobre la misma base de datos relacional.
 - **Reportes** — formatos oficiales de Fiscalía y relación mensual de movimientos
 - **Bitácora** — auditoría de toda operación que modifica datos
 - **Usuarios** — alta, edición y control de acceso por rol (solo Administrador)
+- **Catálogos** — panteones, secciones y agentes del Ministerio Público
+- **Apariencia** — colores, logos y nombre del síndico, sin tocar código
 
 ---
 
@@ -80,3 +84,5 @@ backend/    API Express + Prisma (routes, middleware, lib, prisma/migrations)
 frontend/   SPA React (pages, components, auth)
 deploy/     scripts de instalación, respaldo, restauración y verificación
 ```
+
+Los endpoints están documentados en [API.md](API.md).
