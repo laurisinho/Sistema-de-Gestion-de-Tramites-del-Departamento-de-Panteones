@@ -199,6 +199,10 @@ titulosRouter.post(
     const usuarioId = req.usuario!.usuarioId;
     let manzana: string;
     let lote: string;
+    // Lote que ya existe en esa ubicación sin título vigente, típicamente porque
+    // un permiso "sin título registrado" lo creó. El título se emite sobre ese
+    // mismo lote en lugar de rechazarse.
+    let loteSinTitulo: { loteId: number } | null = null;
 
     if (panteon.usaColindancias) {
       manzana = "S/N";
@@ -220,10 +224,21 @@ titulosRouter.post(
         where: whereUbicacionLote(vm.panteonId, vm.seccion ?? null, manzana, lote),
       });
       if (existe) {
-        const enSeccion = vm.seccion ? ` en la sección ${vm.seccion}` : "";
-        return res.status(400).json({
-          error: `Ya existe un lote registrado en ese panteón${enSeccion} con Manzana ${manzana} y Lote ${lote}.`,
+        // Solo es un conflicto si el lote ya tiene un título vigente. Sin él, el
+        // lote existe únicamente por un permiso y falta emitirle el título.
+        const vigente = await prisma.tituloPropiedad.findFirst({
+          where: { loteId: existe.loteId, estado: "VIGENTE" },
+          include: { titular: true },
         });
+        if (vigente) {
+          const enSeccion = vm.seccion ? ` en la sección ${vm.seccion}` : "";
+          return res.status(409).json({
+            error:
+              `Ese lote ya tiene título vigente: Manzana ${manzana} y Lote ${lote}${enSeccion}, ` +
+              `folio ${vigente.folio} a nombre de ${vigente.titular.nombreCompleto}.`,
+          });
+        }
+        loteSinTitulo = existe;
       }
     }
 
@@ -248,22 +263,26 @@ titulosRouter.post(
           },
         });
 
-        const nuevoLote = await tx.lote.create({
-          data: {
-            panteonId: vm.panteonId,
-            tipoLoteId: vm.tipoLoteId,
-            numeroManzana: manzana,
-            numeroLote: lote,
-            seccion: panteon.usaColindancias ? null : vm.seccion,
-            dimensiones: "1.50 m de frente por 2.50 m de largo",
-            colindanciaNorte: panteon.usaColindancias ? vm.colindanciaNorte : null,
-            colindanciaSur: panteon.usaColindancias ? vm.colindanciaSur : null,
-            colindanciaEste: panteon.usaColindancias ? vm.colindanciaEste : null,
-            colindanciaOeste: panteon.usaColindancias ? vm.colindanciaOeste : null,
-            claveLegado: folio,
-            estado: "OCUPADO",
-          },
-        });
+        // Si el lote ya existía se conserva tal cual (clave, tipo y demás datos);
+        // sus permisos anteriores siguen enlazados a él.
+        const nuevoLote = loteSinTitulo
+          ? await tx.lote.update({ where: { loteId: loteSinTitulo.loteId }, data: { estado: "OCUPADO" } })
+          : await tx.lote.create({
+              data: {
+                panteonId: vm.panteonId,
+                tipoLoteId: vm.tipoLoteId,
+                numeroManzana: manzana,
+                numeroLote: lote,
+                seccion: panteon.usaColindancias ? null : vm.seccion,
+                dimensiones: "1.50 m de frente por 2.50 m de largo",
+                colindanciaNorte: panteon.usaColindancias ? vm.colindanciaNorte : null,
+                colindanciaSur: panteon.usaColindancias ? vm.colindanciaSur : null,
+                colindanciaEste: panteon.usaColindancias ? vm.colindanciaEste : null,
+                colindanciaOeste: panteon.usaColindancias ? vm.colindanciaOeste : null,
+                claveLegado: folio,
+                estado: "OCUPADO",
+              },
+            });
 
         const titulo = await tx.tituloPropiedad.create({
           data: {
