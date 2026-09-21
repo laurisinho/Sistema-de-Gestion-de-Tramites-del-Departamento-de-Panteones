@@ -5,7 +5,7 @@ import { hoyLocal } from "../lib/fechas";
 import { requiereAuth } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
-import { prepararHoja, cerrarHoja, escribirFecha, GUINDA, GUINDA_LT, type ColDef } from "../lib/excel";
+import { prepararHoja, cerrarHoja, escribirFecha, coloresExcel, argb, type ColDef } from "../lib/excel";
 import { renderPdf } from "../lib/pdf";
 import { obtenerAparienciaDocumento } from "../lib/apariencia";
 import { etiquetasHtml, type EtiquetaLote } from "../templates/etiquetas.template";
@@ -328,6 +328,7 @@ reportesRouter.get(
 
     // Hoja 1: concentrado
     const totalMovs = resumen.reduce((s, x) => s + x.total, 0);
+    const colores = await coloresExcel();
     const ws = await prepararHoja(wb, "Resumen", ColsResumen, "RELACIÓN MENSUAL DE MOVIMIENTOS", "Trámites realizados por panteón", periodo, totalMovs);
 
     let r = 7;
@@ -343,7 +344,7 @@ reportesRouter.get(
       ws.getCell(r, 8).value = it.total;
       ws.getCell(r, 9).value = it.donaciones;
 
-      ws.getCell(r, 8).font = { bold: true, color: { argb: `FF${GUINDA}` } };
+      ws.getCell(r, 8).font = { bold: true, color: { argb: argb(colores.guinda) } };
 
       // Los ceros se atenúan para resaltar los valores con movimiento.
       for (let c = 2; c <= 9; c++) {
@@ -372,7 +373,7 @@ reportesRouter.get(
       ws.getCell(r, 9).value = resumen.reduce((s, x) => s + x.donaciones, 0);
       for (let c = 1; c <= ColsResumen.length; c++) {
         ws.getCell(r, c).font = { bold: true, color: { argb: "FFFFFFFF" } };
-        ws.getCell(r, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${GUINDA_LT}` } };
+        ws.getCell(r, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(colores.guindaClaro) } };
       }
       ws.getRow(r).height = 18;
       r++;
@@ -380,7 +381,7 @@ reportesRouter.get(
 
     // Se pasa el total de movimientos y no el de panteones: el pie dice
     // "registro(s)" y debe coincidir con el encabezado.
-    cerrarHoja(ws, ColsResumen, totalMovs, r);
+    await cerrarHoja(ws, ColsResumen, totalMovs, r);
 
     // Hoja 2: detalle movimiento por movimiento
     const wd = await prepararHoja(wb, "Detalle", ColsDetalle, "DETALLE DE MOVIMIENTOS", "Cada trámite del periodo", periodo, detalle.length);
@@ -408,7 +409,7 @@ reportesRouter.get(
       j++;
     }
 
-    cerrarHoja(wd, ColsDetalle, detalle.length, rd);
+    await cerrarHoja(wd, ColsDetalle, detalle.length, rd);
 
     await registrarBitacora(req.usuario!.usuarioId, Acciones.Imprimir, "permisos", undefined, `Relación de movimientos (${periodo}) — ${detalle.length} movimiento(s)`, req.ip);
 

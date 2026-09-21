@@ -6,6 +6,7 @@ import { requiereAuth, requiereRol } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { invalidarCacheApariencia } from "../lib/apariencia";
+import { CONTRASTE_MINIMO, contrasteConBlanco } from "../lib/colores";
 
 // Alta y mantenimiento de los catálogos de Panteones, Secciones y Agentes del
 // Ministerio Público. Nada se borra físicamente, igual que en Usuarios: solo se
@@ -335,7 +336,14 @@ const colorHexSchema = z
   .regex(/^#[0-9a-fA-F]{6}$/, "El color debe ser un código hexadecimal, p. ej. #6b1229.");
 
 const aparienciaSchema = z.object({
-  colorGuinda: colorHexSchema,
+  // El guinda es el fondo de los encabezados y lleva texto blanco encima, tanto
+  // en pantalla como en los títulos, permisos, cesiones y reportes en Excel. Un
+  // color claro dejaría ilegible un documento ya impreso y firmado, así que se
+  // rechaza aquí en lugar de descubrirlo al imprimir.
+  colorGuinda: colorHexSchema.refine(
+    (c) => contrasteConBlanco(c) >= CONTRASTE_MINIMO,
+    "Ese color es demasiado claro: el texto blanco de los documentos no se leería encima. Elige uno más oscuro."
+  ),
   colorDorado: colorHexSchema,
 });
 

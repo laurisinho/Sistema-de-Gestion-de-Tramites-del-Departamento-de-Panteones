@@ -1,14 +1,27 @@
 import ExcelJS from "exceljs";
 import { fechaHoraLocalCorta } from "./fechas";
-import { obtenerLogosBuffer } from "./apariencia";
+import { obtenerAparienciaDocumento, obtenerLogosBuffer } from "./apariencia";
 
-const GUINDA = "6B1229";
-const GUINDA_LT = "8B2040";
-const DORADO = "F5B400";
 const BORDE = "D8D2D4";
 
 function argb(hex: string): string {
-  return `FF${hex}`;
+  return `FF${hex.replace("#", "")}`;
+}
+
+export interface ColoresExcel {
+  guinda: string;
+  guindaClaro: string;
+  dorado: string;
+}
+
+/**
+ * Los colores de marca vigentes, para las celdas que cada reporte pinta por su
+ * cuenta. La apariencia está cacheada en memoria, así que llamarla por reporte
+ * no cuesta una consulta extra.
+ */
+export async function coloresExcel(): Promise<ColoresExcel> {
+  const { paleta } = await obtenerAparienciaDocumento();
+  return { guinda: paleta.guinda, guindaClaro: paleta.guindaClaro, dorado: paleta.dorado };
 }
 
 export interface ColDef {
@@ -31,8 +44,9 @@ export async function prepararHoja(
   periodo: string,
   totalItems: number
 ): Promise<ExcelJS.Worksheet> {
+  const colores = await coloresExcel();
   const ws = wb.addWorksheet(nombreHoja, {
-    properties: { tabColor: { argb: argb(GUINDA) } },
+    properties: { tabColor: { argb: argb(colores.guinda) } },
     views: [{ showGridLines: false }],
   });
   const ncol = cols.length;
@@ -57,15 +71,15 @@ export async function prepararHoja(
     ws.mergeCells(r, 1, r, ncol);
   }
 
-  ws.getCell(1, 1).font = { bold: true, size: 15, color: { argb: argb(GUINDA) } };
+  ws.getCell(1, 1).font = { bold: true, size: 15, color: { argb: argb(colores.guinda) } };
   ws.getCell(1, 1).alignment = { horizontal: "center" };
-  ws.getCell(2, 1).font = { size: 9.5, color: { argb: argb(GUINDA_LT) } };
+  ws.getCell(2, 1).font = { size: 9.5, color: { argb: argb(colores.guindaClaro) } };
   ws.getCell(2, 1).alignment = { horizontal: "center" };
   ws.getCell(3, 1).font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
-  ws.getCell(3, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(GUINDA) } };
+  ws.getCell(3, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(colores.guinda) } };
   ws.getCell(3, 1).alignment = { horizontal: "center", vertical: "middle" };
-  ws.getCell(4, 1).font = { bold: true, size: 10, color: { argb: argb(DORADO) } };
-  ws.getCell(4, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(GUINDA_LT) } };
+  ws.getCell(4, 1).font = { bold: true, size: 10, color: { argb: argb(colores.dorado) } };
+  ws.getCell(4, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(colores.guindaClaro) } };
   ws.getCell(4, 1).alignment = { horizontal: "center" };
   ws.getCell(5, 1).font = { size: 9, italic: true, color: { argb: "FF555555" } };
   ws.getCell(5, 1).alignment = { horizontal: "center" };
@@ -80,7 +94,7 @@ export async function prepararHoja(
     const cell = ws.getCell(FILA_ENCABEZADO, c + 1);
     cell.value = cols[c].titulo;
     cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 9 };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(GUINDA) } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(colores.guinda) } };
     cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
   }
   ws.getRow(FILA_ENCABEZADO).height = 34;
@@ -90,7 +104,13 @@ export async function prepararHoja(
 
 // Equivale a CerrarHoja del sistema original: renglón de total (o "sin
 // registros"), bordes, anchos de columna, encabezado congelado e impresión.
-export function cerrarHoja(ws: ExcelJS.Worksheet, cols: ColDef[], totalItems: number, filaSiguiente: number): void {
+export async function cerrarHoja(
+  ws: ExcelJS.Worksheet,
+  cols: ColDef[],
+  totalItems: number,
+  filaSiguiente: number
+): Promise<void> {
+  const colores = await coloresExcel();
   const ncol = cols.length;
   let ultimaFila: number;
 
@@ -104,7 +124,7 @@ export function cerrarHoja(ws: ExcelJS.Worksheet, cols: ColDef[], totalItems: nu
     ws.getCell(filaSiguiente, 1).value = `TOTAL: ${totalItems} registro(s)`;
     ws.mergeCells(filaSiguiente, 1, filaSiguiente, ncol);
     ws.getCell(filaSiguiente, 1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-    ws.getCell(filaSiguiente, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(GUINDA_LT) } };
+    ws.getCell(filaSiguiente, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(colores.guindaClaro) } };
     ws.getCell(filaSiguiente, 1).alignment = { horizontal: "right" };
     ws.getRow(filaSiguiente).height = 18;
     ultimaFila = filaSiguiente;
@@ -114,10 +134,10 @@ export function cerrarHoja(ws: ExcelJS.Worksheet, cols: ColDef[], totalItems: nu
     for (let c = 1; c <= ncol; c++) {
       const cell = ws.getCell(r, c);
       cell.border = {
-        top: { style: r === FILA_ENCABEZADO ? "medium" : "thin", color: { argb: r === FILA_ENCABEZADO ? argb(GUINDA) : argb(BORDE) } },
-        left: { style: c === 1 ? "medium" : "thin", color: { argb: c === 1 ? argb(GUINDA) : argb(BORDE) } },
-        right: { style: c === ncol ? "medium" : "thin", color: { argb: c === ncol ? argb(GUINDA) : argb(BORDE) } },
-        bottom: { style: r === ultimaFila ? "medium" : "thin", color: { argb: r === ultimaFila ? argb(GUINDA) : argb(BORDE) } },
+        top: { style: r === FILA_ENCABEZADO ? "medium" : "thin", color: { argb: r === FILA_ENCABEZADO ? argb(colores.guinda) : argb(BORDE) } },
+        left: { style: c === 1 ? "medium" : "thin", color: { argb: c === 1 ? argb(colores.guinda) : argb(BORDE) } },
+        right: { style: c === ncol ? "medium" : "thin", color: { argb: c === ncol ? argb(colores.guinda) : argb(BORDE) } },
+        bottom: { style: r === ultimaFila ? "medium" : "thin", color: { argb: r === ultimaFila ? argb(colores.guinda) : argb(BORDE) } },
       };
     }
   }
@@ -171,4 +191,4 @@ export function fechaHoraTexto(f: Date | null | undefined, hora: Date | null | u
   return `${s} ${h}:${m}`;
 }
 
-export { argb, GUINDA, GUINDA_LT, DORADO, BORDE };
+export { argb, BORDE };

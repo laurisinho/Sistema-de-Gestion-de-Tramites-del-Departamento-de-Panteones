@@ -156,7 +156,7 @@ export function etiquetasHtml(
     align-items: center;
     justify-content: center;
     padding: 1pt 4pt 2pt;
-    background: ${apariencia.guinda};
+    background: ${apariencia.paleta.guinda};
     color: #fff;
     font-size: ${medidas.cuerpoPt}pt;
     font-weight: 700;

@@ -250,7 +250,7 @@ incidenciasRouter.get(
       i++;
     }
 
-    cerrarHoja(ws, ColsIncidencias, lista.length, r);
+    await cerrarHoja(ws, ColsIncidencias, lista.length, r);
 
     await registrarBitacora(req.usuario!.usuarioId, Acciones.Imprimir, "incidencias", undefined, `Reporte de incidencias — ${lista.length} registro(s)`, req.ip);
 

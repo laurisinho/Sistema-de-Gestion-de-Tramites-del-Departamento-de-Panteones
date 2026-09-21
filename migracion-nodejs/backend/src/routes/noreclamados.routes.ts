@@ -7,7 +7,7 @@ import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { normalizarAgenteMp } from "../lib/agentesMp";
 import ExcelJS from "exceljs";
-import { prepararHoja, cerrarHoja, escribirFecha, fechaHoraTexto, GUINDA, type ColDef } from "../lib/excel";
+import { prepararHoja, cerrarHoja, escribirFecha, fechaHoraTexto, coloresExcel, argb, type ColDef } from "../lib/excel";
 
 export const noReclamadosRouter = Router();
 noReclamadosRouter.use(requiereAuth, requiereEscritura);
@@ -495,6 +495,7 @@ noReclamadosRouter.get(
     }
 
     const wb = new ExcelJS.Workbook();
+    const colores = await coloresExcel();
     const ws = await prepararHoja(wb, "No Reclamados", ColsSepultados, "RELACIÓN DE PERSONAS NO RECLAMADAS", "Sepultadas en fosas comunes", subtitulo, fallecidos.length);
 
     let r = 7;
@@ -521,7 +522,7 @@ noReclamadosRouter.get(
       ws.getCell(r, 13).alignment = { wrapText: true };
       ws.getCell(r, 2).alignment = { wrapText: true };
       if (f.numeroCaso?.trim()) {
-        ws.getCell(r, 5).font = { bold: true, color: { argb: `FF${GUINDA}` } };
+        ws.getCell(r, 5).font = { bold: true, color: { argb: argb(colores.guinda) } };
       }
       if (i % 2 === 0) {
         for (let c = 1; c <= ColsSepultados.length; c++) {
@@ -532,7 +533,7 @@ noReclamadosRouter.get(
       i++;
     }
 
-    cerrarHoja(ws, ColsSepultados, fallecidos.length, r);
+    await cerrarHoja(ws, ColsSepultados, fallecidos.length, r);
 
     await registrarBitacora(req.usuario!.usuarioId, Acciones.Imprimir, "fallecidos", undefined, `Reporte de no reclamadas sepultadas (${subtitulo}) — ${fallecidos.length} registro(s)`, req.ip);
 
@@ -570,6 +571,7 @@ noReclamadosRouter.get(
     });
 
     const wb = new ExcelJS.Workbook();
+    const colores = await coloresExcel();
     const ws = await prepararHoja(wb, "Identificadas", ColsIdentificados, "RELACIÓN DE PERSONAS NO RECLAMADAS", "Que fueron identificadas y exhumadas", subtitulo, recs.length);
 
     let r = 7;
@@ -591,7 +593,7 @@ noReclamadosRouter.get(
       ws.getCell(r, 2).alignment = { wrapText: true };
       ws.getCell(r, 4).font = { bold: true };
       if (rec.fallecido?.numeroCaso?.trim()) {
-        ws.getCell(r, 5).font = { bold: true, color: { argb: `FF${GUINDA}` } };
+        ws.getCell(r, 5).font = { bold: true, color: { argb: argb(colores.guinda) } };
       }
       if (i % 2 === 0) {
         for (let c = 1; c <= ColsIdentificados.length; c++) {
@@ -602,7 +604,7 @@ noReclamadosRouter.get(
       i++;
     }
 
-    cerrarHoja(ws, ColsIdentificados, recs.length, r);
+    await cerrarHoja(ws, ColsIdentificados, recs.length, r);
 
     await registrarBitacora(req.usuario!.usuarioId, Acciones.Imprimir, "reconocimientos", undefined, `Reporte de identificadas y exhumadas (${subtitulo}) — ${recs.length} registro(s)`, req.ip);
 

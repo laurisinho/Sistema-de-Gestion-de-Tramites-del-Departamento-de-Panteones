@@ -2,8 +2,6 @@ import type { Prisma } from "@prisma/client";
 import type { AparienciaDocumento } from "../lib/apariencia";
 import { esc, fechaLarga, fechaHoraCorta } from "../lib/html";
 
-const GUINDA = "#6B1229";
-const GUINDA_DARK = "#4A0C1C";
 const GRIS_CLARO = "#F5F5F5";
 const DIMENSIONES = "1.50 m de frente por 2.50 m de largo";
 
@@ -23,6 +21,7 @@ export function tituloHtml(
   apariencia: AparienciaDocumento,
   opts: { esReimpresion?: boolean; fechaReimpresion?: Date; numeroReimpresion?: number } = {}
 ): string {
+  const p = apariencia.paleta;
   const usaColindancias = titulo.lote?.numeroManzana === "S/N";
   const { esReimpresion, fechaReimpresion, numeroReimpresion = 0 } = opts;
 
@@ -61,7 +60,7 @@ export function tituloHtml(
   .page { width: 8.5in; min-height: 11in; padding: 1cm 1.8cm; display: flex; flex-direction: column; position: relative; }
   .watermark {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-    font-size: 62pt; font-weight: bold; color: #EAC6CE; letter-spacing: 2pt; white-space: nowrap; z-index: 0;
+    font-size: 62pt; font-weight: bold; color: ${p.marcaAgua}; letter-spacing: 2pt; white-space: nowrap; z-index: 0;
   }
   .header-row { display: flex; align-items: center; }
   .hdr-logo-left { width: 100pt; flex-shrink: 0; }
@@ -69,15 +68,15 @@ export function tituloHtml(
   .hdr-logo-right { width: 90pt; flex-shrink: 0; text-align: right; }
   .hdr-logo-right img { width: 80pt; }
   .hdr-center { flex: 1; text-align: center; }
-  .hdr-t1 { font-size: 8pt; color: ${GUINDA_DARK}; font-weight: bold; }
-  .hdr-t2 { font-size: 7pt; color: ${GUINDA}; }
-  .hdr-t3 { font-size: 10pt; color: ${GUINDA_DARK}; font-weight: bold; padding-top: 2pt; }
+  .hdr-t1 { font-size: 8pt; color: ${p.guindaOscuro}; font-weight: bold; }
+  .hdr-t2 { font-size: 7pt; color: ${p.guinda}; }
+  .hdr-t3 { font-size: 10pt; color: ${p.guindaOscuro}; font-weight: bold; padding-top: 2pt; }
   .hdr-reimp { font-size: 7pt; color: #CC0000; font-weight: bold; padding-top: 2pt; }
-  .hdr-rule { border-top: 2pt solid ${GUINDA}; margin-top: 3pt; }
+  .hdr-rule { border-top: 2pt solid ${p.guinda}; margin-top: 3pt; }
 
   .contenido { flex: 1; padding-top: 6pt; z-index: 1; }
 
-  .banner { display: flex; align-items: center; background: ${GUINDA}; color: #fff; padding: 6pt; margin-bottom: 2pt; }
+  .banner { display: flex; align-items: center; background: ${p.guinda}; color: #fff; padding: 6pt; margin-bottom: 2pt; }
   .banner-titulo { flex: 1; font-weight: bold; font-size: 13pt; }
   .banner-folio { width: 180pt; text-align: right; font-size: 10pt; }
   .banner-folio span { color: #F5D58A; font-size: 9pt; font-weight: normal; }
@@ -91,11 +90,11 @@ export function tituloHtml(
   .ubic-row, .ubic-row3 { display: flex; gap: 12pt; }
   .ubic-row > div, .ubic-row3 > div { flex: 1; }
   .ubic-fila { padding-bottom: 2pt; font-size: 9pt; }
-  .uf-et { font-weight: bold; color: ${GUINDA_DARK}; }
+  .uf-et { font-weight: bold; color: ${p.guindaOscuro}; }
 
   .clausulas { padding-top: 8pt; }
   .clausula { display: flex; gap: 6pt; padding-bottom: 5pt; }
-  .clausula-bullet { color: ${GUINDA}; font-weight: bold; width: 10pt; }
+  .clausula-bullet { color: ${p.guinda}; font-weight: bold; width: 10pt; }
   .clausula-texto { font-size: 9.5pt; line-height: 1.35; text-align: justify; flex: 1; }
 
   .identificacion { padding-top: 4pt; font-size: 9.5pt; }
@@ -106,7 +105,7 @@ export function tituloHtml(
   .firma-sep { width: 40pt; }
   .firma-linea { font-size: 9pt; }
   .firma-nombre { padding-top: 1pt; font-weight: bold; font-size: 9pt; }
-  .firma-cargo { font-size: 8pt; color: ${GUINDA}; }
+  .firma-cargo { font-size: 8pt; color: ${p.guinda}; }
 
   .pie { text-align: center; font-size: 6.5pt; color: #999999; z-index: 1; }
 </style>

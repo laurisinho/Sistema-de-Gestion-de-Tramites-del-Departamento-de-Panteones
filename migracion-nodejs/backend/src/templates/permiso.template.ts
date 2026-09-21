@@ -2,9 +2,6 @@ import type { Prisma } from "@prisma/client";
 import type { AparienciaDocumento } from "../lib/apariencia";
 import { esc, fechaLargaMayus, esFechaReal, fechaHoraCorta, fechaCorta } from "../lib/html";
 
-const GUINDA = "#6B1229";
-const GUINDA_DARK = "#4A0C1C";
-const DORADO = "#F5B400";
 const GRIS_CLARO = "#F5F5F5";
 
 export type PermisoParaPdf = Prisma.PermisoGetPayload<{
@@ -83,6 +80,7 @@ export function permisoHtml(
   apariencia: AparienciaDocumento,
   opts: { esReimpresion?: boolean; fechaReimpresion?: Date; numeroReimpresion?: number } = {}
 ): string {
+  const p = apariencia.paleta;
   const tipo = permiso.tipoTramite.clave;
   const usaColindancias = permiso.lote?.numeroManzana === "S/N";
   const { esReimpresion, fechaReimpresion, numeroReimpresion = 0 } = opts;
@@ -137,7 +135,7 @@ export function permisoHtml(
   .page { width: 8.5in; min-height: 11in; padding: 1cm 1.5cm; display: flex; flex-direction: column; position: relative; }
   .watermark {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-    font-size: 62pt; font-weight: bold; color: #EAC6CE; letter-spacing: 2pt; white-space: nowrap; z-index: 0;
+    font-size: 62pt; font-weight: bold; color: ${p.marcaAgua}; letter-spacing: 2pt; white-space: nowrap; z-index: 0;
   }
   .header-row { display: flex; align-items: center; }
   .hdr-logo-left { width: 100pt; flex-shrink: 0; }
@@ -145,16 +143,16 @@ export function permisoHtml(
   .hdr-logo-right { width: 90pt; flex-shrink: 0; text-align: right; }
   .hdr-logo-right img { width: 80pt; }
   .hdr-center { flex: 1; text-align: center; }
-  .hdr-t1 { font-size: 8pt; color: ${GUINDA_DARK}; font-weight: bold; }
-  .hdr-t2 { font-size: 7pt; color: ${GUINDA}; }
-  .hdr-t3 { font-size: 10pt; color: ${GUINDA_DARK}; font-weight: bold; padding-top: 2pt; }
+  .hdr-t1 { font-size: 8pt; color: ${p.guindaOscuro}; font-weight: bold; }
+  .hdr-t2 { font-size: 7pt; color: ${p.guinda}; }
+  .hdr-t3 { font-size: 10pt; color: ${p.guindaOscuro}; font-weight: bold; padding-top: 2pt; }
   .hdr-reimp { font-size: 7pt; color: #CC0000; font-weight: bold; padding-top: 2pt; }
-  .hdr-rule { border-top: 2pt solid ${GUINDA}; margin-top: 3pt; }
+  .hdr-rule { border-top: 2pt solid ${p.guinda}; margin-top: 3pt; }
 
   .contenido { flex: 1; padding-top: 5pt; z-index: 1; }
 
   .tipo-permiso {
-    text-align: center; background: ${GUINDA}; color: #fff; font-weight: bold; font-size: 12pt;
+    text-align: center; background: ${p.guinda}; color: #fff; font-weight: bold; font-size: 12pt;
     padding: 5pt 25pt; margin: 6pt auto 4pt; display: table;
   }
 
@@ -168,9 +166,9 @@ export function permisoHtml(
   .fd-val { font-size: 10pt; font-weight: bold; }
 
   .ubicacion { padding-top: 6pt; }
-  .ubic-titulo { font-weight: bold; font-size: 10pt; color: ${GUINDA_DARK}; padding-bottom: 3pt; }
+  .ubic-titulo { font-weight: bold; font-size: 10pt; color: ${p.guindaOscuro}; padding-bottom: 3pt; }
   .ubic-tabla { border: 0.5pt solid #DDDDDD; }
-  .ubic-panteon { background: ${GUINDA}; color: #fff; font-weight: bold; font-size: 10pt; padding: 4pt 8pt; }
+  .ubic-panteon { background: ${p.guinda}; color: #fff; font-weight: bold; font-size: 10pt; padding: 4pt 8pt; }
   .ubic-row, .ubic-row3 { display: flex; padding: 6pt; gap: 12pt; }
   .ubic-row > div, .ubic-row3 > div { flex: 1; }
   .ubic-simple { padding-bottom: 2pt; }
@@ -179,34 +177,34 @@ export function permisoHtml(
   .ubic-label { font-size: 8pt; color: #777777; }
   .ubic-valor { font-size: 11pt; font-weight: bold; }
   .sin-titulo {
-    margin-top: 4pt; background: #FFF8E1; border: 0.5pt solid ${DORADO}; padding: 5pt;
-    font-weight: bold; font-size: 9pt; color: ${GUINDA_DARK};
+    margin-top: 4pt; background: #FFF8E1; border: 0.5pt solid ${p.dorado}; padding: 5pt;
+    font-weight: bold; font-size: 9pt; color: ${p.guindaOscuro};
   }
 
   .cuerpo { padding-top: 8pt; }
   .cuerpo-linea { padding-bottom: 3pt; font-size: 10.5pt; line-height: 1.25; }
   .no-acredita {
-    margin-top: 4pt; background: #FFF8E1; border: 0.5pt solid ${DORADO}; padding: 5pt;
-    font-weight: bold; font-size: 9pt; color: ${GUINDA_DARK};
+    margin-top: 4pt; background: #FFF8E1; border: 0.5pt solid ${p.dorado}; padding: 5pt;
+    font-weight: bold; font-size: 9pt; color: ${p.guindaOscuro};
   }
 
   .autorizacion { text-align: center; padding-top: 55pt; }
   .aut-linea { font-size: 11pt; }
   .aut-nombre { padding-top: 3pt; font-weight: bold; font-size: 11pt; }
-  .aut-cargo { padding-top: 1pt; font-size: 9.5pt; color: ${GUINDA}; }
+  .aut-cargo { padding-top: 1pt; font-size: 9.5pt; color: ${p.guinda}; }
   .aut-lugar { font-size: 8.5pt; color: #777777; }
 
   .pie { z-index: 1; }
-  .pie-rule { border-top: 1pt solid ${GUINDA}; }
+  .pie-rule { border-top: 1pt solid ${p.guinda}; }
   .avisos { padding-top: 6pt; }
   .aviso-linea { padding-top: 2pt; font-size: 9.5pt; }
   .aviso-linea:first-child { padding-top: 0; }
-  .av-et { font-weight: bold; color: ${GUINDA_DARK}; }
+  .av-et { font-weight: bold; color: ${p.guindaOscuro}; }
 
   .acuse { padding-top: 6pt; display: flex; }
   .acuse-izq { flex: 3; }
   .acuse-der { flex: 2; padding-top: 8pt; padding-left: 14pt; }
-  .acuse-titulo { font-weight: bold; font-size: 10pt; color: ${GUINDA_DARK}; }
+  .acuse-titulo { font-weight: bold; font-size: 10pt; color: ${p.guindaOscuro}; }
   .acuse-linea { padding-top: 3pt; font-size: 10pt; }
   .acuse-firma-linea { border-bottom: 0.8pt solid #666666; padding-top: 16pt; }
   .acuse-firma-texto { text-align: center; font-size: 9.5pt; color: #777777; padding-top: 2pt; }

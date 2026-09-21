@@ -1,20 +1,22 @@
 import { prisma } from "./prisma";
 import { LOGO_NOGALES, LOGO_FRONTERA } from "./logos";
+import { derivarPaleta, type PaletaDocumento } from "./colores";
 
 export interface AparienciaDocumento {
   logoNogales: string;
   logoFrontera: string;
   sindico: string;
-  /** Color de marca elegido en Administración > Apariencia. */
-  guinda: string;
+  /** Tonos derivados de los colores de Administración > Apariencia. */
+  paleta: PaletaDocumento;
 }
 
 const SINDICO_DEFECTO = "MAESTRA EDNA ELINORA SOTO GRACIA";
 const GUINDA_DEFECTO = "#6B1229";
+const DORADO_DEFECTO = "#F5B400";
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 // Se valida aquí también (no solo al guardarlo) porque el valor se interpola en
-// el CSS de los documentos.
+// el CSS de los documentos y en los colores del Excel.
 function color(valor: string | undefined, porDefecto: string): string {
   return HEX.test(valor ?? "") ? valor! : porDefecto;
 }
@@ -40,7 +42,10 @@ export async function obtenerAparienciaDocumento(): Promise<AparienciaDocumento>
     logoNogales: aDataUri(config?.logoNogales ?? null) ?? LOGO_NOGALES,
     logoFrontera: aDataUri(config?.logoFrontera ?? null) ?? LOGO_FRONTERA,
     sindico: config?.nombreSindico?.trim() || SINDICO_DEFECTO,
-    guinda: color(config?.colorGuinda, GUINDA_DEFECTO),
+    paleta: derivarPaleta(
+      color(config?.colorGuinda, GUINDA_DEFECTO),
+      color(config?.colorDorado, DORADO_DEFECTO)
+    ),
   };
   return cache;
 }
