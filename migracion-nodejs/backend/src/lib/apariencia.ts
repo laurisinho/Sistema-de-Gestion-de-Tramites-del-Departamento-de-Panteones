@@ -5,9 +5,19 @@ export interface AparienciaDocumento {
   logoNogales: string;
   logoFrontera: string;
   sindico: string;
+  /** Color de marca elegido en Administración > Apariencia. */
+  guinda: string;
 }
 
 const SINDICO_DEFECTO = "MAESTRA EDNA ELINORA SOTO GRACIA";
+const GUINDA_DEFECTO = "#6B1229";
+const HEX = /^#[0-9a-fA-F]{6}$/;
+
+// Se valida aquí también (no solo al guardarlo) porque el valor se interpola en
+// el CSS de los documentos.
+function color(valor: string | undefined, porDefecto: string): string {
+  return HEX.test(valor ?? "") ? valor! : porDefecto;
+}
 
 function aDataUri(bytes: Uint8Array | null): string | null {
   return bytes ? `data:image/png;base64,${Buffer.from(bytes).toString("base64")}` : null;
@@ -30,6 +40,7 @@ export async function obtenerAparienciaDocumento(): Promise<AparienciaDocumento>
     logoNogales: aDataUri(config?.logoNogales ?? null) ?? LOGO_NOGALES,
     logoFrontera: aDataUri(config?.logoFrontera ?? null) ?? LOGO_FRONTERA,
     sindico: config?.nombreSindico?.trim() || SINDICO_DEFECTO,
+    guinda: color(config?.colorGuinda, GUINDA_DEFECTO),
   };
   return cache;
 }

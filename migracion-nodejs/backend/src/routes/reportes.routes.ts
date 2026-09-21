@@ -7,6 +7,7 @@ import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { prepararHoja, cerrarHoja, escribirFecha, GUINDA, GUINDA_LT, type ColDef } from "../lib/excel";
 import { renderPdf } from "../lib/pdf";
+import { obtenerAparienciaDocumento } from "../lib/apariencia";
 import { etiquetasHtml, type EtiquetaLote } from "../templates/etiquetas.template";
 
 export const reportesRouter = Router();
@@ -440,7 +441,7 @@ reportesRouter.get(
 
     const titulos = await prisma.tituloPropiedad.findMany({
       where: { estado: "VIGENTE", fechaEmision: { gte: desde, lte: finDia } },
-      include: { titular: true, lote: true },
+      include: { titular: true, lote: { include: { panteon: true } } },
       // Orden aproximado al de archivo de las carpetas físicas, para pegarlas en
       // secuencia.
       orderBy: [
@@ -458,6 +459,10 @@ reportesRouter.get(
     const etiquetas: EtiquetaLote[] = titulos.map((t) => ({
       clave: t.lote.claveLegado?.trim() || t.folio,
       titular: t.titular.nombreCompleto,
+      panteon: t.lote.panteon.nombre,
+      seccion: t.lote.seccion,
+      manzana: t.lote.numeroManzana,
+      lote: t.lote.numeroLote,
     }));
 
     await registrarBitacora(
@@ -469,7 +474,7 @@ reportesRouter.get(
       req.ip
     );
 
-    const pdf = await renderPdf(etiquetasHtml(etiquetas));
+    const pdf = await renderPdf(etiquetasHtml(etiquetas, await obtenerAparienciaDocumento()));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
