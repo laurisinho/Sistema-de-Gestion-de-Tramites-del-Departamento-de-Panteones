@@ -216,6 +216,12 @@ model Lote {
   reconocimientos Reconocimiento[]
   incidencias     Incidencia[]
 
+  // Esta restricción no alcanza a los lotes con seccion NULL (colindancias, o
+  // sin sección capturada): Postgres no considera dos NULL iguales entre sí,
+  // así que dos lotes ahí con la misma manzana y lote no chocarían aquí. Ese
+  // caso lo cubre un índice único parcial aparte (migración
+  // 1_lotes_ubicacion_sin_seccion), que Prisma no puede expresar en este
+  // archivo sin una preview feature.
   @@unique([panteonId, seccion, numeroManzana, numeroLote], name: "uq_lotes_ubicacion")
   @@map("lotes")
 }
