@@ -87,7 +87,10 @@ describe("POST /api/titulos sobre un lote que ya existe", () => {
 
     expect(r.status).toBe(201);
     expect(m.tx.lote.create).not.toHaveBeenCalled(); // no se duplica el lote
-    expect(m.tx.lote.update).toHaveBeenCalledWith({ where: { loteId: 6964 }, data: { estado: "OCUPADO" } });
+    expect(m.tx.lote.update).toHaveBeenCalledWith({
+      where: { loteId: 6964 },
+      data: { estado: "OCUPADO", claveLegado: "PJE-TRZA1-54" },
+    });
     expect(m.tx.tituloPropiedad.create).toHaveBeenCalledOnce();
     expect(m.tx.tituloPropiedad.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ loteId: 6964, folio: "PJE-TRZA1-54" }) })

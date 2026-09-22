@@ -263,10 +263,14 @@ titulosRouter.post(
           },
         });
 
-        // Si el lote ya existía se conserva tal cual (clave, tipo y demás datos);
-        // sus permisos anteriores siguen enlazados a él.
+        // Si el lote ya existía (por un permiso "sin título registrado"), se
+        // conserva su tipo y demás datos; solo se le pone la clave del folio
+        // que se acaba de generar, igual que a un lote nuevo -- si no, se
+        // quedaría sin clave (nunca la tuvo) y no aparecería al buscar por
+        // ella ni en las etiquetas de archivo. Sus permisos anteriores siguen
+        // enlazados a él.
         const nuevoLote = loteSinTitulo
-          ? await tx.lote.update({ where: { loteId: loteSinTitulo.loteId }, data: { estado: "OCUPADO" } })
+          ? await tx.lote.update({ where: { loteId: loteSinTitulo.loteId }, data: { estado: "OCUPADO", claveLegado: folio } })
           : await tx.lote.create({
               data: {
                 panteonId: vm.panteonId,
