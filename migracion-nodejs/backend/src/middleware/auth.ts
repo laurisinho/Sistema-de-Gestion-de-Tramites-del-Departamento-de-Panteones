@@ -45,6 +45,8 @@ export function cookieOpciones(req: Request) {
   };
 }
 
+const METODOS_SEGUROS = ["GET", "HEAD", "OPTIONS"];
+
 export function requiereAuth(req: Request, res: Response, next: NextFunction) {
   // El header tiene prioridad: es lo que envía el frontend en producción, porque
   // varios navegadores (Brave, Safari y cada vez más Chrome) bloquean la cookie
@@ -52,8 +54,25 @@ export function requiereAuth(req: Request, res: Response, next: NextFunction) {
   // respaldo cuando frontend y backend comparten origen (desarrollo local).
   const encabezado = req.headers.authorization;
   const tokenHeader = encabezado?.startsWith("Bearer ") ? encabezado.slice(7) : undefined;
+  const usaCookie = !tokenHeader;
   const token = tokenHeader ?? req.cookies?.[COOKIE_NAME];
   if (!token) return res.status(401).json({ error: "No autenticado" });
+
+  // La cookie viaja sola con cualquier petición al mismo origen, incluida una
+  // que un sitio ajeno mande sin que el usuario lo note (CSRF): con
+  // sameSite=none en producción, el navegador la adjunta aunque la petición
+  // venga de otra página. El header Authorization no tiene ese problema -- una
+  // página ajena no puede leerlo del localStorage ni agregarlo. Por eso solo
+  // cuando la sesión depende de la cookie, en un método que modifica algo, se
+  // exige que el origen declarado sea el del propio frontend. Si el navegador
+  // no mandó Origin se deja pasar (las herramientas de línea de comandos no
+  // lo mandan y no dependen de una cookie ajena para autenticarse).
+  if (usaCookie && !METODOS_SEGUROS.includes(req.method)) {
+    const origen = req.headers.origin;
+    if (origen && origen !== env.frontendOrigin) {
+      return res.status(403).json({ error: "Origen no permitido." });
+    }
+  }
 
   try {
     req.usuario = jwt.verify(token, env.jwtSecret) as TokenPayload;
