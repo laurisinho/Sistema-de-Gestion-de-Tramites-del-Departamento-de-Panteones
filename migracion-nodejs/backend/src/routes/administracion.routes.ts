@@ -1,4 +1,4 @@
-import { Router, json } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
@@ -411,8 +411,9 @@ administracionRouter.put(
 
 // Logos
 // Se reciben como data URI base64 y no como multipart/form-data para no
-// agregar multer por dos archivos pequeños. El límite se define en la ruta en
-// lugar de subir el límite global de JSON.
+// agregar multer por dos archivos pequeños. El límite más grande de cuerpo
+// para esta ruta se registra en app.ts (antes del genérico de la app), porque
+// para cuando llegara aquí el genérico ya habría rechazado un cuerpo grande.
 const cargaLogoSchema = z.object({
   dataUri: z
     .string()
@@ -424,7 +425,6 @@ const FIRMA_PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
 
 administracionRouter.put(
   "/apariencia/logo/:cual",
-  json({ limit: "3mb" }),
   asyncHandler(async (req, res) => {
     const cual = req.params.cual;
     if (cual !== "nogales" && cual !== "frontera") return res.status(404).json({ error: "Logo no reconocido" });
