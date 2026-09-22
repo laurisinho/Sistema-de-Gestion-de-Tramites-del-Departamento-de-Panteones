@@ -429,10 +429,12 @@ permisosRouter.post(
   })
 );
 
-// Equivale a BusquedaController.EditarPermiso: el solicitante siempre se
-// actualiza; el fallecido solo si el permiso ya tiene uno enlazado y se manda un
-// nombre; los campos del trámite se actualizan sin condición (los que no aplican
-// al tipo quedan vacíos).
+// Equivale a BusquedaController.EditarPermiso, con un agregado: el original
+// solo dejaba actualizar el fallecido si el permiso ya tenía uno enlazado, así
+// que un permiso capturado sin ese dato se quedaba sin forma de agregarlo
+// después. Aquí, si no había fallecido y llega un nombre, se crea y se enlaza.
+// Los campos del trámite se actualizan sin condición (los que no aplican al
+// tipo quedan vacíos).
 const editarPermisoSchema = z.object({
   nombreSolicitante: z.string().min(1, "El nombre del solicitante es requerido"),
   telefonoSolicitante: z.string().optional(),
@@ -477,6 +479,7 @@ permisosRouter.put(
         },
       });
 
+      let fallecidoId: number | undefined;
       if (permiso.fallecido && vm.nombreFallecido?.trim()) {
         await tx.fallecido.update({
           where: { fallecidoId: permiso.fallecido.fallecidoId },
@@ -486,11 +489,21 @@ permisosRouter.put(
             actaDefuncionNumero: vm.actaDefuncionNumero,
           },
         });
+      } else if (!permiso.fallecido && vm.nombreFallecido?.trim()) {
+        const fallecido = await tx.fallecido.create({
+          data: {
+            nombreCompleto: vm.nombreFallecido.trim(),
+            fechaFallecimiento: vm.fechaFallecimiento,
+            actaDefuncionNumero: vm.actaDefuncionNumero,
+          },
+        });
+        fallecidoId = fallecido.fallecidoId;
       }
 
       await tx.permiso.update({
         where: { permisoId: id },
         data: {
+          fallecidoId,
           fechaSolicitud: vm.fechaSolicitud,
           estado: vm.estado,
           numeroRecibo: vm.numeroRecibo,

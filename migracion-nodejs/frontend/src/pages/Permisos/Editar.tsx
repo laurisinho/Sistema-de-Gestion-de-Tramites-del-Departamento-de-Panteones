@@ -139,7 +139,7 @@ export function PermisoEditar() {
           </div>
         </div>
 
-        {data.fallecido && (
+        {clave !== "CON" && (
           <div className="card" style={{ marginBottom: 20 }}>
             <div className="card-header-guinda">
               <span>
@@ -147,6 +147,14 @@ export function PermisoEditar() {
               </span>
             </div>
             <div className="card-body">
+              {/* La tarjeta aparece aunque el permiso se haya guardado sin
+                  fallecido (se dejó en blanco al capturarlo): escribir un
+                  nombre aquí y guardar lo enlaza por primera vez. */}
+              {!data.fallecido && (
+                <p className="text-muted" style={{ marginTop: 0 }}>
+                  Este permiso se guardó sin fallecido. Complete los datos y guarde para enlazarlo.
+                </p>
+              )}
               <div className="form-grid" style={{ maxWidth: "none" }}>
                 <div className="form-campo span2">
                   <label>Nombre completo</label>
