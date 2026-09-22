@@ -40,6 +40,11 @@ const nuevaCesionSchema = z.object({
   fechaCesion: fechaISO.optional(),
 });
 
+// Se lanza dentro de la transacción cuando, al momento de marcar el título
+// anterior como CEDIDO, alguien ya lo hizo primero (dos peticiones casi
+// simultáneas sobre el mismo título). Nunca sale de esta ruta.
+class TituloYaCedidoError extends Error {}
+
 // Una cesión toca tres tablas (nuevo título, título anterior y registro de
 // cesión). Sin transacción, una falla intermedia dejaría el título anterior en
 // CEDIDO y el nuevo VIGENTE sin registro de cesión. Equivale a
@@ -99,7 +104,16 @@ cesionesRouter.post(
           },
         });
 
-        await tx.tituloPropiedad.update({ where: { tituloId: titulo.tituloId }, data: { estado: "CEDIDO" } });
+        // Condicionado a que siga VIGENTE: la comprobación de arriba es antes de
+        // abrir la transacción, así que dos peticiones para el mismo título
+        // pueden pasarla las dos. Si otra ya lo cedió entre medio, aquí no
+        // actualiza ninguna fila y se aborta -- revierte también el título
+        // nuevo ya creado -- en vez de dejar dos títulos VIGENTES en el lote.
+        const marcado = await tx.tituloPropiedad.updateMany({
+          where: { tituloId: titulo.tituloId, estado: "VIGENTE" },
+          data: { estado: "CEDIDO" },
+        });
+        if (marcado.count === 0) throw new TituloYaCedidoError();
 
         const folioCesion = await generarFolioCesion(tx);
         const cesion = await tx.cesionDerechos.create({
@@ -133,6 +147,11 @@ cesionesRouter.post(
         nuevoFolio: resultado.nuevoFolio,
       });
     } catch (err) {
+      if (err instanceof TituloYaCedidoError) {
+        return res
+          .status(409)
+          .json({ error: "Ese título ya fue cedido (probablemente desde otra pantalla). Actualiza la búsqueda e inténtalo de nuevo." });
+      }
       console.error("Error al registrar cesión (rollback aplicado):", err);
       res.status(500).json({ error: "No se pudo completar la cesión. No se guardó ningún cambio; inténtalo de nuevo." });
     }
