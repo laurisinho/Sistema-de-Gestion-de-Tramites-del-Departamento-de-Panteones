@@ -9,6 +9,15 @@ export type TituloParaPdf = Prisma.TituloPropiedadGetPayload<{
   include: { titular: true; lote: { include: { panteon: true; tipoLote: true } } };
 }>;
 
+// Iconos del pie de página (bootstrap-icons, incrustados como SVG para que se
+// vean igual en el PDF sin depender de una fuente de íconos instalada).
+const ICONO_TELEFONO =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z"/></svg>';
+const ICONO_FACEBOOK =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951"/></svg>';
+const ICONO_GLOBO =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472M3.82 11a13.7 13.7 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5zm6.853 3.472A7 7 0 0 0 13.745 12H11.91a9.3 9.3 0 0 1-.64 1.539 7 7 0 0 1-.597.933M8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855q.26-.487.468-1.068zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.7 13.7 0 0 1-.312 2.5m2.802-3.5a7 7 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7 7 0 0 0-3.072-2.472c.218.284.418.598.597.933M10.855 4a8 8 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4z"/></svg>';
+
 const CLAUSULAS = [
   "El titular se compromete a respetar y cumplir fielmente con lo dispuesto en el Reglamento de Panteones y Cementerios Municipales de la ciudad de Nogales, Sonora, México.",
   "Asimismo, deberá mantener y conservar las instalaciones y jardines del panteón, así como la limpieza y orden dentro del mismo.",
@@ -106,14 +115,14 @@ export function tituloHtml(
 
   .cuerpo-legal { font-size: calc(var(--k) * 12.5pt); line-height: 1.6; text-align: justify; }
 
-  .ubic-tabla { margin-top: 14pt; border: 0.5pt solid #DDDDDD; border-left: 5pt solid ${p.guinda}; background: ${GRIS_CLARO}; padding: 14pt 18pt; }
-  .ubic-grid3 { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 14pt; }
+  .ubic-tabla { margin-top: 10pt; border: 0.5pt solid #DDDDDD; border-left: 4pt solid ${p.guinda}; background: ${GRIS_CLARO}; padding: 8pt 14pt; }
+  .ubic-grid3 { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 10pt; }
   /* Dos columnas rellenadas por columna: NORTE y ESTE a la izquierda, SUR y OESTE a la derecha. */
-  .ubic-grid2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2, auto); grid-auto-flow: column; gap: 8pt 16pt; }
+  .ubic-grid2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2, auto); grid-auto-flow: column; gap: 6pt 16pt; }
   .ubic-celda { min-width: 0; }
-  .uf-et { font-size: 9pt; font-weight: bold; letter-spacing: 1pt; color: ${p.guindaOscuro}; }
-  .uf-val { padding-top: 3pt; font-size: calc(var(--k) * 18pt); font-weight: bold; overflow-wrap: anywhere; }
-  .ubic-grid2 .uf-val { font-size: calc(var(--k) * 11.5pt); font-weight: normal; }
+  .uf-et { font-size: 7pt; font-weight: bold; letter-spacing: 0.8pt; color: ${p.guindaOscuro}; }
+  .uf-val { padding-top: 1pt; font-size: calc(var(--k) * 13pt); font-weight: bold; overflow-wrap: anywhere; }
+  .ubic-grid2 .uf-val { font-size: calc(var(--k) * 10pt); font-weight: normal; }
 
   .clausula { display: flex; gap: 9pt; padding-bottom: 10pt; }
   .clausula-bullet { color: ${p.guinda}; font-weight: bold; width: 10pt; }
@@ -129,7 +138,14 @@ export function tituloHtml(
   .firma-nombre { padding-top: 3pt; font-weight: bold; font-size: calc(var(--k) * 11pt); }
   .firma-cargo { font-size: 10pt; color: ${p.guinda}; }
 
-  .pie { text-align: center; font-size: 7pt; color: #999999; padding-top: 10pt; z-index: 1; }
+  .pie { padding-top: 8pt; z-index: 1; }
+  .pie-reglamento { text-align: center; font-size: 6pt; color: #999999; margin-bottom: 4pt; }
+  .pie-rule { border-top: 1.2pt solid ${p.guinda}; margin-bottom: 5pt; }
+  .pie-ayto { display: flex; align-items: center; justify-content: center; gap: 6pt; font-size: 7.5pt; font-weight: 700; color: #333333; }
+  .pie-ayto img { height: 12pt; }
+  .pie-contacto { display: flex; align-items: center; justify-content: center; gap: 16pt; font-size: 7pt; color: #666666; margin-top: 3pt; }
+  .pie-item { display: flex; align-items: center; gap: 3pt; }
+  .pie-item svg { width: 7.5pt; height: 7.5pt; fill: ${p.guinda}; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -195,7 +211,19 @@ export function tituloHtml(
     </div>
   </div>
 
-  <div class="pie">Reglamento de Panteones y Cementerios Municipales de Nogales, Sonora — Art. 59</div>
+  <div class="pie">
+    <div class="pie-reglamento">Reglamento de Panteones y Cementerios Municipales de Nogales, Sonora — Art. 59</div>
+    <div class="pie-rule"></div>
+    <div class="pie-ayto">
+      <img src="${apariencia.logoNogales}" alt="" />
+      <span>Ayuntamiento. Ave. Obregón No. 339, Col. Centro. C.P. 84000</span>
+    </div>
+    <div class="pie-contacto">
+      <div class="pie-item">${ICONO_TELEFONO}<span>+52 (631) 162 5000</span></div>
+      <div class="pie-item">${ICONO_FACEBOOK}<span>@gobiernodenogales</span></div>
+      <div class="pie-item">${ICONO_GLOBO}<span>municipio.nogales-sonora.gob.mx</span></div>
+    </div>
+  </div>
 </div>
 </body>
 </html>`;
