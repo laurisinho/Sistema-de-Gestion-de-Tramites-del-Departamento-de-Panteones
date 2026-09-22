@@ -33,7 +33,6 @@ model TipoTramite {
   clave          String  @unique @db.VarChar(30)
   nombre         String  @db.VarChar(100)
   descripcion    String? @db.VarChar(300)
-  retencionAnios Int?    @map("retencion_anios")
   activo         Boolean @default(true)
 
   permisos Permiso[]
@@ -130,11 +129,8 @@ model Usuario {
 
   rol                    Rol               @relation(fields: [rolId], references: [rolId])
   titulosEmitidos        TituloPropiedad[] @relation("TituloEmitio")
-  titulosAprobados       TituloPropiedad[] @relation("TituloAprobo")
   cesionesRegistradas    CesionDerechos[]  @relation("CesionRegistro")
-  cesionesAprobadas      CesionDerechos[]  @relation("CesionAprobo")
   permisosRegistrados    Permiso[]         @relation("PermisoRegistro")
-  permisosAprobados      Permiso[]         @relation("PermisoAprobo")
   reconocimientos        Reconocimiento[]
   reimpresiones          Reimpresion[]
   bitacoras              Bitacora[]
@@ -146,11 +142,9 @@ model Usuario {
 model Persona {
   personaId            Int      @id @default(autoincrement()) @map("persona_id")
   nombreCompleto       String   @map("nombre_completo") @db.VarChar(200)
-  curp                 String?  @db.Char(18)
   domicilio            String?  @db.VarChar(300)
   colonia              String?  @db.VarChar(150)
   telefono             String?  @db.VarChar(25)
-  correoElectronico    String?  @map("correo_electronico") @db.VarChar(150)
   identificacionTipo   String?  @map("identificacion_tipo") @db.VarChar(50)
   identificacionNumero String?  @map("identificacion_numero") @db.VarChar(50)
   fechaRegistro        DateTime @default(now()) @map("fecha_registro")
@@ -166,7 +160,6 @@ model Persona {
 model Fallecido {
   fallecidoId         Int       @id @default(autoincrement()) @map("fallecido_id")
   nombreCompleto      String    @map("nombre_completo") @db.VarChar(200)
-  fechaNacimiento     DateTime? @map("fecha_nacimiento") @db.Date
   fechaFallecimiento  DateTime? @map("fecha_fallecimiento") @db.Date
   actaDefuncionNumero String?   @map("acta_defuncion_numero") @db.VarChar(100)
   actaDefuncionFolio  String?   @map("acta_defuncion_folio") @db.VarChar(100)
@@ -196,9 +189,7 @@ model Lote {
   numeroManzana    String   @map("numero_manzana") @db.VarChar(20)
   numeroLote       String   @map("numero_lote") @db.VarChar(20)
   seccion          String?  @db.VarChar(50)
-  zona             String?  @db.VarChar(50)
   dimensiones      String?  @db.VarChar(100)
-  comprobantePago  String?  @map("comprobante_pago") @db.VarChar(200)
   colindanciaNorte String?  @map("colindancia_norte") @db.VarChar(200)
   colindanciaSur   String?  @map("colindancia_sur") @db.VarChar(200)
   colindanciaEste  String?  @map("colindancia_este") @db.VarChar(200)
@@ -233,8 +224,6 @@ model TituloPropiedad {
   folio           String    @unique @db.VarChar(50)
   fechaEmision    DateTime? @map("fecha_emision") @db.Date
   usuarioEmitioId Int       @map("usuario_emitio_id")
-  usuarioAproboId Int?      @map("usuario_aprobo_id")
-  fechaAprobacion DateTime? @map("fecha_aprobacion")
   estado          String    @default("VIGENTE") @db.VarChar(20)
   estadoEntrega   String    @default("PENDIENTE_ENTREGA") @map("estado_entrega") @db.VarChar(30)
   fechaEntrega    DateTime? @map("fecha_entrega") @db.Date
@@ -245,7 +234,6 @@ model TituloPropiedad {
   lote          Lote             @relation(fields: [loteId], references: [loteId])
   titular       Persona          @relation(fields: [titularId], references: [personaId])
   usuarioEmitio Usuario          @relation("TituloEmitio", fields: [usuarioEmitioId], references: [usuarioId])
-  usuarioAprobo Usuario?         @relation("TituloAprobo", fields: [usuarioAproboId], references: [usuarioId])
   cesiones      CesionDerechos[]
   reimpresiones Reimpresion[]
 
@@ -264,8 +252,6 @@ model CesionDerechos {
   folio             String    @unique @db.VarChar(50)
   fechaCesion       DateTime  @map("fecha_cesion") @db.Date
   usuarioRegistroId Int       @map("usuario_registro_id")
-  usuarioAproboId   Int?      @map("usuario_aprobo_id")
-  fechaAprobacion   DateTime? @map("fecha_aprobacion")
   estado            String    @default("VIGENTE") @db.VarChar(20)
   rutaDocumento     String?   @map("ruta_documento") @db.VarChar(500)
   fechaCreacion     DateTime  @default(now()) @map("fecha_creacion")
@@ -275,7 +261,6 @@ model CesionDerechos {
   cedente         Persona         @relation("Cedente", fields: [cedenteId], references: [personaId])
   cesionario      Persona         @relation("Cesionario", fields: [cesionarioId], references: [personaId])
   usuarioRegistro Usuario         @relation("CesionRegistro", fields: [usuarioRegistroId], references: [usuarioId])
-  usuarioAprobo   Usuario?        @relation("CesionAprobo", fields: [usuarioAproboId], references: [usuarioId])
   reimpresiones   Reimpresion[]
 
   // loteId: expediente de lote. fechaCesion: relación mensual de movimientos
@@ -295,7 +280,6 @@ model Permiso {
   fechaSolicitud      DateTime? @map("fecha_solicitud") @db.Date
   fechaEmision        DateTime? @map("fecha_emision")
   usuarioRegistroId   Int       @map("usuario_registro_id")
-  usuarioAproboId     Int?      @map("usuario_aprobo_id")
   estado              String    @default("PENDIENTE") @db.VarChar(20)
   motivoExhumacion    String?   @map("motivo_exhumacion") @db.VarChar(300)
   destinoRestos       String?   @map("destino_restos") @db.VarChar(300)
@@ -318,7 +302,6 @@ model Permiso {
   solicitante     Persona          @relation(fields: [solicitanteId], references: [personaId])
   fallecido       Fallecido?       @relation(fields: [fallecidoId], references: [fallecidoId])
   usuarioRegistro Usuario          @relation("PermisoRegistro", fields: [usuarioRegistroId], references: [usuarioId])
-  usuarioAprobo   Usuario?         @relation("PermisoAprobo", fields: [usuarioAproboId], references: [usuarioId])
   reconocimientos Reconocimiento[]
   reimpresiones   Reimpresion[]
 

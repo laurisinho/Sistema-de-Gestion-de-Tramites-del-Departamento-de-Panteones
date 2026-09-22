@@ -26,10 +26,10 @@ async function main() {
 
   await prisma.tipoTramite.createMany({
     data: [
-      { clave: "SEP", nombre: "Sepultura", descripcion: "Permiso para inhumación de restos en lote asignado", retencionAnios: 10 },
-      { clave: "EXH", nombre: "Exhumación", descripcion: "Permiso para exhumación de restos con motivo y destino declarado", retencionAnios: 10 },
-      { clave: "CEN", nombre: "Depósito de Cenizas", descripcion: "Permiso para depósito de cenizas en ubicación designada", retencionAnios: 10 },
-      { clave: "CON", nombre: "Construcción", descripcion: "Permiso para construcción o modificación de monumento en lote", retencionAnios: 10 },
+      { clave: "SEP", nombre: "Sepultura", descripcion: "Permiso para inhumación de restos en lote asignado" },
+      { clave: "EXH", nombre: "Exhumación", descripcion: "Permiso para exhumación de restos con motivo y destino declarado" },
+      { clave: "CEN", nombre: "Depósito de Cenizas", descripcion: "Permiso para depósito de cenizas en ubicación designada" },
+      { clave: "CON", nombre: "Construcción", descripcion: "Permiso para construcción o modificación de monumento en lote" },
       { clave: "TIT", nombre: "Título de Propiedad", descripcion: "Emisión de título de propiedad de lote o nicho" },
       { clave: "CES", nombre: "Cesión de Derechos", descripcion: "Transferencia de titularidad de lote o nicho entre particulares" },
     ],
