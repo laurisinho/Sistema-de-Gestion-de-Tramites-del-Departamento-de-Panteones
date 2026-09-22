@@ -249,6 +249,9 @@ model TituloPropiedad {
   cesiones      CesionDerechos[]
   reimpresiones Reimpresion[]
 
+  // El expediente de lote y la comprobación de título vigente al ceder o
+  // emitir filtran por loteId en varios puntos.
+  @@index([loteId], name: "ix_titulos_lote")
   @@map("titulos_propiedad")
 }
 
@@ -275,6 +278,10 @@ model CesionDerechos {
   usuarioAprobo   Usuario?        @relation("CesionAprobo", fields: [usuarioAproboId], references: [usuarioId])
   reimpresiones   Reimpresion[]
 
+  // loteId: expediente de lote. fechaCesion: relación mensual de movimientos
+  // por rango de fechas.
+  @@index([loteId], name: "ix_cesiones_lote")
+  @@index([fechaCesion], name: "ix_cesiones_fecha")
   @@map("cesion_derechos")
 }
 
@@ -315,6 +322,12 @@ model Permiso {
   reconocimientos Reconocimiento[]
   reimpresiones   Reimpresion[]
 
+  // loteId y fallecidoId: el expediente de lote, los ocupantes y la búsqueda de
+  // no reclamados filtran por ellos. tipoTramiteId: se recorre en cada alta,
+  // para calcular el siguiente folio consecutivo de ese tipo (ver lib/folio.ts).
+  @@index([loteId], name: "ix_permisos_lote")
+  @@index([fallecidoId], name: "ix_permisos_fallecido")
+  @@index([tipoTramiteId], name: "ix_permisos_tipo_tramite")
   @@map("permisos")
 }
 
@@ -341,6 +354,9 @@ model Reconocimiento {
 
   @@index([fallecidoId], name: "ix_reconocimientos_fallecido")
   @@index([fechaReconocimiento], name: "ix_reconocimientos_fecha")
+  // Para liberar el lote de fosa común al aprobar la exhumación (ver
+  // permisos.routes.ts) y para el expediente de lote.
+  @@index([loteId], name: "ix_reconocimientos_lote")
   @@map("reconocimientos")
 }
 
@@ -359,6 +375,11 @@ model Reimpresion {
   cesion  CesionDerechos?  @relation(fields: [cesionId], references: [cesionId])
   usuario Usuario          @relation(fields: [usuarioId], references: [usuarioId])
 
+  // Cada uno se consulta al reimprimir, para calcular el número de
+  // reimpresión consecutivo de ese documento en particular.
+  @@index([permisoId], name: "ix_reimpresiones_permiso")
+  @@index([tituloId], name: "ix_reimpresiones_titulo")
+  @@index([cesionId], name: "ix_reimpresiones_cesion")
   @@map("reimpresiones")
 }
 
@@ -374,6 +395,11 @@ model Bitacora {
 
   usuario Usuario? @relation(fields: [usuarioId], references: [usuarioId])
 
+  // usuarioId: filtro opcional del panel y el conteo de usuarios distintos.
+  // fechaHora: los cortes de "hoy", "esta semana" y "últimos 14 días", más el
+  // orden del listado principal.
+  @@index([usuarioId], name: "ix_bitacoras_usuario")
+  @@index([fechaHora], name: "ix_bitacoras_fecha")
   @@map("bitacoras")
 }
 
