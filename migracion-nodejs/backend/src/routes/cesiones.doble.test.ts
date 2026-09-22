@@ -33,6 +33,12 @@ vi.mock("../lib/bitacora", () => ({
   Acciones: { Ceder: "CEDER" },
   registrarBitacora: vi.fn(async () => undefined),
 }));
+// cesiones.routes.ts también importa esto para su endpoint /:id/pdf (no
+// probado aquí). Sin simularlo, lib/pdf.ts arrastra a env.ts, que exige
+// JWT_SECRET -- en la máquina de quien desarrolla ya está en .env, pero en un
+// runner de CI limpio no existe ningún .env y la importación truena.
+vi.mock("../lib/pdf", () => ({ renderPdf: vi.fn() }));
+vi.mock("../lib/apariencia", () => ({ obtenerAparienciaDocumento: vi.fn() }));
 vi.mock("../middleware/auth", () => ({
   requiereAuth: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
     req.usuario = { usuarioId: 1, rol: "Capturista" } as never;
