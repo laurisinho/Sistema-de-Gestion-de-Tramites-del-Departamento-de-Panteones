@@ -21,16 +21,19 @@ lotesRouter.get(
   asyncHandler(async (req, res) => {
     const manzana = str(req.query.manzana);
     const lote = str(req.query.lote);
-    const clave = str(req.query.clave);
     // La sección se elige de una lista, por lo que se compara exacta.
     const seccion = str(req.query.seccion);
     const panteonId = req.query.panteonId ? Number(req.query.panteonId) : undefined;
+    // Para los panteones de colindancias (numeroManzana="S/N"), donde manzana y
+    // lote no dicen nada: se busca por titular vigente o por el nombre de un
+    // vecino registrado como colindancia, igual que /lotes/buscar.
+    const termino = str(req.query.termino);
 
-    if (!manzana && !lote && !clave && !seccion) {
+    if (!manzana && !lote && !seccion && !termino) {
       return res.json({ resultados: [] });
     }
 
-    // Filtros combinados con AND, cada uno en su entrada: si "manzana" y "clave"
+    // Filtros combinados con AND, cada uno en su entrada: si "manzana" y "termino"
     // compartieran where.OR, uno de los dos se perdería.
     const filtros: Prisma.LoteWhereInput[] = [];
     if (panteonId) filtros.push({ panteonId });
@@ -43,7 +46,17 @@ lotesRouter.get(
     }
     if (lote) filtros.push({ numeroLote: { contains: lote, mode: "insensitive" } });
     if (seccion) filtros.push(whereSeccion(seccion));
-    if (clave) filtros.push({ claveLegado: { contains: clave, mode: "insensitive" } });
+    if (termino) {
+      filtros.push({
+        OR: [
+          { titulos: { some: { estado: "VIGENTE", titular: { nombreCompleto: { contains: termino, mode: "insensitive" } } } } },
+          { colindanciaNorte: { contains: termino, mode: "insensitive" } },
+          { colindanciaSur: { contains: termino, mode: "insensitive" } },
+          { colindanciaEste: { contains: termino, mode: "insensitive" } },
+          { colindanciaOeste: { contains: termino, mode: "insensitive" } },
+        ],
+      });
+    }
 
     const lotes = await prisma.lote.findMany({
       where: { AND: filtros },

@@ -7,6 +7,7 @@ import { claseEstado } from "../../lib/badges";
 interface Panteon {
   panteonId: number;
   nombre: string;
+  usaColindancias: boolean;
 }
 
 interface LoteResultado {
@@ -25,7 +26,7 @@ interface LoteResultado {
 interface Filtros {
   manzana: string;
   lote: string;
-  clave: string;
+  termino: string;
   seccion: string;
   panteonId: string;
 }
@@ -33,7 +34,7 @@ interface Filtros {
 export function LotesBuscar() {
   const [manzana, setManzana] = useState("");
   const [lote, setLote] = useState("");
-  const [clave, setClave] = useState("");
+  const [termino, setTermino] = useState("");
   const [seccion, setSeccion] = useState("");
   const [panteonId, setPanteonId] = useState("");
   const [filtros, setFiltros] = useState<Filtros | null>(null);
@@ -42,6 +43,12 @@ export function LotesBuscar() {
     queryKey: ["catalogos", "panteones"],
     queryFn: () => api<{ panteones: Panteon[] }>("/catalogos/panteones").then((r) => r.panteones),
   });
+
+  // Los panteones de colindancias (numeroManzana="S/N") no tienen manzana/lote
+  // reales ni sección: se buscan por titular o por el nombre de un vecino
+  // registrado en cada punto cardinal, igual que en Nuevo Permiso.
+  const panteonSel = panteones?.find((p) => String(p.panteonId) === panteonId);
+  const usaColindancias = panteonSel?.usaColindancias ?? false;
 
   // Secciones del panteón elegido; sin panteón, las de todos. Se muestran en una
   // lista porque cada panteón tiene las suyas. incluirVirtuales trae también
@@ -62,7 +69,7 @@ export function LotesBuscar() {
       const params = new URLSearchParams();
       if (filtros?.manzana) params.set("manzana", filtros.manzana);
       if (filtros?.lote) params.set("lote", filtros.lote);
-      if (filtros?.clave) params.set("clave", filtros.clave);
+      if (filtros?.termino) params.set("termino", filtros.termino);
       if (filtros?.seccion) params.set("seccion", filtros.seccion);
       if (filtros?.panteonId) params.set("panteonId", filtros.panteonId);
       return api<{ resultados: LoteResultado[] }>(`/lotes?${params}`).then((r) => r.resultados);
@@ -82,14 +89,16 @@ export function LotesBuscar() {
       <div className="card">
         <div className="card-body">
           <p className="text-muted" style={{ marginTop: 0 }}>
-            Son casi 7,000 lotes — elige una sección o captura manzana, lote o clave para buscar.
+            {usaColindancias
+              ? "Este panteón no usa manzana ni lote: busca por titular o por el nombre de un vecino registrado."
+              : "Son casi 7,000 lotes — elige una sección o captura manzana o lote para buscar."}
           </p>
           <form
             className="barra-filtros"
             style={{ marginBottom: 0 }}
             onSubmit={(e) => {
               e.preventDefault();
-              setFiltros({ manzana, lote, clave, seccion, panteonId });
+              setFiltros({ manzana, lote, termino, seccion, panteonId });
             }}
           >
             <select
@@ -97,8 +106,12 @@ export function LotesBuscar() {
               onChange={(e) => {
                 setPanteonId(e.target.value);
                 // Las secciones cambian con el panteón: la elegida puede no existir en el
-                // nuevo.
+                // nuevo. Manzana/lote y el término de colindancias tampoco tienen sentido
+                // al cambiar entre un panteón normal y uno de colindancias.
                 setSeccion("");
+                setManzana("");
+                setLote("");
+                setTermino("");
               }}
             >
               <option value="">Todos los panteones</option>
@@ -108,17 +121,27 @@ export function LotesBuscar() {
                 </option>
               ))}
             </select>
-            <select value={seccion} onChange={(e) => setSeccion(e.target.value)}>
-              <option value="">Todas las secciones</option>
-              {secciones?.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <input placeholder="Manzana" value={manzana} onChange={(e) => setManzana(e.target.value)} />
-            <input placeholder="Lote" value={lote} onChange={(e) => setLote(e.target.value)} />
-            <input placeholder="Clave" value={clave} onChange={(e) => setClave(e.target.value)} />
+            {usaColindancias ? (
+              <input
+                placeholder="Titular o vecino (colindancia)"
+                value={termino}
+                onChange={(e) => setTermino(e.target.value)}
+                style={{ minWidth: 260 }}
+              />
+            ) : (
+              <>
+                <select value={seccion} onChange={(e) => setSeccion(e.target.value)}>
+                  <option value="">Todas las secciones</option>
+                  {secciones?.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <input placeholder="Manzana" value={manzana} onChange={(e) => setManzana(e.target.value)} />
+                <input placeholder="Lote" value={lote} onChange={(e) => setLote(e.target.value)} />
+              </>
+            )}
             <button className="boton" type="submit">
               <i className="bi bi-search" /> Buscar
             </button>
