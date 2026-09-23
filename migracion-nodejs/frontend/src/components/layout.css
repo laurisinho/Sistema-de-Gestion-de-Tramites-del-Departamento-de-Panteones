@@ -332,6 +332,9 @@ html.dark .page-header h2 { color: #d9d4dc; }
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .form-campo input:focus, .form-campo select:focus, .form-campo textarea:focus { outline: none; border-color: var(--guinda); box-shadow: 0 0 0 4px var(--ring); }
+.form-campo input:disabled, .form-campo select:disabled, .form-campo textarea:disabled {
+  background: var(--bg-body); color: var(--text-muted); cursor: not-allowed;
+}
 .form-campo.span2 { grid-column: 1 / -1; }
 
 /* Campo de solo lectura que muestra el resultado de una búsqueda (expediente
