@@ -145,6 +145,12 @@ export function PermisoNuevo() {
           ? ocupantesCon[0]
           : null;
 
+  // En Exhumación, mientras no se elija un modo (buscar y enlazar, o marcar "no
+  // está en el sistema") los campos de texto se bloquean: si no, se podía
+  // escribir un fallecido nuevo sin pasar por ninguna de las dos opciones,
+  // duplicando un expediente que probablemente ya existe.
+  const fallecidoBloqueado = tipoClave === "EXH" && !fallecidoNoRegistrado && !fallecidoSel;
+
   const panteonSelLote = panteones?.find((p) => String(p.panteonId) === panteonIdLote);
   const usaColindanciasLote = panteonSelLote?.usaColindancias ?? false;
 
@@ -505,16 +511,27 @@ export function PermisoNuevo() {
                     value={nombreFallecido}
                     onChange={(e) => setNombreFallecido(e.target.value)}
                     readOnly={!!fallecidoSel}
-                    placeholder="Nombre del fallecido"
+                    disabled={fallecidoBloqueado}
+                    placeholder={fallecidoBloqueado ? "Busca un expediente arriba o marca \"No está en el sistema\"" : "Nombre del fallecido"}
                   />
                 </div>
                 <div className="form-campo">
                   <label>Fecha de fallecimiento</label>
-                  <input type="date" value={fechaFallecimiento} onChange={(e) => setFechaFallecimiento(e.target.value)} />
+                  <input
+                    type="date"
+                    value={fechaFallecimiento}
+                    onChange={(e) => setFechaFallecimiento(e.target.value)}
+                    disabled={fallecidoBloqueado}
+                  />
                 </div>
                 <div className="form-campo">
                   <label>No. Acta de defunción</label>
-                  <input value={actaDefuncionNumero} onChange={(e) => setActaDefuncionNumero(e.target.value)} placeholder="Número de acta" />
+                  <input
+                    value={actaDefuncionNumero}
+                    onChange={(e) => setActaDefuncionNumero(e.target.value)}
+                    placeholder="Número de acta"
+                    disabled={fallecidoBloqueado}
+                  />
                 </div>
               </div>
             </div>
