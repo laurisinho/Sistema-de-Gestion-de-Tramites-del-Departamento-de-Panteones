@@ -11,6 +11,10 @@ interface Apariencia {
 
 const SINDICO_DEFAULT = "MAESTRA EDNA ELINORA SOTO GRACIA";
 
+// Las tres tarjetas de esta pantalla comparten ancho para que sus bordes
+// queden alineados en vez de la escalinata que dejaban 520/640/520px sueltos.
+const ANCHO_TARJETA = 640;
+
 function archivoADataUri(archivo: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const lector = new FileReader();
@@ -78,7 +82,7 @@ export function AdministracionApariencia() {
         cada quien sigue siendo aparte.
       </p>
 
-      <div className="card" style={{ maxWidth: 520 }}>
+      <div className="card" style={{ maxWidth: ANCHO_TARJETA }}>
         <div className="card-header-guinda">
           <span>
             <i className="bi bi-eyedropper" /> Colores del sistema
@@ -202,7 +206,17 @@ function LogoFila({ cual, etiqueta }: { cual: "nogales" | "frontera"; etiqueta: 
         <div style={{ fontWeight: 600, fontSize: 13.5 }}>{etiqueta}</div>
         {error && <p className="aviso-error" style={{ margin: "4px 0 0", fontSize: 12.5 }}>{error}</p>}
       </div>
-      <input ref={inputRef} type="file" accept="image/png" onChange={onArchivoElegido} disabled={subiendo} style={{ maxWidth: 200 }} />
+      <button type="button" className="boton-secundario boton-sm" onClick={() => inputRef.current?.click()} disabled={subiendo}>
+        <i className="bi bi-upload" /> {subiendo ? "Subiendo..." : "Cambiar"}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png"
+        onChange={onArchivoElegido}
+        disabled={subiendo}
+        style={{ display: "none" }}
+      />
       <button type="button" className="boton-secundario boton-sm" onClick={restablecer} disabled={subiendo} title="Restablecer al original">
         <i className="bi bi-arrow-counterclockwise" />
       </button>
@@ -212,7 +226,7 @@ function LogoFila({ cual, etiqueta }: { cual: "nogales" | "frontera"; etiqueta: 
 
 function LogosCard() {
   return (
-    <div className="card" style={{ maxWidth: 640 }}>
+    <div className="card" style={{ maxWidth: ANCHO_TARJETA }}>
       <div className="card-header-guinda">
         <span>
           <i className="bi bi-images" /> Logos en documentos y reportes
@@ -253,7 +267,7 @@ function SindicoCard({ nombreGuardado }: { nombreGuardado: string | undefined })
   });
 
   return (
-    <div className="card" style={{ maxWidth: 520 }}>
+    <div className="card" style={{ maxWidth: ANCHO_TARJETA }}>
       <div className="card-header-guinda">
         <span>
           <i className="bi bi-person-badge" /> Síndico Municipal
