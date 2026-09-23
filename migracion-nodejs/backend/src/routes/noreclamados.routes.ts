@@ -12,6 +12,8 @@ import { prepararHoja, cerrarHoja, escribirFecha, fechaHoraTexto, coloresExcel, 
 export const noReclamadosRouter = Router();
 noReclamadosRouter.use(requiereAuth, requiereEscritura);
 
+class YaReconocidoError extends Error {}
+
 function str(v: unknown): string | undefined {
   const s = typeof v === "string" ? v.trim() : "";
   return s === "" ? undefined : s;
@@ -213,54 +215,63 @@ noReclamadosRouter.post(
 
     const lote = await primerLoteDe(id);
 
-    // El reconocimiento y reconocido=true deben confirmarse juntos: si el update
-    // fallara solo, el guard de arriba (f.reconocido) no lo detectaría en un
-    // reintento y se crearía un segundo reconocimiento contradictorio.
-    const reconocimiento = await prisma.$transaction(async (tx) => {
-      const rec = await tx.reconocimiento.create({
-        data: {
-          fallecidoId: f.fallecidoId,
-          loteId: lote?.loteId,
-          nombreAnterior: f.nombreCompleto,
-          nombreIdentificado: vm.nombreIdentificado.trim(),
-          fechaReconocimiento: vm.fechaReconocimiento,
-          medioIdentificacion: vm.medioIdentificacion.trim(),
-          instanciaSolicita: vm.instanciaSolicita?.trim(),
-          numeroActaDefuncion: vm.numeroActaDefuncion?.trim(),
-          ministerioPublico: vm.ministerioPublico?.trim(),
-          observaciones: vm.observaciones?.trim(),
-          usuarioRegistroId: usuarioId,
-        },
+    try {
+      // El guard de arriba (f.reconocido) se leyó antes de esta transacción: dos
+      // reconocimientos casi simultáneos del mismo expediente pasarían los dos.
+      // El updateMany con reconocido:false en el where hace la comprobación y el
+      // marcado en una sola operación atómica; si count da 0, alguien más ya lo
+      // reconoció mientras tanto y se aborta sin crear un segundo registro
+      // contradictorio.
+      const reconocimiento = await prisma.$transaction(async (tx) => {
+        const marcado = await tx.fallecido.updateMany({
+          where: { fallecidoId: f.fallecidoId, reconocido: false },
+          data: {
+            reconocido: true,
+            posibleNombre: vm.nombreIdentificado.trim(),
+            numeroCaso: vm.numeroCaso?.trim() || f.numeroCaso,
+            actaDefuncionNumero: vm.numeroActaDefuncion?.trim() || f.actaDefuncionNumero,
+          },
+        });
+        if (marcado.count === 0) throw new YaReconocidoError();
+
+        return tx.reconocimiento.create({
+          data: {
+            fallecidoId: f.fallecidoId,
+            loteId: lote?.loteId,
+            nombreAnterior: f.nombreCompleto,
+            nombreIdentificado: vm.nombreIdentificado.trim(),
+            fechaReconocimiento: vm.fechaReconocimiento,
+            medioIdentificacion: vm.medioIdentificacion.trim(),
+            instanciaSolicita: vm.instanciaSolicita?.trim(),
+            numeroActaDefuncion: vm.numeroActaDefuncion?.trim(),
+            ministerioPublico: vm.ministerioPublico?.trim(),
+            observaciones: vm.observaciones?.trim(),
+            usuarioRegistroId: usuarioId,
+          },
+        });
       });
 
-      await tx.fallecido.update({
-        where: { fallecidoId: f.fallecidoId },
-        data: {
-          reconocido: true,
-          posibleNombre: vm.nombreIdentificado.trim(),
-          numeroCaso: vm.numeroCaso?.trim() || f.numeroCaso,
-          actaDefuncionNumero: vm.numeroActaDefuncion?.trim() || f.actaDefuncionNumero,
-        },
+      await registrarBitacora(
+        usuarioId,
+        Acciones.Reconocer,
+        "fallecidos",
+        f.fallecidoId,
+        `Identificada: «${f.nombreCompleto}» → ${vm.nombreIdentificado}`,
+        req.ip
+      );
+
+      res.status(201).json({
+        reconocimientoId: reconocimiento.reconocimientoId,
+        mensaje: lote
+          ? `«${f.nombreCompleto}» quedó registrada como ${vm.nombreIdentificado}. El lote se liberará al aprobar el permiso de exhumación.`
+          : `«${f.nombreCompleto}» quedó registrada como ${vm.nombreIdentificado}. Nota: no tiene lote asignado, falta capturarle el permiso de inhumación.`,
       });
-
-      return rec;
-    });
-
-    await registrarBitacora(
-      usuarioId,
-      Acciones.Reconocer,
-      "fallecidos",
-      f.fallecidoId,
-      `Identificada: «${f.nombreCompleto}» → ${vm.nombreIdentificado}`,
-      req.ip
-    );
-
-    res.status(201).json({
-      reconocimientoId: reconocimiento.reconocimientoId,
-      mensaje: lote
-        ? `«${f.nombreCompleto}» quedó registrada como ${vm.nombreIdentificado}. El lote se liberará al aprobar el permiso de exhumación.`
-        : `«${f.nombreCompleto}» quedó registrada como ${vm.nombreIdentificado}. Nota: no tiene lote asignado, falta capturarle el permiso de inhumación.`,
-    });
+    } catch (err) {
+      if (err instanceof YaReconocidoError) {
+        return res.status(409).json({ error: "Esta persona ya está registrada como identificada (probablemente desde otra pantalla)." });
+      }
+      throw err;
+    }
   })
 );
 
