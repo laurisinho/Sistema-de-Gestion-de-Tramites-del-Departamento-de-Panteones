@@ -287,9 +287,15 @@ export function PermisoNuevo() {
         body.loteId = loteSel?.loteId;
       }
       if (tipoClave === "CON") {
-        // Los campos de fallecido de otros trámites quedan ocultos pero conservan
-        // su valor; aquí no deben viajar.
-        if (difuntoCon) body.fallecidoId = difuntoCon.fallecidoId;
+        if (loteNoRegistrado) {
+          // Sin lote en el sistema no hay sepultados que elegir: se captura el
+          // nombre igual que en los demás trámites.
+          body.nombreFallecido = nombreFallecido || undefined;
+          body.fechaFallecimiento = fechaFallecimiento || undefined;
+          body.actaDefuncionNumero = actaDefuncionNumero || undefined;
+        } else if (difuntoCon) {
+          body.fallecidoId = difuntoCon.fallecidoId;
+        }
       } else if (fallecidoSel) {
         body.fallecidoId = fallecidoSel.fallecidoId;
       } else {
@@ -752,7 +758,31 @@ export function PermisoNuevo() {
               </span>
             </div>
             <div className="card-body">
-              {!loteSel ? (
+              {loteNoRegistrado ? (
+                <>
+                  <p className="text-muted" style={{ marginTop: 0, fontSize: 13 }}>
+                    Este lote no está en el sistema, así que no hay sepultados de dónde elegir. Si sabes quién está ahí, captúralo aquí.
+                  </p>
+                  <div className="form-grid" style={{ gridTemplateColumns: "5fr 3fr 4fr", maxWidth: "none" }}>
+                    <div className="form-campo">
+                      <label>Nombre completo</label>
+                      <input
+                        value={nombreFallecido}
+                        onChange={(e) => setNombreFallecido(e.target.value)}
+                        placeholder="Nombre del difunto (opcional)"
+                      />
+                    </div>
+                    <div className="form-campo">
+                      <label>Fecha de fallecimiento</label>
+                      <input type="date" value={fechaFallecimiento} onChange={(e) => setFechaFallecimiento(e.target.value)} />
+                    </div>
+                    <div className="form-campo">
+                      <label>No. Acta de defunción</label>
+                      <input value={actaDefuncionNumero} onChange={(e) => setActaDefuncionNumero(e.target.value)} placeholder="Número de acta" />
+                    </div>
+                  </div>
+                </>
+              ) : !loteSel ? (
                 <p className="text-muted" style={{ margin: 0 }}>
                   Elige un lote arriba para ver quién está sepultado ahí. Es opcional: si no hay difunto, el permiso sale sin nombre.
                 </p>
