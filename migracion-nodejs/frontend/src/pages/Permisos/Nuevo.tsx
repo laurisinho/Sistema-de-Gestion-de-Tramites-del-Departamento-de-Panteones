@@ -77,6 +77,11 @@ export function PermisoNuevo() {
   const [fallecidoTermino, setFallecidoTermino] = useState("");
   const [fallecidoResultados, setFallecidoResultados] = useState<FallecidoResultado[]>([]);
   const [fallecidoSel, setFallecidoSel] = useState<FallecidoResultado | null>(null);
+  // Exhumación: por defecto se busca un expediente ya registrado (lo más común,
+  // porque quien se exhuma ya se sepultó ahí antes). Si no está en el sistema,
+  // este check cambia a solo los campos libres, en vez de mostrar siempre los
+  // dos caminos a la vez.
+  const [fallecidoNoRegistrado, setFallecidoNoRegistrado] = useState(false);
   const [nombreFallecido, setNombreFallecido] = useState("");
   const [fechaFallecimiento, setFechaFallecimiento] = useState("");
   const [actaDefuncionNumero, setActaDefuncionNumero] = useState("");
@@ -402,68 +407,91 @@ export function PermisoNuevo() {
             <div className="card-body">
               {tipoClave === "EXH" && (
                 <>
-                  <div className="form-grid" style={{ gridTemplateColumns: "6fr 2fr 4fr", maxWidth: "none", alignItems: "flex-end" }}>
-                    <div className="form-campo">
-                      <label>
-                        Buscar expediente ya registrado{" "}
-                        <i
-                          className="bi bi-info-circle text-muted"
-                          title="Enlaza el permiso a un expediente existente en vez de duplicarlo. Busca por nombre, acta o número de caso."
-                        />
-                      </label>
-                      <input
-                        value={fallecidoTermino}
-                        onChange={(e) => setFallecidoTermino(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarFallecido())}
-                        placeholder="Nombre, no. de acta o SON/NOG/FGE/..."
-                      />
-                    </div>
-                    <button type="button" className="boton" onClick={buscarFallecido}>
-                      <i className="bi bi-search" /> Buscar
-                    </button>
-                    <div className="form-campo">
-                      <label>Expediente enlazado</label>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <div className={`campo-resultado${fallecidoSel ? " lleno" : ""}`}>
-                          {fallecidoSel ? fallecidoSel.nombre : "Sin seleccionar"}
-                        </div>
-                        {fallecidoSel && (
-                          <button type="button" className="boton-secundario" title="Quitar enlace" onClick={quitarFallecido}>
-                            <i className="bi bi-x-lg" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                  <div className="form-campo" style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <input
+                      type="checkbox"
+                      id="fallecidoNoRegistrado"
+                      checked={fallecidoNoRegistrado}
+                      onChange={(e) => {
+                        setFallecidoNoRegistrado(e.target.checked);
+                        if (e.target.checked) {
+                          setFallecidoTermino("");
+                          setFallecidoResultados([]);
+                          quitarFallecido();
+                        }
+                      }}
+                    />
+                    <label htmlFor="fallecidoNoRegistrado" style={{ margin: 0 }}>
+                      No está en el sistema, capturar a mano
+                    </label>
                   </div>
 
-                  {fallecidoResultados.length > 0 && (
-                    <div className="tabla-contenedor" style={{ marginTop: 12 }}>
-                      <table className="tabla">
-                        <tbody>
-                          {fallecidoResultados.map((f) => (
-                            <tr key={f.fallecidoId}>
-                              <td style={{ fontWeight: 600 }}>{f.nombre}</td>
-                              <td className="text-muted">
-                                <small>
-                                  {[f.fecha ? new Date(f.fecha).toLocaleDateString("es-MX", { timeZone: "UTC" }) : null, f.acta ? `Acta ${f.acta}` : null, f.numeroCaso]
-                                    .filter(Boolean)
-                                    .join(" · ")}
-                                </small>
-                              </td>
-                              <td>
-                                {f.esNoReclamado && <span className="badge badge-warning">No reclamado</span>}{" "}
-                                {f.yaTienePermiso && <span className="badge badge-secondary">Ya tiene permiso</span>}
-                              </td>
-                              <td>
-                                <button type="button" className="boton-secundario boton-sm" onClick={() => seleccionarFallecido(f)}>
-                                  Usar este
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                  {!fallecidoNoRegistrado && (
+                    <>
+                      <div className="form-grid" style={{ gridTemplateColumns: "6fr 2fr 4fr", maxWidth: "none", alignItems: "flex-end" }}>
+                        <div className="form-campo">
+                          <label>
+                            Buscar expediente ya registrado{" "}
+                            <i
+                              className="bi bi-info-circle text-muted"
+                              title="Enlaza el permiso a un expediente existente en vez de duplicarlo. Busca por nombre, acta o número de caso."
+                            />
+                          </label>
+                          <input
+                            value={fallecidoTermino}
+                            onChange={(e) => setFallecidoTermino(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarFallecido())}
+                            placeholder="Nombre, no. de acta o SON/NOG/FGE/..."
+                          />
+                        </div>
+                        <button type="button" className="boton" onClick={buscarFallecido}>
+                          <i className="bi bi-search" /> Buscar
+                        </button>
+                        <div className="form-campo">
+                          <label>Expediente enlazado</label>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <div className={`campo-resultado${fallecidoSel ? " lleno" : ""}`}>
+                              {fallecidoSel ? fallecidoSel.nombre : "Sin seleccionar"}
+                            </div>
+                            {fallecidoSel && (
+                              <button type="button" className="boton-secundario" title="Quitar enlace" onClick={quitarFallecido}>
+                                <i className="bi bi-x-lg" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {fallecidoResultados.length > 0 && (
+                        <div className="tabla-contenedor" style={{ marginTop: 12 }}>
+                          <table className="tabla">
+                            <tbody>
+                              {fallecidoResultados.map((f) => (
+                                <tr key={f.fallecidoId}>
+                                  <td style={{ fontWeight: 600 }}>{f.nombre}</td>
+                                  <td className="text-muted">
+                                    <small>
+                                      {[f.fecha ? new Date(f.fecha).toLocaleDateString("es-MX", { timeZone: "UTC" }) : null, f.acta ? `Acta ${f.acta}` : null, f.numeroCaso]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </small>
+                                  </td>
+                                  <td>
+                                    {f.esNoReclamado && <span className="badge badge-warning">No reclamado</span>}{" "}
+                                    {f.yaTienePermiso && <span className="badge badge-secondary">Ya tiene permiso</span>}
+                                  </td>
+                                  <td>
+                                    <button type="button" className="boton-secundario boton-sm" onClick={() => seleccionarFallecido(f)}>
+                                      Usar este
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "16px 0" }} />
