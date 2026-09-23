@@ -533,6 +533,7 @@ export function PermisoNuevo() {
                     type="date"
                     value={fechaFallecimiento}
                     onChange={(e) => setFechaFallecimiento(e.target.value)}
+                    readOnly={!!fallecidoSel}
                     disabled={fallecidoBloqueado}
                   />
                 </div>
@@ -542,6 +543,7 @@ export function PermisoNuevo() {
                     value={actaDefuncionNumero}
                     onChange={(e) => setActaDefuncionNumero(e.target.value)}
                     placeholder="Número de acta"
+                    readOnly={!!fallecidoSel}
                     disabled={fallecidoBloqueado}
                   />
                 </div>

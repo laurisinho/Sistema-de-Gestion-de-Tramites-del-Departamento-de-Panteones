@@ -40,10 +40,12 @@ fallecidosRouter.get(
     // Al buscar para una exhumación, el capturista suele encontrar al difunto
     // antes de haber elegido el lote: se manda dónde está sepultado hoy (si no
     // lo han exhumado ya) para que la pantalla lo enlace también, en el mismo
-    // formato que /lotes/buscar.
+    // formato que /lotes/buscar. SEP y CEN ocupan el lote por igual (sepultura
+    // o depósito de cenizas); dejar fuera a CEN aquí es el mismo hueco que
+    // tenía /lotes/:id/ocupantes.
     const [sepultados, exhumaciones] = await Promise.all([
       prisma.permiso.findMany({
-        where: { fallecidoId: { in: idsFallecidos }, tipoTramite: { clave: "SEP" }, loteId: { not: null } },
+        where: { fallecidoId: { in: idsFallecidos }, tipoTramite: { clave: { in: ["SEP", "CEN"] } }, loteId: { not: null } },
         include: { lote: { include: { panteon: true, titulos: { where: { estado: "VIGENTE" }, include: { titular: true }, take: 1 } } } },
         orderBy: { permisoId: "asc" },
       }),

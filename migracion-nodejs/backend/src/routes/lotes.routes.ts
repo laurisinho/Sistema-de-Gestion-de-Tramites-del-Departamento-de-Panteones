@@ -189,8 +189,11 @@ lotesRouter.get(
     const loteId = Number(req.params.id);
 
     const [sepultados, exhumaciones] = await Promise.all([
+      // SEP y CEN ocupan el lote por igual (sepultura o depósito de cenizas):
+      // dejar fuera a CEN aquí hacía que un lote ocupado por un depósito de
+      // cenizas apareciera como "sin sepultados" al elegirlo.
       prisma.permiso.findMany({
-        where: { loteId, tipoTramite: { clave: "SEP" }, fallecidoId: { not: null } },
+        where: { loteId, tipoTramite: { clave: { in: ["SEP", "CEN"] } }, fallecidoId: { not: null } },
         include: { fallecido: true },
         orderBy: { permisoId: "asc" },
       }),

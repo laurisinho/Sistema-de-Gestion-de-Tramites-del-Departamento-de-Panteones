@@ -5,7 +5,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 // Al buscar un difunto para una exhumación, el capturista casi siempre lo
 // encuentra antes de haber elegido el lote. Se prueba que /fallecidos/buscar
 // mande dónde está sepultado hoy (para que la pantalla lo enlace junto con el
-// difunto), y que no lo mande si ya lo exhumaron.
+// difunto), que no lo mande si ya lo exhumaron, y que cuente tanto sepultura
+// como depósito de cenizas como formas de "ocupar" el lote (un fallecido
+// solo enlazado por un permiso CEN se quedaba sin lote antes de este arreglo).
 const m = vi.hoisted(() => ({
   fallecidoFindMany: vi.fn(async () => [{ fallecidoId: 30, nombreCompleto: "JUAN PEREZ", fechaFallecimiento: null, actaDefuncionNumero: null, numeroCaso: null, esNoReclamado: false }]),
   groupBy: vi.fn(async () => []),
@@ -29,6 +31,17 @@ const { fallecidosRouter } = await import("./fallecidos.routes");
 
 let servidor: ReturnType<express.Express["listen"]>;
 let base = "";
+
+type WhereOcupacion = { where: { tipoTramite: { clave: string | { in: string[] } } } };
+
+// El código real filtra la consulta de ocupación con `clave: { in: [...] }`;
+// esta ayudante simula lo que Postgres haría con ese filtro, para que el mock
+// solo devuelva el lote cuando la clave del permiso (aquí, "CEN") de verdad
+// esté incluida en la consulta.
+function coincideClave(args: WhereOcupacion, claveDelPermiso: string): boolean {
+  const clave = args.where.tipoTramite.clave;
+  return typeof clave === "string" ? clave === claveDelPermiso : clave.in.includes(claveDelPermiso);
+}
 
 function loteDePrueba() {
   return {
@@ -70,10 +83,8 @@ beforeEach(() => {
 });
 
 describe("GET /fallecidos/buscar", () => {
-  it("manda el lote donde sigue sepultado", async () => {
-    m.permisoFindMany.mockImplementation(async (args: { where: { tipoTramite: { clave: string } } }) =>
-      args.where.tipoTramite.clave === "SEP" ? [loteDePrueba()] : []
-    );
+  it("manda el lote donde sigue sepultado (permiso de Sepultura)", async () => {
+    m.permisoFindMany.mockImplementation(async (args: WhereOcupacion) => (coincideClave(args, "SEP") ? [loteDePrueba()] : []));
 
     const r = await buscar();
     const cuerpo = (await r.json()) as Array<{ lote: { loteId: number; lote: string } | null }>;
@@ -84,9 +95,20 @@ describe("GET /fallecidos/buscar", () => {
     );
   });
 
+  it("manda el lote también si lo ocupa un Depósito de Cenizas (CEN), no solo Sepultura", async () => {
+    // Solo responde si la consulta pide CEN: si el código volviera a filtrar
+    // nada más por "SEP", esta prueba fallaría (lote quedaría null).
+    m.permisoFindMany.mockImplementation(async (args: WhereOcupacion) => (coincideClave(args, "CEN") ? [loteDePrueba()] : []));
+
+    const r = await buscar();
+    const cuerpo = (await r.json()) as Array<{ lote: { loteId: number } | null }>;
+
+    expect(cuerpo[0].lote).toEqual(expect.objectContaining({ loteId: 700 }));
+  });
+
   it("no manda lote si ya lo exhumaron", async () => {
-    m.permisoFindMany.mockImplementation(async (args: { where: { tipoTramite: { clave: string } } }) =>
-      args.where.tipoTramite.clave === "SEP" ? [loteDePrueba()] : [{ fallecidoId: 30 }]
+    m.permisoFindMany.mockImplementation(async (args: WhereOcupacion) =>
+      coincideClave(args, "SEP") ? [loteDePrueba()] : [{ fallecidoId: 30 }]
     );
 
     const r = await buscar();
