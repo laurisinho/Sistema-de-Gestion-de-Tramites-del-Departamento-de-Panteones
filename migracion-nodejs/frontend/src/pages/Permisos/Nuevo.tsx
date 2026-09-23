@@ -11,6 +11,10 @@ interface FallecidoResultado {
   numeroCaso: string | null;
   esNoReclamado: boolean;
   yaTienePermiso: boolean;
+  // Solo lo manda /fallecidos/buscar (para exhumación): dónde está sepultado
+  // hoy, si no lo han exhumado ya. Los ocupantes de un lote ya elegido
+  // (/lotes/:id/ocupantes) no lo traen porque ahí el lote ya se conoce.
+  lote?: LoteResultado | null;
 }
 
 interface LoteResultado {
@@ -196,6 +200,14 @@ export function PermisoNuevo() {
     if (f.fecha) setFechaFallecimiento(f.fecha.slice(0, 10));
     if (f.acta) setActaDefuncionNumero(f.acta);
     setFallecidoResultados([]);
+    // Para exhumación: si el difunto ya tiene lote sepultado, se enlaza junto
+    // con él, en vez de obligar a buscarlo otra vez abajo en Ubicación del Lote.
+    if (f.lote) {
+      setLoteNoRegistrado(false);
+      setLoteSel(f.lote);
+      setLoteResultados([]);
+      setErrorLote(null);
+    }
   }
 
   function quitarFallecido() {
