@@ -522,8 +522,7 @@ export function PermisoNuevo() {
                   <input
                     value={nombreFallecido}
                     onChange={(e) => setNombreFallecido(e.target.value)}
-                    readOnly={!!fallecidoSel}
-                    disabled={fallecidoBloqueado}
+                    disabled={fallecidoBloqueado || !!fallecidoSel}
                     placeholder={fallecidoBloqueado ? "Busca un expediente arriba o marca \"No está en el sistema\"" : "Nombre del fallecido"}
                   />
                 </div>
@@ -533,8 +532,7 @@ export function PermisoNuevo() {
                     type="date"
                     value={fechaFallecimiento}
                     onChange={(e) => setFechaFallecimiento(e.target.value)}
-                    readOnly={!!fallecidoSel}
-                    disabled={fallecidoBloqueado}
+                    disabled={fallecidoBloqueado || !!fallecidoSel}
                   />
                 </div>
                 <div className="form-campo">
@@ -543,8 +541,7 @@ export function PermisoNuevo() {
                     value={actaDefuncionNumero}
                     onChange={(e) => setActaDefuncionNumero(e.target.value)}
                     placeholder="Número de acta"
-                    readOnly={!!fallecidoSel}
-                    disabled={fallecidoBloqueado}
+                    disabled={fallecidoBloqueado || !!fallecidoSel}
                   />
                 </div>
               </div>
@@ -663,17 +660,18 @@ export function PermisoNuevo() {
                   <div className="form-campo" style={{ flex: "3 1 280px" }}>
                     <label>Titular o vecino (colindancia)</label>
                     <input
-                      value={terminoLote}
+                      value={loteSel ? loteSel.titular : terminoLote}
                       onChange={(e) => setTerminoLote(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
                       placeholder="Nombre del titular o de un vecino registrado"
+                      disabled={!!loteSel}
                     />
                   </div>
                 ) : (
                   <>
                     <div className="form-campo" style={{ flex: "1 1 140px" }}>
                       <label>Sección</label>
-                      <select value={seccionLote} onChange={(e) => setSeccionLote(e.target.value)}>
+                      <select value={loteSel ? (loteSel.seccion ?? "") : seccionLote} onChange={(e) => setSeccionLote(e.target.value)} disabled={!!loteSel}>
                         <option value="">Todas</option>
                         {secciones?.map((s) => (
                           <option key={s} value={s}>
@@ -685,32 +683,35 @@ export function PermisoNuevo() {
                     <div className="form-campo" style={{ flex: "1 1 110px" }}>
                       <label>Manzana</label>
                       <input
-                        value={loteManzana}
+                        value={loteSel ? loteSel.manzana : loteManzana}
                         onChange={(e) => setLoteManzana(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
+                        disabled={!!loteSel}
                       />
                     </div>
                     <div className="form-campo" style={{ flex: "1 1 110px" }}>
                       <label>Lote</label>
                       <input
-                        value={loteLote}
+                        value={loteSel ? loteSel.lote : loteLote}
                         onChange={(e) => setLoteLote(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
+                        disabled={!!loteSel}
                       />
                     </div>
                     <div className="form-campo" style={{ flex: "1 1 160px" }}>
                       <label>Titular</label>
                       <input
-                        value={terminoTitular}
+                        value={loteSel ? loteSel.titular : terminoTitular}
                         onChange={(e) => setTerminoTitular(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), buscarLote())}
                         placeholder="Nombre del titular"
+                        disabled={!!loteSel}
                       />
                     </div>
                   </>
                 )}
 
-                <button type="button" className="boton" onClick={buscarLote} style={{ flex: "0 0 auto" }}>
+                <button type="button" className="boton" onClick={buscarLote} style={{ flex: "0 0 auto" }} disabled={!!loteSel}>
                   <i className="bi bi-search" /> Buscar
                 </button>
 
