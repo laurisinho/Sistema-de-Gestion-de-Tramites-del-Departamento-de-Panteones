@@ -60,7 +60,7 @@ export function BitacoraLista() {
   const [hasta, setHasta] = useState("");
   const [filtros, setFiltros] = useState({ q: "", accion: "", usuarioId: "", desde: "", hasta: "" });
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["bitacora", filtros],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -200,8 +200,9 @@ export function BitacoraLista() {
           <span className="badge badge-warning">{data?.registros.length ?? 0} evento(s)</span>
         </div>
         <div className="card-body">
+          {isLoading && <p>Cargando...</p>}
           <ul className="tl">
-            {data?.registros.length === 0 && <li>Sin registros para este filtro.</li>}
+            {!isLoading && data?.registros.length === 0 && <li>Sin registros para este filtro.</li>}
             {data?.registros.map((r) => {
               const meta = ICONO_ACCION[r.accion] ?? { icono: "bi-circle", color: "#9b9298" };
               return (

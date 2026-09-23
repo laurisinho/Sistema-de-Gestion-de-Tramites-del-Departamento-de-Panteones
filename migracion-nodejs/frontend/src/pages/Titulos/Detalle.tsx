@@ -64,7 +64,7 @@ export function TituloDetalle() {
   const queryClient = useQueryClient();
   const [confirmando, setConfirmando] = useState(false);
   const [errorCancelar, setErrorCancelar] = useState<string | null>(null);
-  const { data: resultado } = useQuery({
+  const { data: resultado, isLoading } = useQuery({
     queryKey: ["titulos", id],
     queryFn: () => api<TituloDetalleData>(`/titulos/${id}`),
   });
@@ -78,7 +78,8 @@ export function TituloDetalle() {
     onError: (err) => setErrorCancelar(err instanceof ApiError ? err.message : "No se pudo cancelar"),
   });
 
-  if (!resultado) return <p>Cargando...</p>;
+  if (isLoading) return <p>Cargando...</p>;
+  if (!resultado) return <p className="aviso-error">No se encontró el título.</p>;
   const { titulo: data, fallecidos, permisos } = resultado;
   const usaColindancias = data.lote.numeroManzana === "S/N";
 

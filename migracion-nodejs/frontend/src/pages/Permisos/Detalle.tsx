@@ -50,7 +50,7 @@ export function PermisoDetalle() {
   const queryClient = useQueryClient();
   const [confirmando, setConfirmando] = useState(false);
   const [errorCancelar, setErrorCancelar] = useState<string | null>(null);
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["permisos", id],
     queryFn: () => api<{ permiso: PermisoDetalle }>(`/permisos/${id}`).then((r) => r.permiso),
   });
@@ -64,7 +64,8 @@ export function PermisoDetalle() {
     onError: (err) => setErrorCancelar(err instanceof ApiError ? err.message : "No se pudo cancelar"),
   });
 
-  if (!data) return <p>Cargando...</p>;
+  if (isLoading) return <p>Cargando...</p>;
+  if (!data) return <p className="aviso-error">No se encontró el permiso.</p>;
   const clave = data.tipoTramite.clave;
   const usaColindancias = data.lote?.numeroManzana === "S/N";
 
