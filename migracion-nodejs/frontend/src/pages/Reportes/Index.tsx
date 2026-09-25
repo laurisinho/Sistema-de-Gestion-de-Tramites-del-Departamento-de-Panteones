@@ -33,6 +33,7 @@ export function ReportesIndex() {
   const [hastaMov, setHastaMov] = useState("");
   const rangoIncompleto = porRango && (!desdeMov || !hastaMov);
 
+  const [panteonIdEstado, setPanteonIdEstado] = useState("");
   const [panteonIdInc, setPanteonIdInc] = useState("");
   const [estadoInc, setEstadoInc] = useState("");
   const [desdeInc, setDesdeInc] = useState("");
@@ -150,14 +151,30 @@ export function ReportesIndex() {
             <i className="bi bi-bar-chart-steps" /> Estado actual por panteón
           </p>
           <p className="rep-desc">
-            Foto de hoy de cada panteón: cuántos lotes tiene (ocupados, disponibles, fosa común, con título vigente), los trámites
+            Estado actual de cada panteón: cuántos lotes tiene (ocupados, disponibles, fosa común, con título vigente), los trámites
             acumulados de sepultura, exhumación, cenizas y construcción, y cuántas personas hay sepultadas. A diferencia de la
-            relación mensual, no depende de un periodo.
+            relación mensual, no depende de un periodo. El Excel trae tres hojas: el resumen, los títulos vigentes y los permisos.
           </p>
         </div>
         <div className="rep-body">
-          <div className="barra-filtros" style={{ marginBottom: 0 }}>
-            <BotonDescarga className="boton" icono="bi-file-earmark-excel" nombreArchivo="estado-por-panteon.xlsx" ruta="/reportes/panteones/excel">
+          <div className="barra-filtros" style={{ marginBottom: 0, alignItems: "flex-end" }}>
+            <div className="form-campo">
+              <label>Panteón</label>
+              <select value={panteonIdEstado} onChange={(e) => setPanteonIdEstado(e.target.value)}>
+                <option value="">Todos los panteones</option>
+                {panteones?.map((p) => (
+                  <option key={p.panteonId} value={p.panteonId}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <BotonDescarga
+              className="boton"
+              icono="bi-file-earmark-excel"
+              nombreArchivo="estado-por-panteon.xlsx"
+              ruta={`/reportes/panteones/excel${panteonIdEstado ? `?${new URLSearchParams({ panteonId: panteonIdEstado })}` : ""}`}
+            >
               Generar Excel
             </BotonDescarga>
           </div>

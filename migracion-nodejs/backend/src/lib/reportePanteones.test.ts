@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resumenPorPanteon, type LoteBase, type PanteonBase, type PermisoBase } from "./reportePanteones";
+import { compararUbicacion, resumenPorPanteon, type LoteBase, type PanteonBase, type PermisoBase, type Ubicacion } from "./reportePanteones";
 
 const panteones: PanteonBase[] = [
   { panteonId: 1, nombre: "Jardines del Edén", activo: true },
@@ -58,5 +58,26 @@ describe("resumenPorPanteon", () => {
     const [edén] = resumenPorPanteon(panteones, [], [{ clave: "SEP", panteonId: 1, fallecidoId: null }]);
     expect(edén.sepultados).toBe(0);
     expect(edén.sepulturas).toBe(1);
+  });
+});
+
+describe("compararUbicacion", () => {
+  const u = (panteon: string, seccion: string | null, manzana: string, lote: string): Ubicacion => ({ panteon, seccion, manzana, lote });
+  const ordenar = (xs: Ubicacion[]) => [...xs].sort(compararUbicacion).map((x) => `${x.panteon}|${x.seccion ?? ""}|${x.manzana}|${x.lote}`);
+
+  it("ordena por panteón y luego por sección", () => {
+    expect(ordenar([u("Nacional", null, "S/N", "1"), u("Jardines del Edén", "TERRAZAS", "1", "1"), u("Jardines del Edén", "ADE", "1", "1")])).toEqual([
+      "Jardines del Edén|ADE|1|1",
+      "Jardines del Edén|TERRAZAS|1|1",
+      "Nacional||S/N|1",
+    ]);
+  });
+
+  it("compara manzanas y lotes como números, no como texto", () => {
+    expect(ordenar([u("P", "A", "10", "2"), u("P", "A", "2", "10"), u("P", "A", "2", "2")])).toEqual(["P|A|2|2", "P|A|2|10", "P|A|10|2"]);
+  });
+
+  it("entiende lotes con letras (2-B antes que 10)", () => {
+    expect(ordenar([u("P", null, "1", "10"), u("P", null, "1", "2-B")])).toEqual(["P||1|2-B", "P||1|10"]);
   });
 });

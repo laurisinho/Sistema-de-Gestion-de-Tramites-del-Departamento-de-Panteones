@@ -6,7 +6,7 @@ import { requiereAuth } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { prepararHoja, cerrarHoja, escribirFecha, coloresExcel, argb, type ColDef } from "../lib/excel";
-import { resumenPorPanteon } from "../lib/reportePanteones";
+import { compararUbicacion, resumenPorPanteon } from "../lib/reportePanteones";
 import { renderPdf } from "../lib/pdf";
 import { obtenerAparienciaDocumento } from "../lib/apariencia";
 import { etiquetasHtml, type EtiquetaLote } from "../templates/etiquetas.template";
@@ -438,21 +438,96 @@ const ColsPanteones: ColDef[] = [
   { titulo: "PERSONAS SEPULTADAS", ancho: 15, align: "center" },
 ];
 
-// Foto del estado actual de cada panteón (inventario de lotes y trámites
-// acumulados), a diferencia de la relación de movimientos, que es de un periodo.
+const ColsTitulosPanteon: ColDef[] = [
+  { titulo: "FOLIO", ancho: 20, align: "left" },
+  { titulo: "TITULAR", ancho: 38, align: "left" },
+  { titulo: "PANTEÓN", ancho: 30, align: "left" },
+  { titulo: "SECCIÓN", ancho: 16, align: "center" },
+  { titulo: "MANZANA", ancho: 10, align: "center" },
+  { titulo: "LOTE", ancho: 10, align: "center" },
+  { titulo: "FECHA DE EMISIÓN", ancho: 15, align: "center" },
+  { titulo: "ENTREGA", ancho: 20, align: "center" },
+];
+
+const ColsPermisosPanteon: ColDef[] = [
+  { titulo: "FOLIO", ancho: 16, align: "left" },
+  { titulo: "TIPO", ancho: 20, align: "left" },
+  { titulo: "FECHA", ancho: 12, align: "center" },
+  { titulo: "SOLICITANTE", ancho: 34, align: "left" },
+  { titulo: "DIFUNTO", ancho: 34, align: "left" },
+  { titulo: "PANTEÓN", ancho: 30, align: "left" },
+  { titulo: "SECCIÓN", ancho: 16, align: "center" },
+  { titulo: "MANZANA", ancho: 10, align: "center" },
+  { titulo: "LOTE", ancho: 10, align: "center" },
+  { titulo: "ESTADO", ancho: 14, align: "center" },
+  { titulo: "OBSERVACIONES", ancho: 32, align: "left" },
+];
+
+// Escribe filas de datos con el renglón alterno sombreado; las fechas pasan por
+// escribirFecha para que salgan como fecha real y no como texto. Devuelve el
+// siguiente renglón libre.
+function escribirFilas(ws: ExcelJS.Worksheet, filas: (string | number | Date | null)[][]): number {
+  let r = 7;
+  filas.forEach((fila, idx) => {
+    fila.forEach((v, c) => {
+      const cell = ws.getCell(r, c + 1);
+      if (v instanceof Date) escribirFecha(cell, v);
+      else cell.value = v ?? "";
+      if (idx % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF7F3F4" } };
+    });
+    r++;
+  });
+  return r;
+}
+
+// Estado actual de cada panteón (inventario de lotes y trámites acumulados), a
+// diferencia de la relación de movimientos, que es de un periodo. Con
+// ?panteonId= se limita a ese panteón; sin él, van todos. Trae tres hojas: el
+// resumen, los títulos vigentes y los permisos.
 reportesRouter.get(
   "/panteones/excel",
   asyncHandler(async (req, res) => {
-    const [panteones, lotes, permisos] = await Promise.all([
-      prisma.panteon.findMany({ orderBy: { nombre: "asc" }, select: { panteonId: true, nombre: true, activo: true } }),
+    let panteonId: number | undefined;
+    if (req.query.panteonId !== undefined && req.query.panteonId !== "") {
+      panteonId = Number(req.query.panteonId);
+      if (!Number.isInteger(panteonId) || panteonId <= 0) return res.status(400).json({ error: "Panteón inválido" });
+    }
+    const porPanteon = panteonId ? { panteonId } : {};
+    const loteDelPanteon = panteonId ? { lote: { panteonId } } : {};
+
+    const [panteones, lotes, permisos, titulos] = await Promise.all([
+      prisma.panteon.findMany({ where: porPanteon, orderBy: { nombre: "asc" }, select: { panteonId: true, nombre: true, activo: true } }),
       prisma.lote.findMany({
+        where: porPanteon,
         select: { panteonId: true, estado: true, esFosaComun: true, titulos: { where: { estado: "VIGENTE" }, select: { tituloId: true }, take: 1 } },
       }),
       prisma.permiso.findMany({
-        where: { estado: { not: "CANCELADO" }, loteId: { not: null } },
-        select: { fallecidoId: true, tipoTramite: { select: { clave: true } }, lote: { select: { panteonId: true } } },
+        where: { estado: { not: "CANCELADO" }, loteId: { not: null }, ...loteDelPanteon },
+        select: {
+          folio: true,
+          fechaSolicitud: true,
+          estado: true,
+          sinTituloRegistrado: true,
+          fallecidoId: true,
+          tipoTramite: { select: { clave: true, nombre: true } },
+          solicitante: { select: { nombreCompleto: true } },
+          fallecido: { select: { nombreCompleto: true } },
+          lote: { select: { panteonId: true, seccion: true, numeroManzana: true, numeroLote: true, panteon: { select: { nombre: true } } } },
+        },
+      }),
+      prisma.tituloPropiedad.findMany({
+        where: { estado: "VIGENTE", ...loteDelPanteon },
+        select: {
+          folio: true,
+          fechaEmision: true,
+          estadoEntrega: true,
+          titular: { select: { nombreCompleto: true } },
+          lote: { select: { seccion: true, numeroManzana: true, numeroLote: true, panteon: { select: { nombre: true } } } },
+        },
       }),
     ]);
+
+    if (panteonId && panteones.length === 0) return res.status(404).json({ error: "Panteón no encontrado" });
 
     const filas = resumenPorPanteon(
       panteones,
@@ -462,10 +537,11 @@ reportesRouter.get(
 
     const hoy = hoyLocal();
     const corte = `Corte al ${String(hoy.getUTCDate()).padStart(2, "0")}/${String(hoy.getUTCMonth() + 1).padStart(2, "0")}/${hoy.getUTCFullYear()}`;
+    const alcance = panteonId ? panteones[0].nombre : "Todos los panteones";
 
     const wb = new ExcelJS.Workbook();
     const colores = await coloresExcel();
-    const ws = await prepararHoja(wb, "Panteones", ColsPanteones, "ESTADO ACTUAL POR PANTEÓN", "Lotes, títulos y trámites de cada panteón", corte, filas.length);
+    const ws = await prepararHoja(wb, "Resumen", ColsPanteones, "ESTADO ACTUAL POR PANTEÓN", `Lotes y trámites · ${alcance}`, corte, filas.length);
 
     // Los ceros se atenúan para resaltar lo que sí tiene registros.
     const valores = (f: (typeof filas)[number]) => [
@@ -499,11 +575,48 @@ reportesRouter.get(
 
     await cerrarHoja(ws, ColsPanteones, filas.length, r);
 
-    await registrarBitacora(req.usuario!.usuarioId, Acciones.Imprimir, "panteones", undefined, `Estado actual por panteón — ${filas.length} panteón(es)`, req.ip);
+    // Hoja de títulos: solo los vigentes, que son el estado actual de cada lote.
+    const filasTitulos = titulos
+      .map((t) => ({ t, u: { panteon: t.lote.panteon.nombre, seccion: t.lote.seccion, manzana: t.lote.numeroManzana, lote: t.lote.numeroLote } }))
+      .sort((a, b) => compararUbicacion(a.u, b.u) || a.t.folio.localeCompare(b.t.folio, "es", { numeric: true }))
+      .map(({ t, u }) => [t.folio, t.titular.nombreCompleto, u.panteon, u.seccion ?? "", u.manzana, u.lote, t.fechaEmision, t.estadoEntrega.replaceAll("_", " ")]);
+    const wt = await prepararHoja(wb, "Títulos", ColsTitulosPanteon, "TÍTULOS DE PROPIEDAD VIGENTES", alcance, corte, filasTitulos.length);
+    await cerrarHoja(wt, ColsTitulosPanteon, filasTitulos.length, escribirFilas(wt, filasTitulos));
+
+    // Hoja de permisos: todos los no cancelados, del más reciente al más antiguo
+    // dentro de cada lote.
+    const filasPermisos = permisos
+      .flatMap((p) => (p.lote ? [{ p, l: p.lote, u: { panteon: p.lote.panteon.nombre, seccion: p.lote.seccion, manzana: p.lote.numeroManzana, lote: p.lote.numeroLote } }] : []))
+      .sort((a, b) => compararUbicacion(a.u, b.u) || (b.p.fechaSolicitud?.getTime() ?? 0) - (a.p.fechaSolicitud?.getTime() ?? 0))
+      .map(({ p, u }) => [
+        p.folio,
+        p.tipoTramite.nombre,
+        p.fechaSolicitud,
+        p.solicitante.nombreCompleto,
+        p.fallecido?.nombreCompleto ?? "",
+        u.panteon,
+        u.seccion ?? "",
+        u.manzana,
+        u.lote,
+        p.estado,
+        p.sinTituloRegistrado ? "Sin título de propiedad registrado" : "",
+      ]);
+    const wp = await prepararHoja(wb, "Permisos", ColsPermisosPanteon, "PERMISOS", alcance, corte, filasPermisos.length);
+    await cerrarHoja(wp, ColsPermisosPanteon, filasPermisos.length, escribirFilas(wp, filasPermisos));
+
+    await registrarBitacora(
+      req.usuario!.usuarioId,
+      Acciones.Imprimir,
+      "panteones",
+      undefined,
+      `Estado actual por panteón (${alcance}) — ${filasTitulos.length} título(s), ${filasPermisos.length} permiso(s)`,
+      req.ip
+    );
 
     const buffer = await wb.xlsx.writeBuffer();
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="Estado_por_panteon_${hoy.toISOString().slice(0, 10)}.xlsx"`);
+    const sufijo = panteonId ? `_${panteones[0].nombre.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "_")}` : "";
+    res.setHeader("Content-Disposition", `attachment; filename="Estado_por_panteon${sufijo}_${hoy.toISOString().slice(0, 10)}.xlsx"`);
     res.send(Buffer.from(buffer));
   })
 );

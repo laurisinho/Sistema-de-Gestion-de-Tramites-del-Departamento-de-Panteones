@@ -34,7 +34,26 @@ export interface FilaPanteon {
   sepultados: number;
 }
 
-// Foto del estado actual de cada panteón: inventario de lotes y trámites
+export interface Ubicacion {
+  panteon: string;
+  seccion: string | null;
+  manzana: string;
+  lote: string;
+}
+
+// Orden de las hojas de detalle: panteón, sección, manzana y lote, comparando
+// los números como números ("2" antes que "10", "2-B" antes que "10").
+export function compararUbicacion(a: Ubicacion, b: Ubicacion): number {
+  const opciones = { numeric: true, sensitivity: "base" } as const;
+  return (
+    a.panteon.localeCompare(b.panteon, "es", opciones) ||
+    (a.seccion ?? "").localeCompare(b.seccion ?? "", "es", opciones) ||
+    a.manzana.localeCompare(b.manzana, "es", opciones) ||
+    a.lote.localeCompare(b.lote, "es", opciones)
+  );
+}
+
+// Estado actual de cada panteón: inventario de lotes y trámites
 // acumulados. "Sepultados" son las personas con permiso de sepultura o de
 // depósito de cenizas en ese panteón que no han sido exhumadas (misma regla que
 // /lotes/:id/ocupantes, pero por panteón).
