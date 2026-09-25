@@ -6,6 +6,7 @@ import { requiereAuth } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { prepararHoja, cerrarHoja, escribirFecha, coloresExcel, argb, type ColDef } from "../lib/excel";
+import { resumenPorPanteon } from "../lib/reportePanteones";
 import { renderPdf } from "../lib/pdf";
 import { obtenerAparienciaDocumento } from "../lib/apariencia";
 import { etiquetasHtml, type EtiquetaLote } from "../templates/etiquetas.template";
@@ -419,6 +420,90 @@ reportesRouter.get(
       ? `${String(req.query.desde)}_a_${String(req.query.hasta)}`
       : String(req.query.anio ?? hoyLocal().getUTCFullYear());
     res.setHeader("Content-Disposition", `attachment; filename="Movimientos_${sufijoArchivo}.xlsx"`);
+    res.send(Buffer.from(buffer));
+  })
+);
+
+const ColsPanteones: ColDef[] = [
+  { titulo: "PANTEÓN", ancho: 34, align: "left" },
+  { titulo: "LOTES", ancho: 11, align: "center" },
+  { titulo: "OCUPADOS", ancho: 12, align: "center" },
+  { titulo: "DISPONIBLES", ancho: 13, align: "center" },
+  { titulo: "FOSA COMÚN", ancho: 12, align: "center" },
+  { titulo: "CON TÍTULO VIGENTE", ancho: 14, align: "center" },
+  { titulo: "SEPULTURAS", ancho: 13, align: "center" },
+  { titulo: "EXHUMACIONES", ancho: 14, align: "center" },
+  { titulo: "DEPÓSITOS DE CENIZAS", ancho: 15, align: "center" },
+  { titulo: "CONSTRUCCIONES", ancho: 14, align: "center" },
+  { titulo: "PERSONAS SEPULTADAS", ancho: 15, align: "center" },
+];
+
+// Foto del estado actual de cada panteón (inventario de lotes y trámites
+// acumulados), a diferencia de la relación de movimientos, que es de un periodo.
+reportesRouter.get(
+  "/panteones/excel",
+  asyncHandler(async (req, res) => {
+    const [panteones, lotes, permisos] = await Promise.all([
+      prisma.panteon.findMany({ orderBy: { nombre: "asc" }, select: { panteonId: true, nombre: true, activo: true } }),
+      prisma.lote.findMany({
+        select: { panteonId: true, estado: true, esFosaComun: true, titulos: { where: { estado: "VIGENTE" }, select: { tituloId: true }, take: 1 } },
+      }),
+      prisma.permiso.findMany({
+        where: { estado: { not: "CANCELADO" }, loteId: { not: null } },
+        select: { fallecidoId: true, tipoTramite: { select: { clave: true } }, lote: { select: { panteonId: true } } },
+      }),
+    ]);
+
+    const filas = resumenPorPanteon(
+      panteones,
+      lotes.map((l) => ({ panteonId: l.panteonId, estado: l.estado, esFosaComun: l.esFosaComun, conTituloVigente: l.titulos.length > 0 })),
+      permisos.flatMap((p) => (p.lote ? [{ clave: p.tipoTramite.clave, panteonId: p.lote.panteonId, fallecidoId: p.fallecidoId }] : []))
+    );
+
+    const hoy = hoyLocal();
+    const corte = `Corte al ${String(hoy.getUTCDate()).padStart(2, "0")}/${String(hoy.getUTCMonth() + 1).padStart(2, "0")}/${hoy.getUTCFullYear()}`;
+
+    const wb = new ExcelJS.Workbook();
+    const colores = await coloresExcel();
+    const ws = await prepararHoja(wb, "Panteones", ColsPanteones, "ESTADO ACTUAL POR PANTEÓN", "Lotes, títulos y trámites de cada panteón", corte, filas.length);
+
+    // Los ceros se atenúan para resaltar lo que sí tiene registros.
+    const valores = (f: (typeof filas)[number]) => [
+      f.nombre, f.lotes, f.ocupados, f.disponibles, f.fosaComun, f.conTitulo,
+      f.sepulturas, f.exhumaciones, f.cenizas, f.construcciones, f.sepultados,
+    ];
+    let r = 7;
+    filas.forEach((f, idx) => {
+      valores(f).forEach((v, c) => {
+        const cell = ws.getCell(r, c + 1);
+        cell.value = v;
+        if (v === 0) cell.font = { color: { argb: "FFBBBBBB" } };
+        if (idx % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF7F3F4" } };
+      });
+      r++;
+    });
+
+    if (filas.length > 0) {
+      const suma = (k: keyof (typeof filas)[number]) => filas.reduce((s, f) => s + (f[k] as number), 0);
+      const total = ["TOTAL GENERAL", suma("lotes"), suma("ocupados"), suma("disponibles"), suma("fosaComun"), suma("conTitulo"),
+        suma("sepulturas"), suma("exhumaciones"), suma("cenizas"), suma("construcciones"), suma("sepultados")];
+      total.forEach((v, c) => {
+        const cell = ws.getCell(r, c + 1);
+        cell.value = v;
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(colores.guindaClaro) } };
+      });
+      ws.getRow(r).height = 18;
+      r++;
+    }
+
+    await cerrarHoja(ws, ColsPanteones, filas.length, r);
+
+    await registrarBitacora(req.usuario!.usuarioId, Acciones.Imprimir, "panteones", undefined, `Estado actual por panteón — ${filas.length} panteón(es)`, req.ip);
+
+    const buffer = await wb.xlsx.writeBuffer();
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="Estado_por_panteon_${hoy.toISOString().slice(0, 10)}.xlsx"`);
     res.send(Buffer.from(buffer));
   })
 );

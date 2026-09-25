@@ -144,6 +144,26 @@ export function ReportesIndex() {
         </div>
       </div>
 
+      <div className="rep-card" style={{ marginBottom: 20 }}>
+        <div className="rep-head">
+          <p className="rep-titulo">
+            <i className="bi bi-bar-chart-steps" /> Estado actual por panteón
+          </p>
+          <p className="rep-desc">
+            Foto de hoy de cada panteón: cuántos lotes tiene (ocupados, disponibles, fosa común, con título vigente), los trámites
+            acumulados de sepultura, exhumación, cenizas y construcción, y cuántas personas hay sepultadas. A diferencia de la
+            relación mensual, no depende de un periodo.
+          </p>
+        </div>
+        <div className="rep-body">
+          <div className="barra-filtros" style={{ marginBottom: 0 }}>
+            <BotonDescarga className="boton" icono="bi-file-earmark-excel" nombreArchivo="estado-por-panteon.xlsx" ruta="/reportes/panteones/excel">
+              Generar Excel
+            </BotonDescarga>
+          </div>
+        </div>
+      </div>
+
       <div className="detalle-grid">
         <div className="rep-card">
           <div className="rep-head">
