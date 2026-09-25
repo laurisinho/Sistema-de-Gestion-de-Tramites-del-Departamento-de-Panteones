@@ -86,25 +86,32 @@ noReclamadosRouter.get(
 // Agentes del M.P. para el selector del formulario: el catálogo de
 // Administración más los que ya se hayan capturado como texto libre en
 // Fallecido/Reconocimiento (registros anteriores al catálogo o capturados con
-// "Otro").
+// "Otro"). Un agente desactivado en el catálogo no se ofrece aunque aparezca en
+// registros viejos: si no, desactivarlo no serviría de nada, porque casi todos
+// ya se usaron alguna vez. Al editar un registro que ya lo tiene, el selector
+// pasa solo a modo "Otro" y conserva el valor.
 noReclamadosRouter.get(
   "/ministerios-publicos",
   asyncHandler(async (_req, res) => {
-    const [delCatalogo, deFallecidos, deReconocimientos] = await Promise.all([
-      prisma.agenteMinisterioPublico.findMany({ where: { activo: true }, select: { nombre: true } }),
+    const [catalogo, deFallecidos, deReconocimientos] = await Promise.all([
+      prisma.agenteMinisterioPublico.findMany({ select: { nombre: true, activo: true } }),
       prisma.fallecido.findMany({ where: { ministerioPublico: { not: null } }, select: { ministerioPublico: true }, distinct: ["ministerioPublico"] }),
       prisma.reconocimiento.findMany({ where: { ministerioPublico: { not: null } }, select: { ministerioPublico: true }, distinct: ["ministerioPublico"] }),
     ]);
     // Se normaliza cada nombre (misma regla que el sembrado del catálogo) para que
     // "LIC, X" de un registro viejo no aparezca duplicado junto a "LIC. X".
     const porClave = new Map<string, string>();
-    for (const nombre of [
-      ...delCatalogo.map((a) => a.nombre),
-      ...deFallecidos.map((f) => f.ministerioPublico!),
-      ...deReconocimientos.map((r) => r.ministerioPublico!),
-    ]) {
+    const desactivados = new Set<string>();
+    for (const a of catalogo) {
+      const n = normalizarAgenteMp(a.nombre);
+      if (!n) continue;
+      if (a.activo) porClave.set(n.toUpperCase(), n);
+      else desactivados.add(n.toUpperCase());
+    }
+    for (const nombre of [...deFallecidos.map((f) => f.ministerioPublico!), ...deReconocimientos.map((r) => r.ministerioPublico!)]) {
       const n = normalizarAgenteMp(nombre);
-      if (n && !porClave.has(n.toUpperCase())) porClave.set(n.toUpperCase(), n);
+      const clave = n.toUpperCase();
+      if (n && !desactivados.has(clave) && !porClave.has(clave)) porClave.set(clave, n);
     }
     res.json([...porClave.values()].sort((a, b) => a.localeCompare(b)));
   })
