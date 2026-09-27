@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, API_URL, ApiError } from "../../lib/api";
 import { aplicarApariencia, APARIENCIA_DEFAULT } from "../../lib/colores";
+import { archivoADataUri } from "../../lib/archivos";
 
 interface Apariencia {
   colorGuinda: string;
@@ -14,15 +15,6 @@ const SINDICO_DEFAULT = "MAESTRA EDNA ELINORA SOTO GRACIA";
 // Las tres tarjetas de esta pantalla comparten ancho para que sus bordes
 // queden alineados en vez de la escalinata que dejaban 520/640/520px sueltos.
 const ANCHO_TARJETA = 640;
-
-function archivoADataUri(archivo: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const lector = new FileReader();
-    lector.onload = () => resolve(lector.result as string);
-    lector.onerror = () => reject(lector.error);
-    lector.readAsDataURL(archivo);
-  });
-}
 
 export function AdministracionApariencia() {
   const queryClient = useQueryClient();

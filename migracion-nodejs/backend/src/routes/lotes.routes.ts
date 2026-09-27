@@ -1,13 +1,18 @@
 import { Router } from "express";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { requiereAuth } from "../middleware/auth";
+import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { variantesManzana } from "../lib/romanos";
 import { whereSeccion } from "../lib/ubicacion";
+import { Acciones, registrarBitacora } from "../lib/bitacora";
+import { subirDocumento, descargarDocumento, eliminarDocumento } from "../lib/storageDocumentos";
 
 export const lotesRouter = Router();
-lotesRouter.use(requiereAuth);
+// requiereEscritura no afecta ninguna ruta GET (deja pasar cualquier rol):
+// solo bloquea subir/eliminar documentos a un usuario de solo Consulta.
+lotesRouter.use(requiereAuth, requiereEscritura);
 
 function str(v: unknown): string | undefined {
   const s = typeof v === "string" ? v.trim() : "";
@@ -468,5 +473,149 @@ lotesRouter.get(
       exhumaciones,
       ocupantes,
     });
+  })
+);
+
+// Documentos escaneados del expediente físico del lote (identificación, acta,
+// comprobante, escritura...). El archivo vive en Supabase Storage; aquí solo se
+// guarda la referencia (ver lib/storageDocumentos.ts). Van ligados al lote y no
+// a un título/permiso puntual, porque el expediente físico junta todo lo del
+// lote a lo largo de su historia. El límite más grande de cuerpo para la ruta
+// de subir se registra en app.ts (antes del genérico de la app), igual que el
+// del logo de Apariencia.
+const MIME_PERMITIDOS: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+};
+const LIMITE_DOCUMENTO_BYTES = 10 * 1024 * 1024;
+
+const subirDocumentoSchema = z.object({
+  nombreArchivo: z.string().trim().min(1, "Falta el nombre del archivo").max(200),
+  dataUri: z.string().regex(/^data:[\w./+-]+;base64,/, "Formato de archivo inválido"),
+});
+
+// Deja solo caracteres seguros para una ruta de Storage y para el nombre de
+// archivo al descargarlo: sin acentos, espacios ni "/" o "..".
+function nombreSeguro(nombre: string): string {
+  const limpio = nombre
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^A-Za-z0-9._-]+/g, "_");
+  return limpio.slice(-150) || "documento";
+}
+
+lotesRouter.get(
+  "/:id/documentos",
+  asyncHandler(async (req, res) => {
+    const documentos = await prisma.documentoLote.findMany({
+      where: { loteId: Number(req.params.id) },
+      include: { usuarioSubio: { select: { nombreCompleto: true } } },
+      orderBy: { fechaSubida: "desc" },
+    });
+    res.json(
+      documentos.map((d) => ({
+        documentoId: d.documentoId,
+        nombreArchivo: d.nombreArchivo,
+        tipoMime: d.tipoMime,
+        tamanioBytes: d.tamanioBytes,
+        fechaSubida: d.fechaSubida,
+        subioPor: d.usuarioSubio.nombreCompleto,
+      }))
+    );
+  })
+);
+
+lotesRouter.post(
+  "/:id/documentos",
+  asyncHandler(async (req, res) => {
+    const loteId = Number(req.params.id);
+    const lote = await prisma.lote.findUnique({ where: { loteId } });
+    if (!lote) return res.status(404).json({ error: "Lote no encontrado" });
+
+    const parseo = subirDocumentoSchema.safeParse(req.body);
+    if (!parseo.success) return res.status(400).json({ error: parseo.error.issues[0]?.message ?? "Datos inválidos" });
+
+    const [encabezado, base64] = parseo.data.dataUri.split(",");
+    const tipoMime = encabezado.match(/^data:([\w./+-]+);base64$/)?.[1] ?? "";
+    if (!MIME_PERMITIDOS[tipoMime]) return res.status(400).json({ error: "Solo se aceptan PDF, JPG o PNG." });
+
+    const bytes = Buffer.from(base64 ?? "", "base64");
+    if (bytes.length === 0 || bytes.length > LIMITE_DOCUMENTO_BYTES) {
+      return res.status(400).json({ error: "El archivo debe pesar menos de 10 MB." });
+    }
+
+    const usuarioId = req.usuario!.usuarioId;
+    const ruta = `lotes/${loteId}/${Date.now()}-${nombreSeguro(parseo.data.nombreArchivo)}`;
+    await subirDocumento(ruta, bytes, tipoMime);
+
+    let documento;
+    try {
+      documento = await prisma.documentoLote.create({
+        data: {
+          loteId,
+          nombreArchivo: parseo.data.nombreArchivo.slice(0, 255),
+          rutaStorage: ruta,
+          tipoMime,
+          tamanioBytes: bytes.length,
+          usuarioSubioId: usuarioId,
+        },
+      });
+    } catch (err) {
+      // El archivo ya se subió a Storage: si el registro en la BD falla, que no
+      // quede huérfano ocupando espacio sin aparecer en ningún lado.
+      await eliminarDocumento(ruta).catch(() => {});
+      throw err;
+    }
+
+    await registrarBitacora(
+      usuarioId,
+      Acciones.Crear,
+      "documentos_lote",
+      documento.documentoId,
+      `Documento "${documento.nombreArchivo}" subido al lote ${loteId}`,
+      req.ip
+    );
+
+    res.status(201).json({ documentoId: documento.documentoId });
+  })
+);
+
+lotesRouter.get(
+  "/:id/documentos/:documentoId/descargar",
+  asyncHandler(async (req, res) => {
+    const documento = await prisma.documentoLote.findFirst({
+      where: { documentoId: Number(req.params.documentoId), loteId: Number(req.params.id) },
+    });
+    if (!documento) return res.status(404).json({ error: "Documento no encontrado" });
+
+    const bytes = await descargarDocumento(documento.rutaStorage);
+    res.setHeader("Content-Type", documento.tipoMime);
+    res.setHeader("Content-Disposition", `inline; filename="${documento.nombreArchivo.replace(/"/g, "")}"`);
+    res.send(bytes);
+  })
+);
+
+lotesRouter.delete(
+  "/:id/documentos/:documentoId",
+  asyncHandler(async (req, res) => {
+    const documento = await prisma.documentoLote.findFirst({
+      where: { documentoId: Number(req.params.documentoId), loteId: Number(req.params.id) },
+    });
+    if (!documento) return res.status(404).json({ error: "Documento no encontrado" });
+
+    await prisma.documentoLote.delete({ where: { documentoId: documento.documentoId } });
+    await eliminarDocumento(documento.rutaStorage).catch(() => {});
+
+    await registrarBitacora(
+      req.usuario!.usuarioId,
+      Acciones.Eliminar,
+      "documentos_lote",
+      documento.documentoId,
+      `Documento "${documento.nombreArchivo}" eliminado del lote ${req.params.id}`,
+      req.ip
+    );
+
+    res.json({ ok: true });
   })
 );

@@ -39,6 +39,10 @@ app.disable("x-powered-by");
 // propio límite. body-parser no vuelve a leer un cuerpo ya parseado, así que
 // el genérico de abajo no hace nada en esta ruta.
 app.use("/api/administracion/apariencia/logo", express.json({ limit: "3mb" }));
+// Documentos escaneados (POST /lotes/:id/documentos): hasta 10MB de archivo real
+// más el ~33% que suma la codificación base64, con margen para el resto del
+// cuerpo JSON.
+app.use("/api/lotes/:id/documentos", express.json({ limit: "15mb" }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: env.frontendOrigin, credentials: true }));

@@ -135,6 +135,7 @@ model Usuario {
   reimpresiones          Reimpresion[]
   bitacoras              Bitacora[]
   incidenciasRegistradas Incidencia[]
+  documentosSubidos      DocumentoLote[]
 
   @@map("usuarios")
 }
@@ -206,6 +207,7 @@ model Lote {
   permisos        Permiso[]
   reconocimientos Reconocimiento[]
   incidencias     Incidencia[]
+  documentos      DocumentoLote[]
 
   // Esta restricción no alcanza a los lotes con seccion NULL (colindancias, o
   // sin sección capturada): Postgres no considera dos NULL iguales entre sí,
@@ -215,6 +217,29 @@ model Lote {
   // archivo sin una preview feature.
   @@unique([panteonId, seccion, numeroManzana, numeroLote], name: "uq_lotes_ubicacion")
   @@map("lotes")
+}
+
+// Documentos escaneados del expediente físico del lote (identificación, acta,
+// comprobante, escritura...). El archivo en sí vive en Supabase Storage (ver
+// lib/storageDocumentos.ts); aquí solo se guarda la referencia. Van ligados al
+// lote y no al título/permiso puntual, porque el expediente físico junta todo
+// lo del lote a lo largo de su historia, sin importar cuántos títulos o
+// permisos haya tenido.
+model DocumentoLote {
+  documentoId    Int      @id @default(autoincrement()) @map("documento_id")
+  loteId         Int      @map("lote_id")
+  nombreArchivo  String   @map("nombre_archivo") @db.VarChar(255)
+  rutaStorage    String   @map("ruta_storage") @db.VarChar(500)
+  tipoMime       String   @map("tipo_mime") @db.VarChar(100)
+  tamanioBytes   Int      @map("tamanio_bytes")
+  usuarioSubioId Int      @map("usuario_subio_id")
+  fechaSubida    DateTime @default(now()) @map("fecha_subida")
+
+  lote         Lote    @relation(fields: [loteId], references: [loteId])
+  usuarioSubio Usuario @relation(fields: [usuarioSubioId], references: [usuarioId])
+
+  @@index([loteId], name: "ix_documentos_lote_lote")
+  @@map("documentos_lote")
 }
 
 model TituloPropiedad {

@@ -1,6 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, descargarArchivo } from "../../lib/api";
+import { api, ApiError, descargarArchivo } from "../../lib/api";
+import { archivoADataUri, formatoBytes } from "../../lib/archivos";
+import { useAuth } from "../../auth/AuthContext";
+import { ConfirmModal } from "../../components/ConfirmModal";
+import { BotonImprimir } from "../../components/BotonImprimir";
 
 interface EventoLote {
   fecha: string | null;
@@ -29,14 +34,154 @@ interface ExpedienteData {
   ocupantes: string[];
 }
 
+interface DocumentoLote {
+  documentoId: number;
+  nombreArchivo: string;
+  tipoMime: string;
+  tamanioBytes: number;
+  fechaSubida: string;
+  subioPor: string;
+}
+
+const ICONO_POR_MIME: Record<string, string> = {
+  "application/pdf": "bi-file-earmark-pdf",
+  "image/jpeg": "bi-file-earmark-image",
+  "image/png": "bi-file-earmark-image",
+};
+
 function fmtFecha(f: string | null): string {
   if (!f) return "Sin fecha";
   return new Date(f).toLocaleDateString("es-MX", { timeZone: "UTC" });
 }
 
+function fmtFechaHora(f: string): string {
+  return new Date(f).toLocaleString("es-MX");
+}
+
+function DocumentosLote({ loteId, puedeEscribir }: { loteId: string; puedeEscribir: boolean }) {
+  const queryClient = useQueryClient();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [porBorrar, setPorBorrar] = useState<DocumentoLote | null>(null);
+
+  const { data: documentos } = useQuery({
+    queryKey: ["lotes", loteId, "documentos"],
+    queryFn: () => api<DocumentoLote[]>(`/lotes/${loteId}/documentos`),
+  });
+
+  const subir = useMutation({
+    mutationFn: async (archivo: File) => {
+      const dataUri = await archivoADataUri(archivo);
+      return api(`/lotes/${loteId}/documentos`, { method: "POST", body: JSON.stringify({ nombreArchivo: archivo.name, dataUri }) });
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["lotes", loteId, "documentos"] });
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "No se pudo subir el archivo"),
+    onSettled: () => {
+      if (inputRef.current) inputRef.current.value = "";
+    },
+  });
+
+  const borrar = useMutation({
+    mutationFn: (documentoId: number) => api(`/lotes/${loteId}/documentos/${documentoId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      setPorBorrar(null);
+      queryClient.invalidateQueries({ queryKey: ["lotes", loteId, "documentos"] });
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "No se pudo eliminar el archivo"),
+  });
+
+  return (
+    <div className="card" style={{ marginBottom: 20 }}>
+      <div className="card-header-guinda">
+        <span>
+          <i className="bi bi-folder2-open" /> Documentos escaneados
+        </span>
+      </div>
+      <div className="card-body">
+        <p className="text-muted" style={{ marginTop: 0, fontSize: 13 }}>
+          Identificación, actas, comprobantes o cualquier papel del expediente físico. Solo PDF, JPG o PNG, hasta 10 MB.
+        </p>
+
+        {puedeEscribir && (
+          <>
+            <button type="button" className="boton-secundario boton-sm" onClick={() => inputRef.current?.click()} disabled={subir.isPending}>
+              <i className="bi bi-upload" /> {subir.isPending ? "Subiendo..." : "Subir documento"}
+            </button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="application/pdf,image/jpeg,image/png"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const archivo = e.target.files?.[0];
+                if (archivo) subir.mutate(archivo);
+              }}
+            />
+          </>
+        )}
+        {error && (
+          <p className="aviso-error" style={{ marginTop: 12, marginBottom: 0 }}>
+            {error}
+          </p>
+        )}
+
+        {!documentos || documentos.length === 0 ? (
+          <p className="text-muted" style={{ marginTop: 12, marginBottom: 0 }}>
+            Sin documentos subidos todavía.
+          </p>
+        ) : (
+          <ul style={{ listStyle: "none", margin: "12px 0 0", padding: 0 }}>
+            {documentos.map((d, i) => (
+              <li
+                key={d.documentoId}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid var(--border)" }}
+              >
+                <i className={`bi ${ICONO_POR_MIME[d.tipoMime] ?? "bi-file-earmark"}`} style={{ fontSize: 18, color: "var(--guinda)", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.nombreArchivo}</div>
+                  <small className="text-muted">
+                    {formatoBytes(d.tamanioBytes)} · {fmtFechaHora(d.fechaSubida)} · {d.subioPor}
+                  </small>
+                </div>
+                <BotonImprimir ruta={`/lotes/${loteId}/documentos/${d.documentoId}/descargar`} nombreArchivo={d.nombreArchivo} className="boton-secundario boton-sm" title="Ver documento">
+                  {" "}Ver
+                </BotonImprimir>
+                {puedeEscribir && (
+                  <button type="button" className="boton-peligro boton-sm" title="Eliminar documento" onClick={() => setPorBorrar(d)}>
+                    <i className="bi bi-trash" />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <ConfirmModal
+          abierto={!!porBorrar}
+          titulo="Eliminar documento"
+          mensaje={
+            <>
+              ¿Eliminar <strong>{porBorrar?.nombreArchivo}</strong>?
+            </>
+          }
+          nota="Esta acción no se puede deshacer."
+          cargando={borrar.isPending}
+          onCancelar={() => setPorBorrar(null)}
+          onConfirmar={() => porBorrar && borrar.mutate(porBorrar.documentoId)}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function LoteExpediente() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const puedeEscribir = usuario?.rol !== "Consulta";
   const { data, isLoading, error } = useQuery({
     queryKey: ["lotes", id, "expediente"],
     queryFn: () => api<ExpedienteData>(`/lotes/${id}/expediente`),
@@ -104,6 +249,8 @@ export function LoteExpediente() {
           )}
         </div>
       </div>
+
+      <DocumentosLote loteId={id!} puedeEscribir={puedeEscribir} />
 
       <div className="exp-titulo-seccion">
         Historial{" "}
