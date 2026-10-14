@@ -1,5 +1,7 @@
 # Cómo montar el sistema en un servidor
 
+> Esta guía usa Docker. Si el servidor no lo va a usar, la instalación directa en Ubuntu está en [`DEPLOY-SIN-DOCKER.md`](DEPLOY-SIN-DOCKER.md).
+
 Esto levanta tres contenedores con Docker Compose: la base de datos (PostgreSQL 17), la API y un Caddy que sirve el sitio y le pasa todo lo que empiece con `/api` a la API. Solo Caddy abre puertos hacia afuera (80 y 443). La base y la API no se ven desde la red, y así deben quedarse.
 
 Todo lo que hace falta está en este repositorio. No hay que instalar Node, Chrome ni Postgres en el servidor, solo Docker.
