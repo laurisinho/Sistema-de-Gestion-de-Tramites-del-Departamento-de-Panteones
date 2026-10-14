@@ -132,9 +132,9 @@ export function BitacoraLista() {
               </span>
             </div>
             <div className="card-body">
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60 }}>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60, overflowX: "auto", overflowY: "hidden" }}>
                 {data.grafica.map((g) => (
-                  <div key={g.etiqueta} title={`${g.etiqueta}: ${g.valor}`} style={{ flex: 1, textAlign: "center" }}>
+                  <div key={g.etiqueta} title={`${g.etiqueta}: ${g.valor}`} style={{ flex: "1 0 28px", textAlign: "center" }}>
                     <div
                       style={{
                         background: "linear-gradient(180deg, var(--guinda-light), var(--guinda))",

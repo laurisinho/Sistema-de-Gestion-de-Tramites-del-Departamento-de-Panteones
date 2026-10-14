@@ -105,10 +105,27 @@ export function Layout() {
   const [oscuro, setOscuro] = useState(() => document.documentElement.classList.contains("dark"));
   const enNoReclamados = location.pathname.startsWith("/no-reclamados");
   const [grupoAbierto, setGrupoAbierto] = useState(() => localStorage.getItem("nav:grupoNR") === "true");
+  // En pantallas angostas el menú es un cajón que se abre con el botón de la
+  // barra superior; en escritorio este estado no cambia nada.
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   useEffect(() => {
     if (enNoReclamados) setGrupoAbierto(true);
   }, [enNoReclamados]);
+
+  // Al elegir una opción el cajón se cierra solo, y también con Escape.
+  useEffect(() => {
+    setMenuAbierto(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!menuAbierto) return;
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuAbierto(false);
+    };
+    document.addEventListener("keydown", alTeclear);
+    return () => document.removeEventListener("keydown", alTeclear);
+  }, [menuAbierto]);
 
   const tituloPagina = tituloDePagina(location.pathname);
   useEffect(() => {
@@ -133,7 +150,8 @@ export function Layout() {
 
   return (
     <div className="shell">
-      <aside className="shell-sidebar">
+      {menuAbierto && <div className="shell-backdrop" onClick={() => setMenuAbierto(false)} aria-hidden="true" />}
+      <aside className={"shell-sidebar" + (menuAbierto ? " abierto" : "")}>
         <div className="shell-brand">
           <img src={logoNogales} alt="Escudo de Nogales" />
           <div className="shell-brand-texto">
@@ -194,10 +212,21 @@ export function Layout() {
       </aside>
       <div className="shell-main">
         <header className="shell-topbar">
-          <span style={{ color: "rgba(255,255,255,.94)", fontWeight: 600, fontSize: "0.9rem", display: "flex", alignItems: "center", gap: 8 }}>
-            <i className="bi bi-geo-alt" style={{ color: "var(--dorado-suave)" }} />
-            {tituloPagina}
-          </span>
+          <div className="shell-topbar-izq">
+            <button
+              type="button"
+              className="shell-topbar-btn shell-menu-btn"
+              onClick={() => setMenuAbierto((v) => !v)}
+              aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={menuAbierto}
+            >
+              <i className={`bi ${menuAbierto ? "bi-x-lg" : "bi-list"}`} />
+            </button>
+            <span className="shell-topbar-titulo">
+              <i className="bi bi-geo-alt" style={{ color: "var(--dorado-suave)" }} />
+              <span>{tituloPagina}</span>
+            </span>
+          </div>
           <div className="shell-usuario">
             <button className="shell-topbar-btn" onClick={alternarOscuro} title="Cambiar tema">
               <i className={`bi ${oscuro ? "bi-sun" : "bi-moon-stars"}`} />

@@ -210,6 +210,16 @@ html.dark .shell-topbar { background: linear-gradient(90deg, var(--guinda-sombra
 }
 .shell-usuario-nombre { color: rgba(255, 255, 255, 0.85); font-size: 0.8rem; font-weight: 500; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.shell-topbar-izq { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.shell-topbar-titulo {
+  color: rgba(255, 255, 255, 0.94); font-weight: 600; font-size: 0.9rem;
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+.shell-topbar-titulo > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Solo se ve en pantallas angostas (ver @media al final). */
+.shell-menu-btn { display: none; flex-shrink: 0; }
+.shell-backdrop { display: none; }
+
 .shell-content { padding: 1.6rem 1.75rem 2.2rem; flex: 1; width: 100%; max-width: 1480px; margin: 0 auto; }
 
 /* Encabezado de página */
@@ -584,6 +594,48 @@ html.dark .tarjeta-icono.icon-teal { background: rgba(45, 212, 191, 0.18); color
 
 .text-muted { color: var(--text-muted); }
 .font-monospace { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+
+/* Pantallas angostas (tablet vertical y celular): el menú pasa a ser un cajón
+   que se abre desde la barra superior, en vez de robar 255px fijos al contenido. */
+@media (max-width: 860px) {
+  .shell-menu-btn { display: flex; }
+  .shell-sidebar {
+    width: min(290px, 86vw);
+    height: 100vh; height: 100dvh;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.22s ease, visibility 0s linear 0.22s;
+  }
+  .shell-sidebar.abierto {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.22s ease, visibility 0s;
+    box-shadow: 10px 0 34px rgba(0, 0, 0, 0.45);
+  }
+  .shell-backdrop { display: block; position: fixed; inset: 0; background: rgba(20, 8, 13, 0.55); z-index: 999; }
+  .shell-main { margin-left: 0; }
+  .shell-topbar { padding: 0 0.75rem; gap: 0.5rem; }
+  .shell-usuario-nombre, .shell-divider { display: none; }
+  .shell-content { padding: 1rem 0.85rem 1.8rem; }
+}
+
+/* Celular: formularios en una columna, controles cómodos para el dedo, y sin que
+   iOS acerque la pantalla al enfocar un campo (lo hace con letra menor a 16px). */
+@media (max-width: 720px) {
+  .form-grid { grid-template-columns: 1fr !important; }
+  .form-campo input, .form-campo select, .form-campo textarea,
+  .barra-filtros input, .barra-filtros select { font-size: 16px; min-height: 42px; }
+  .boton, .boton-secundario, .boton-peligro, .boton-peligro-solido { min-height: 42px; justify-content: center; }
+  .boton.boton-sm, .boton-secundario.boton-sm, .boton-peligro.boton-sm { min-height: 36px; }
+  .barra-filtros > input, .barra-filtros > select { flex: 1 1 140px; min-width: 0; }
+  .page-header-acciones { width: 100%; }
+  .page-header-acciones > * { flex: 1 1 auto; justify-content: center; }
+  .card-body { padding: 0.95rem 0.9rem; }
+  .modal-pie { flex-wrap: wrap; }
+  .modal-pie > * { flex: 1 1 auto; }
+  .tl-item { flex-wrap: wrap; }
+  .tl-fecha { width: auto; }
+}
 
 @media print {
   .shell-sidebar, .shell-topbar { display: none !important; }
