@@ -356,65 +356,7 @@ export function PermisoNuevo() {
     }
   }
 
-  return (
-    <div>
-      <div className="page-header">
-        <h2>
-          <i className="bi bi-file-earmark-plus" />
-          Nuevo Permiso — {tipoNombre}
-        </h2>
-        <div className="page-header-acciones">
-          <button type="button" className="boton-secundario" onClick={() => navigate("/permisos")}>
-            <i className="bi bi-arrow-left" /> Regresar
-          </button>
-        </div>
-      </div>
-
-      <form onSubmit={onSubmit}>
-        <div className="form-campo" style={{ maxWidth: 260, marginBottom: 20 }}>
-          <label>Tipo de trámite</label>
-          <select
-            value={tipoClave}
-            onChange={(e) => {
-              const nuevo = e.target.value;
-              if (nuevo !== "EXH" && fallecidoSel) quitarFallecido();
-              setTipoClave(nuevo);
-            }}
-          >
-            {TIPOS.map((t) => (
-              <option key={t.clave} value={t.clave}>
-                {t.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-header-guinda">
-            <span>
-              <i className="bi bi-person" /> Datos del Solicitante
-            </span>
-          </div>
-          <div className="card-body">
-            <div className="form-grid" style={{ gridTemplateColumns: "2fr 1fr", maxWidth: "none" }}>
-              <div className="form-campo">
-                <label>Nombre completo *</label>
-                <input
-                  value={nombreSolicitante}
-                  onChange={(e) => setNombreSolicitante(e.target.value)}
-                  placeholder="Nombre del solicitante"
-                  required
-                />
-              </div>
-              <div className="form-campo">
-                <label>Teléfono</label>
-                <input value={telefonoSolicitante} onChange={(e) => setTelefonoSolicitante(e.target.value)} placeholder="10 dígitos" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {tipoClave !== "CON" && (
+  const bloqueFallecido = tipoClave !== "CON" && (
           <div className="card" style={{ marginBottom: 20 }}>
             <div className="card-header-guinda">
               <span>
@@ -546,8 +488,9 @@ export function PermisoNuevo() {
               </div>
             </div>
           </div>
-        )}
+  );
 
+  const bloqueLote = (
         <div className="card" style={{ marginBottom: 20 }}>
           <div className="card-header-guinda">
             <span>
@@ -770,6 +713,78 @@ export function PermisoNuevo() {
             )}
           </div>
         </div>
+  );
+
+  return (
+    <div>
+      <div className="page-header">
+        <h2>
+          <i className="bi bi-file-earmark-plus" />
+          Nuevo Permiso — {tipoNombre}
+        </h2>
+        <div className="page-header-acciones">
+          <button type="button" className="boton-secundario" onClick={() => navigate("/permisos")}>
+            <i className="bi bi-arrow-left" /> Regresar
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={onSubmit}>
+        <div className="form-campo" style={{ maxWidth: 260, marginBottom: 20 }}>
+          <label>Tipo de trámite</label>
+          <select
+            value={tipoClave}
+            onChange={(e) => {
+              const nuevo = e.target.value;
+              if (nuevo !== "EXH" && fallecidoSel) quitarFallecido();
+              setTipoClave(nuevo);
+            }}
+          >
+            {TIPOS.map((t) => (
+              <option key={t.clave} value={t.clave}>
+                {t.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header-guinda">
+            <span>
+              <i className="bi bi-person" /> Datos del Solicitante
+            </span>
+          </div>
+          <div className="card-body">
+            <div className="form-grid" style={{ gridTemplateColumns: "2fr 1fr", maxWidth: "none" }}>
+              <div className="form-campo">
+                <label>Nombre completo *</label>
+                <input
+                  value={nombreSolicitante}
+                  onChange={(e) => setNombreSolicitante(e.target.value)}
+                  placeholder="Nombre del solicitante"
+                  required
+                />
+              </div>
+              <div className="form-campo">
+                <label>Teléfono</label>
+                <input value={telefonoSolicitante} onChange={(e) => setTelefonoSolicitante(e.target.value)} placeholder="10 dígitos" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* En exhumación se ubica primero el lote; en los demás trámites, primero al fallecido. */}
+        {tipoClave === "EXH" ? (
+          <>
+            {bloqueLote}
+            {bloqueFallecido}
+          </>
+        ) : (
+          <>
+            {bloqueFallecido}
+            {bloqueLote}
+          </>
+        )}
 
         {tipoClave === "EXH" && (
           <div className="card" style={{ marginBottom: 20 }}>
