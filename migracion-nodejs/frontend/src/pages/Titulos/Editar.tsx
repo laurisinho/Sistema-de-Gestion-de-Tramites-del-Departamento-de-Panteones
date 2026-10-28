@@ -11,7 +11,13 @@ interface TituloDetalle {
   estado: string;
   estadoEntrega: string;
   fechaEntrega: string | null;
-  titular: { nombreCompleto: string; telefono: string | null; domicilio: string | null; colonia: string | null };
+  titular: {
+    nombreCompleto: string;
+    telefono: string | null;
+    domicilio: string | null;
+    colonia: string | null;
+    identificacionNumero: string | null;
+  };
   lote: {
     numeroManzana: string;
     numeroLote: string;
@@ -43,6 +49,7 @@ export function TituloEditar() {
   const [telefonoTitular, setTelefonoTitular] = useState("");
   const [domicilioTitular, setDomicilioTitular] = useState("");
   const [coloniaTitular, setColoniaTitular] = useState("");
+  const [numeroINE, setNumeroINE] = useState("");
   const [numeroManzana, setNumeroManzana] = useState("");
   const [numeroLote, setNumeroLote] = useState("");
   const [seccion, setSeccion] = useState("");
@@ -67,6 +74,7 @@ export function TituloEditar() {
     setTelefonoTitular(data.titular.telefono ?? "");
     setDomicilioTitular(data.titular.domicilio ?? "");
     setColoniaTitular(data.titular.colonia ?? "");
+    setNumeroINE(data.titular.identificacionNumero ?? "");
     setNumeroManzana(data.lote.numeroManzana);
     setNumeroLote(data.lote.numeroLote);
     setSeccion(data.lote.seccion ?? "");
@@ -94,6 +102,7 @@ export function TituloEditar() {
           telefonoTitular: telefonoTitular || undefined,
           domicilioTitular: domicilioTitular || undefined,
           coloniaTitular: coloniaTitular || undefined,
+          numeroINE,
           numeroManzana: numeroManzana || undefined,
           numeroLote: numeroLote || undefined,
           seccion: seccion || undefined,
@@ -150,6 +159,10 @@ export function TituloEditar() {
               <div className="form-campo">
                 <label>Teléfono</label>
                 <input value={telefonoTitular} onChange={(e) => setTelefonoTitular(e.target.value)} />
+              </div>
+              <div className="form-campo">
+                <label>Número de INE</label>
+                <input value={numeroINE} onChange={(e) => setNumeroINE(e.target.value)} maxLength={20} />
               </div>
               <div className="form-campo">
                 <label>Colonia</label>

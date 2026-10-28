@@ -371,6 +371,7 @@ const editarTituloSchema = z.object({
   telefonoTitular: z.string().optional(),
   domicilioTitular: z.string().optional(),
   coloniaTitular: z.string().optional(),
+  numeroINE: z.string().optional(),
   numeroManzana: z.string().optional(),
   numeroLote: z.string().optional(),
   seccion: z.string().optional(),
@@ -410,6 +411,13 @@ titulosRouter.put(
           telefono: vm.telefonoTitular,
           domicilio: vm.domicilioTitular,
           colonia: vm.coloniaTitular,
+          // Si el campo llega vacío se borra el INE; si no llega, se deja como está.
+          ...(vm.numeroINE !== undefined
+            ? {
+                identificacionTipo: vm.numeroINE.trim() ? "INE" : null,
+                identificacionNumero: vm.numeroINE.trim() || null,
+              }
+            : {}),
         },
       });
 
