@@ -12,6 +12,7 @@ interface PermisoDetalle {
   funeraria: string | null;
   motivoExhumacion: string | null;
   destinoRestos: string | null;
+  ubicacionDeposito: string | null;
   tipoObra: string | null;
   descripcionObra: string | null;
   esDonacion: boolean;
@@ -41,6 +42,7 @@ export function PermisoEditar() {
   const [funeraria, setFuneraria] = useState("");
   const [motivoExhumacion, setMotivoExhumacion] = useState("");
   const [destinoRestos, setDestinoRestos] = useState("");
+  const [ubicacionDeposito, setUbicacionDeposito] = useState("");
   const [tipoObra, setTipoObra] = useState("");
   const [descripcionObra, setDescripcionObra] = useState("");
   const [esDonacion, setEsDonacion] = useState(false);
@@ -61,6 +63,7 @@ export function PermisoEditar() {
     setFuneraria(data.funeraria ?? "");
     setMotivoExhumacion(data.motivoExhumacion ?? "");
     setDestinoRestos(data.destinoRestos ?? "");
+    setUbicacionDeposito(data.ubicacionDeposito ?? "");
     setTipoObra(data.tipoObra ?? "");
     setDescripcionObra(data.descripcionObra ?? "");
     setEsDonacion(data.esDonacion);
@@ -86,6 +89,7 @@ export function PermisoEditar() {
           funeraria: funeraria || undefined,
           motivoExhumacion: motivoExhumacion || undefined,
           destinoRestos: destinoRestos || undefined,
+          ubicacionDeposito: ubicacionDeposito || undefined,
           tipoObra: tipoObra || undefined,
           descripcionObra: descripcionObra || undefined,
           esDonacion,
@@ -239,6 +243,22 @@ export function PermisoEditar() {
                   <label>Destino de los restos</label>
                   <input value={destinoRestos} onChange={(e) => setDestinoRestos(e.target.value)} />
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {clave === "CEN" && (
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div className="card-header-guinda">
+              <span>
+                <i className="bi bi-info-circle" /> Datos del Depósito de Cenizas
+              </span>
+            </div>
+            <div className="card-body">
+              <div className="form-campo" style={{ maxWidth: 420 }}>
+                <label>Ubicación del depósito</label>
+                <input value={ubicacionDeposito} onChange={(e) => setUbicacionDeposito(e.target.value)} />
               </div>
             </div>
           </div>
