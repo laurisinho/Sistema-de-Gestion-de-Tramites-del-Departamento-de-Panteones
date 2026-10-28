@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma";
 import { requiereAuth, requiereEscritura } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { variantesManzana } from "../lib/romanos";
-import { whereSeccion } from "../lib/ubicacion";
+import { compararNatural, mismoLote, whereLoteContiene, whereSeccion } from "../lib/ubicacion";
 import { Acciones, registrarBitacora } from "../lib/bitacora";
 import { subirDocumento, descargarDocumento, eliminarDocumento } from "../lib/storageDocumentos";
 
@@ -49,7 +49,7 @@ lotesRouter.get(
         OR: variantesManzana(manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
       });
     }
-    if (lote) filtros.push({ numeroLote: { contains: lote, mode: "insensitive" } });
+    if (lote) filtros.push(whereLoteContiene(lote));
     if (seccion) filtros.push(whereSeccion(seccion));
     if (termino) {
       filtros.push({
@@ -84,14 +84,14 @@ lotesRouter.get(
         const bm = igual(b.numeroManzana, manzana) ? 0 : 1;
         if (am !== bm) return am - bm;
 
-        const al = igual(a.numeroLote, lote) ? 0 : 1;
-        const bl = igual(b.numeroLote, lote) ? 0 : 1;
+        const al = mismoLote(a.numeroLote, lote) ? 0 : 1;
+        const bl = mismoLote(b.numeroLote, lote) ? 0 : 1;
         if (al !== bl) return al - bl;
 
         return (
           (a.seccion ?? "").localeCompare(b.seccion ?? "") ||
-          a.numeroManzana.localeCompare(b.numeroManzana) ||
-          a.numeroLote.localeCompare(b.numeroLote)
+          compararNatural(a.numeroManzana, b.numeroManzana) ||
+          compararNatural(a.numeroLote, b.numeroLote)
         );
       })
       .slice(0, 60)
@@ -151,7 +151,7 @@ lotesRouter.get(
         OR: variantesManzana(manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
       });
     }
-    if (lote) filtros.push({ numeroLote: { contains: lote, mode: "insensitive" } });
+    if (lote) filtros.push(whereLoteContiene(lote));
     if (titular) {
       filtros.push({ titulos: { some: { estado: "VIGENTE", titular: { nombreCompleto: { contains: titular, mode: "insensitive" } } } } });
     }

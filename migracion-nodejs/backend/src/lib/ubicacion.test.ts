@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { filtrosLoteBusqueda, whereUbicacionLote } from "./ubicacion";
+import { compararNatural, filtrosLoteBusqueda, mismoLote, variantesLote, whereUbicacionLote } from "./ubicacion";
+
+describe("lotes con letras", () => {
+  it("'5A' y '5 A' se buscan como el mismo lote", () => {
+    expect(variantesLote("5A").sort()).toEqual(["5 A", "5A"]);
+    expect(variantesLote("5 A").sort()).toEqual(["5 A", "5A"]);
+    expect(variantesLote("7")).toEqual(["7"]);
+  });
+
+  it("la coincidencia exacta ignora espacios y mayúsculas, pero no confunde 5 con 15", () => {
+    expect(mismoLote("5A", "5 a")).toBe(true);
+    expect(mismoLote("26 bis B", "26bisb")).toBe(true);
+    expect(mismoLote("15", "5")).toBe(false);
+  });
+
+  it("el orden es natural: 2, 10, 10A", () => {
+    expect(["10A", "10", "2", "5B", "5A"].sort(compararNatural)).toEqual(["2", "5A", "5B", "10", "10A"]);
+  });
+});
 
 /**
  * Regresión: la comprobación de ubicación ocupada debe incluir la sección,
@@ -33,7 +51,7 @@ describe("filtrosLoteBusqueda", () => {
     const f = filtrosLoteBusqueda({ panteonId: 1, manzana: "3", lote: "7" });
     expect(f).toHaveLength(3);
     expect(f[0]).toEqual({ panteonId: 1 });
-    expect(f[2]).toEqual({ numeroLote: { contains: "7", mode: "insensitive" } });
+    expect(f[2]).toEqual({ OR: [{ numeroLote: { contains: "7", mode: "insensitive" } }] });
   });
 
   it("'ANG' y una manzana tecleada no se pisan: son condiciones distintas", () => {

@@ -37,6 +37,29 @@ export function whereSeccion(seccion: string): Prisma.LoteWhereInput {
   return { seccion };
 }
 
+/**
+ * Formas en que se captura el mismo número de lote: "5A", "5 A", "5a". Se buscan
+ * todas para que escribir de una forma encuentre lo guardado de la otra.
+ */
+export function variantesLote(lote: string): string[] {
+  const t = lote.trim();
+  const sinEspacios = t.replace(/\s+/g, "");
+  const conEspacio = sinEspacios.replace(/^(\d+)([A-Za-z])/, "$1 $2");
+  return [...new Set([t, sinEspacios, conEspacio])];
+}
+
+/** Para saber si dos números de lote son el mismo sin importar espacios ni mayúsculas. */
+export function mismoLote(a: string, b?: string): boolean {
+  return !!b && a.replace(/\s+/g, "").toLowerCase() === b.replace(/\s+/g, "").toLowerCase();
+}
+
+/** Orden natural: 2, 10, 10A (y no 10, 10A, 2). */
+export const compararNatural = new Intl.Collator("es", { numeric: true, sensitivity: "base" }).compare;
+
+export function whereLoteContiene(lote: string): Prisma.LoteWhereInput {
+  return { OR: variantesLote(lote).map((v) => ({ numeroLote: { contains: v, mode: "insensitive" as const } })) };
+}
+
 export interface FiltroUbicacionBusqueda {
   panteonId?: number;
   seccion?: string;
@@ -65,7 +88,7 @@ export function filtrosLoteBusqueda(f: FiltroUbicacionBusqueda): Prisma.LoteWher
       OR: variantesManzana(f.manzana).map((v) => ({ numeroManzana: { contains: v, mode: "insensitive" as const } })),
     });
   }
-  if (f.lote) filtros.push({ numeroLote: { contains: f.lote, mode: "insensitive" } });
+  if (f.lote) filtros.push(whereLoteContiene(f.lote));
   if (f.colindancia) {
     filtros.push({
       OR: [
