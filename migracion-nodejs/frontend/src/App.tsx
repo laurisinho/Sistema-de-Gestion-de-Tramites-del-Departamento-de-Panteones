@@ -17,6 +17,7 @@ import { TituloEditar } from "./pages/Titulos/Editar";
 import { TituloDetalle } from "./pages/Titulos/Detalle";
 import { CesionesLista } from "./pages/Cesiones/Lista";
 import { CesionNueva } from "./pages/Cesiones/Nueva";
+import { CesionEditar } from "./pages/Cesiones/Editar";
 import { NoReclamadosLista } from "./pages/NoReclamados/Lista";
 import { NoReclamadoDetalle } from "./pages/NoReclamados/Detalle";
 import { NoReclamadoReconocer } from "./pages/NoReclamados/Reconocer";
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/titulos/:id" element={<TituloDetalle />} />
             <Route path="/cesiones" element={<CesionesLista />} />
             <Route path="/cesiones/nueva" element={<CesionNueva />} />
+            <Route path="/cesiones/:id/editar" element={<CesionEditar />} />
             <Route path="/no-reclamados" element={<NoReclamadosLista />} />
             <Route path="/no-reclamados/nuevo" element={<NoReclamadoCrear />} />
             <Route path="/no-reclamados/reconocidos" element={<NoReclamadosReconocidos />} />

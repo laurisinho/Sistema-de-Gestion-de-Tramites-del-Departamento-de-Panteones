@@ -159,6 +159,72 @@ cesionesRouter.post(
 );
 
 cesionesRouter.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const cesion = await prisma.cesionDerechos.findUnique({
+      where: { cesionId: Number(req.params.id) },
+      include: { cedente: true, cesionario: true, lote: { include: { panteon: true } } },
+    });
+    if (!cesion) return res.status(404).json({ error: "Cesión no encontrada" });
+    res.json({ cesion });
+  })
+);
+
+// Corrige los datos capturados de una cesión: el cesionario (la persona se creó
+// con esta cesión, así que no la comparte con otros trámites) y la fecha. El
+// cedente, el lote y los folios no se cambian: los demarca la cesión original.
+const editarCesionSchema = z.object({
+  nombreCesionario: z.string().min(1, "El nombre del cesionario es obligatorio."),
+  telefonoCesionario: z.string().optional(),
+  domicilioCesionario: z.string().optional(),
+  coloniaCesionario: z.string().optional(),
+  ineCesionario: z.string().optional(),
+  fechaCesion: fechaISO.optional(),
+});
+
+cesionesRouter.put(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const cesion = await prisma.cesionDerechos.findUnique({ where: { cesionId: id } });
+    if (!cesion) return res.status(404).json({ error: "Cesión no encontrada" });
+
+    const parseo = editarCesionSchema.safeParse(req.body);
+    if (!parseo.success) {
+      return res.status(400).json({ error: parseo.error.issues[0]?.message ?? "Datos inválidos" });
+    }
+    const vm = parseo.data;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.persona.update({
+        where: { personaId: cesion.cesionarioId },
+        data: {
+          nombreCompleto: vm.nombreCesionario.trim(),
+          telefono: vm.telefonoCesionario,
+          domicilio: vm.domicilioCesionario,
+          colonia: vm.coloniaCesionario,
+          // Vacío borra el INE; si no llega, se deja como está.
+          ...(vm.ineCesionario !== undefined
+            ? {
+                identificacionTipo: vm.ineCesionario.trim() ? "INE" : null,
+                identificacionNumero: vm.ineCesionario.trim() || null,
+              }
+            : {}),
+        },
+      });
+      if (vm.fechaCesion) {
+        await tx.cesionDerechos.update({ where: { cesionId: id }, data: { fechaCesion: vm.fechaCesion } });
+        // El título que emitió esta cesión lleva la misma fecha de emisión.
+        await tx.tituloPropiedad.update({ where: { tituloId: cesion.tituloId }, data: { fechaEmision: vm.fechaCesion } });
+      }
+    });
+
+    await registrarBitacora(req.usuario!.usuarioId, Acciones.Editar, "cesion_derechos", id, `Cesión ${cesion.folio} editada`, req.ip);
+    res.json({ ok: true });
+  })
+);
+
+cesionesRouter.get(
   "/:id/pdf",
   asyncHandler(async (req, res) => {
     const cesion = await prisma.cesionDerechos.findUnique({

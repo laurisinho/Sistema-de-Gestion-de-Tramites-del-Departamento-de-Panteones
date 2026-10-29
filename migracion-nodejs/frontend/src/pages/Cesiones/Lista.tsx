@@ -95,6 +95,11 @@ export function CesionesLista() {
                             className="boton-secundario boton-sm"
                             title="Imprimir"
                           />
+                          {puedeEscribir && (
+                            <Link to={`/cesiones/${c.cesionId}/editar`} className="boton-secundario boton-sm" title="Editar">
+                              <i className="bi bi-pencil-square" />
+                            </Link>
+                          )}
                           {c.estado !== "CANCELADO" && puedeEscribir && (
                             <Link to={`/reimpresiones?tipo=CESION&id=${c.cesionId}`} className="boton-secundario boton-sm" title="Reimprimir con sello">
                               <i className="bi bi-printer-fill" />
